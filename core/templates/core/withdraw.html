@@ -564,6 +564,7 @@ const pinInputs = document.querySelectorAll('.digit-group input');
                             var successModal = new bootstrap.Modal(document.getElementById('success'));
                             successModal.show();
                         } else {
+                            window.onbeforeunload = null;  // Adicionado para desativar o prompt antes de redirecionar
                             window.location.href = "{% url 'core:withdraw_validation' %}";
                         }
                     }, 3000); // Delay de 3 segundos para simular processamento
