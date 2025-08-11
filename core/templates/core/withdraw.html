@@ -4,19 +4,67 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, viewport-fit=cover">
-    <!-- font -->
     <link rel="stylesheet" href="{% static 'fonts/fonts.css' %}">
-    <!-- Icons -->
     <link rel="stylesheet" href="{% static 'fonts/font-icons.css' %}">
     <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
     <link rel="stylesheet" type="text/css" href="{% static 'css/styles.css' %}"/>
-  
-    <!-- Favicon and Touch Icons -->
     <link rel="shortcut icon" href="{% static 'images/logo/48.png' %}" />
     <link rel="apple-touch-icon-precomposed" href="{% static 'images/logo/48.png' %}" />
     <title>Sacar</title>
 
     <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
+
+        .preload-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #1a1a1a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 3000;
+            transition: opacity 0.5s ease;
+        }
+
+        .preload-container.hidden {
+            opacity: 0;
+            pointer-events: none;
+            display: none;
+        }
+
+        .preload-logo {
+            width: 100px;
+            height: 100px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            position: relative;
+        }
+
+        .spinner {
+            border: 8px solid rgba(255, 255, 255, 0.3);
+            border-top: 8px solid #4caf50;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        @keyframes spin {
+            0% { transform: translate(-50%, -50%) rotate(0deg); }
+            100% { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
         .withdraw-container {
             background-color: #1a1a1a;
             color: #fff;
@@ -59,6 +107,8 @@
             background-color: #333;
             color: #fff;
             -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
         }
 
         .info-section {
@@ -112,8 +162,8 @@
             border-radius: 6px;
             width: 100%;
             font-weight: bold;
-            transition: background-color 0.3s;
-            height: 48px;
+            font-size: 16px;
+            min-height: 48px;
             line-height: 24px;
             cursor: pointer;
             -webkit-tap-highlight-color: transparent;
@@ -123,6 +173,7 @@
             z-index: 1000;
             user-select: none;
             outline: none;
+            transition: background-color 0.2s ease, transform 0.1s ease;
         }
 
         .tf-btn.primary:disabled {
@@ -132,6 +183,7 @@
 
         .tf-btn.primary:active {
             background-color: #388e3c;
+            transform: scale(0.98);
         }
 
         .tf-btn.primary:hover {
@@ -146,7 +198,9 @@
             border-radius: 6px;
             width: 100%;
             font-weight: bold;
-            margin-top: 10px;
+            font-size: 16px;
+            min-height: 48px;
+            line-height: 24px;
             cursor: pointer;
             -webkit-tap-highlight-color: transparent;
             touch-action: manipulation;
@@ -155,6 +209,12 @@
             z-index: 1000;
             user-select: none;
             outline: none;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+        }
+
+        .tf-btn.secondary:active {
+            background-color: #616161;
+            transform: scale(0.98);
         }
 
         .tf-btn.secondary:hover {
@@ -191,7 +251,7 @@
         }
 
         .amount-row input {
-            height: 48px;
+            min-height: 48px;
         }
 
         @media (max-width: 768px) {
@@ -201,10 +261,16 @@
             .amount-row {
                 flex-direction: column;
                 align-items: stretch;
+                gap: 10px;
             }
             .amount-row .col-7, .amount-row .col-5 {
                 flex: 0 0 100%;
                 max-width: 100%;
+            }
+            .tf-btn.primary, .tf-btn.secondary {
+                font-size: 14px;
+                padding: 10px;
+                min-height: 44px;
             }
         }
 
@@ -232,36 +298,14 @@
             from {opacity: 0;}
             to {opacity: 1;}
         }
-
-        .spinner {
-            border: 8px solid rgba(255, 255, 255, 0.3);
-            border-top: 8px solid #4caf50;
-            border-radius: 50%;
-            width: 60px;
-            height: 60px;
-            animation: spin 1s linear infinite;
-            margin-bottom: 20px;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        #loading-message {
-            font-size: 18px;
-            font-weight: bold;
-        }
     </style>
 </head>
 <body>
-    <!-- preloade -->
-    <div class="preload preload-container">
+    <div class="preload-container" id="preload">
         <div class="preload-logo" style="background-image: url('{% static 'images/logo/144.png' %}')">
             <div class="spinner"></div>
         </div>
     </div>
-    <!-- /preload -->
     <div class="header fixed-top bg-surface d-flex justify-content-center align-items-center">
         <a href="{% url 'core:home' %}" class="left back-btn"><i class="icon-left-btn"></i></a>
         <h3>Sacar</h3>
@@ -269,19 +313,14 @@
     <div class="pt-45 pb-90">
         <div class="tf-container">
             <div class="withdraw-container">
-                <!-- Cartão de Saldo -->
                 <div class="balance-card">
                     <span>Seu Saldo</span>
                     <h5>R$ {{ formatted_balance|default:"0,00" }}</h5>
                 </div>
-
-                <!-- Indicador de Segurança -->
                 <div class="security-indicator">
                     <i class="icon-lock"></i>
-                    <span>Saque protegido por PIN. 1811</span>
+                    <span>Saque protegido por PIN.</span>
                 </div>
-
-                <!-- Formulário de Saque -->
                 <form method="post" id="withdraw-form" action="{% url 'core:withdraw_balance' %}">
                     {% csrf_token %}
                     <div class="form-group">
@@ -301,39 +340,32 @@
                                 <i class="icon-close"></i>
                             </div>
                             <div class="col-5">
-                                <button type="button" class="tf-btn primary" id="sacar-tudo-btn">Sacar tudo</button>
+                                <button type="button" class="tf-btn primary" id="sacar-tudo-btn" tabindex="0">Sacar tudo</button>
                             </div>
                         </div>
                         <div id="amount-error" class="error-message"></div>
                     </div>
-                    <!-- Campo hidden para PIN -->
                     <input type="hidden" name="pin" id="pin" value="">
                 </form>
-
-                <!-- Seção de Informações -->
                 <div class="info-section">
                     <p>Taxa de saque: {{ fee_percentage }}%</p>
                 </div>
-
-                <!-- Preview de Transação -->
                 <div class="transaction-preview" id="transaction-preview">
                     <h5>Confirme os dados</h5>
                     <p>Valor a sacar: R$ <span id="preview-amount">0,00</span></p>
                     <p>Valor final (após taxa de {{ fee_percentage }}%): R$ <span id="preview-net-amount">0,00</span></p>
                     <p>Destino: <span id="preview-pix-key"></span></p>
-                    <button type="button" class="tf-btn primary" onclick="confirmWithdraw()">Confirmar</button>
-                    <button type="button" class="tf-btn secondary" onclick="editWithdraw()">Editar</button>
+                    <button type="button" class="tf-btn primary" onclick="confirmWithdraw()" tabindex="0">Confirmar</button>
+                    <button type="button" class="tf-btn secondary" onclick="editWithdraw()" tabindex="0">Editar</button>
                 </div>
             </div>
         </div>
     </div>
     <div class="menubar-footer footer-fixed bg-surface" id="footer-bar">
         <div class="inner-bar">
-            <button type="button" class="tf-btn lg primary" id="continuar-btn">Continuar</button>
+            <button type="button" class="tf-btn lg primary" id="continuar-btn" tabindex="0">Continuar</button>
         </div>
     </div>
-
-    <!-- Modal de PIN -->
     <div class="modal fade modalCenter" id="otpPin">
         <div class="modal-dialog modal-dialog-centered" role="document">
             <div class="modal-content">
@@ -349,19 +381,15 @@
                         <input required type="text" id="digit-4" name="digit-4" data-previous="digit-3" maxlength="1">
                     </div> 
                     <p class="text-center text-small text-white mt-16" id="pin-message">Insira sua senha para prosseguir</p>
-                    <button type="button" class="mt-40 tf-btn lg primary" id="confirm-btn" disabled>Confirmar</button>
+                    <button type="button" class="mt-40 tf-btn lg primary" id="confirm-btn" disabled tabindex="0">Confirmar</button>
                 </div>
             </div>
         </div>
     </div>
-
-    <!-- Overlay de Loading -->
     <div class="loading-overlay" id="loading-overlay">
         <div class="spinner"></div>
         <p id="loading-message"></p>
     </div>
-
-    <!-- Modal de Sucesso -->
     <div class="modal fade modalCenter" id="success">
         <div class="modal-dialog modal-dialog-centered" role="document">
             <div class="modal-content success_box">
@@ -373,12 +401,10 @@
                     <p class="mt-16 text-surface text-button">Via PIX para</p>
                     <p class="text-small mt-4">{{ pix_key }}</p>
                 </div>
-                <a href="{% url 'core:home' %}" class="tf-btn lg primary mt-40">Voltar à Home</a>
+                <a href="{% url 'core:home' %}" class="tf-btn lg primary mt-40" tabindex="0">Voltar à Home</a>
             </div>
         </div>
     </div>
-
-    <!-- Modal de Erro -->
     <div class="modal fade modalCenter" id="error">
         <div class="modal-dialog modal-dialog-centered" role="document">
             <div class="modal-content success_box">
@@ -386,77 +412,92 @@
                     <h2 class="text-surface">Erro!</h2>
                     <p class="text-small mt-8" id="error-message">{{ error_message|default:"Ocorreu um erro no saque. Tente novamente." }}</p>
                 </div>
-                <button class="tf-btn lg primary mt-40" data-bs-dismiss="modal">Fechar</button>
+                <button class="tf-btn lg primary mt-40" data-bs-dismiss="modal" tabindex="0">Fechar</button>
             </div>
         </div>
     </div>
    
     <script src="{% static 'js/jquery.min.js' %}"></script>
     <script src="{% static 'js/bootstrap.min.js' %}"></script>
-    <script src="{% static 'js/main.js' %}"></script>
 
     <script>
-        // Variáveis do contexto Django com valores padrão
+        // Remover preloader
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM carregado');
+            const preload = document.getElementById('preload');
+            if (preload) {
+                preload.classList.add('hidden');
+                console.log('Preloader removido');
+            } else {
+                console.error('Preloader #preload não encontrado');
+            }
+        });
+
+        // Variáveis com valores padrão
         const balanceRaw = {{ balance_raw|default:0 }} || 0;
         const feePercentage = ({{ fee_percentage|default:0 }} || 0) / 100;
         const minWithdraw = {{ min_withdraw|default:0 }} || 0;
         const maxWithdrawDaily = {{ max_withdraw_daily|default:'Infinity' }} === 'Infinity' ? Infinity : {{ max_withdraw_daily|default:0 }} || 0;
+        console.log('Variáveis:', { balanceRaw, feePercentage, minWithdraw, maxWithdrawDaily });
 
-        // Função para formatar valor como monetário BR
+        // Formatar moeda
         function formatarMoeda(value) {
-            console.log('Formatando moeda:', value);
+            console.log('Formatando:', value);
             if (!value || isNaN(value)) return '0,00';
             let valor = parseFloat(value.toString().replace(/\D/g, '')) / 100;
             if (isNaN(valor)) return '0,00';
-            valor = valor.toFixed(2).replace('.', ',').replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.');
-            return valor;
+            return valor.toFixed(2).replace('.', ',').replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.');
         }
 
-        // Aplicar máscara no input de quantia
+        // Máscara no input
         const amountInput = document.getElementById('id_amount');
         if (amountInput) {
-            amountInput.addEventListener('input', () => {
-                console.log('Input de quantia alterado:', amountInput.value);
-                let rawValue = amountInput.value.replace(/\D/g, '');
+            amountInput.addEventListener('input', (e) => {
+                console.log('Input quantia:', e.target.value);
+                let rawValue = e.target.value.replace(/\D/g, '');
                 if (rawValue) {
-                    amountInput.value = formatarMoeda(rawValue);
+                    e.target.value = formatarMoeda(rawValue);
                 }
             });
         } else {
-            console.error('Input de quantia (#id_amount) não encontrado!');
+            console.error('Input #id_amount não encontrado');
         }
 
-        // Limpar input com icon-close
+        // Limpar input
         const clearIcon = document.querySelector('.icon-close');
         if (clearIcon) {
             clearIcon.addEventListener('click', (e) => {
                 e.preventDefault();
-                console.log('Limpando input de quantia');
+                console.log('Limpando quantia');
                 if (amountInput) amountInput.value = '';
             });
         } else {
-            console.error('Ícone de limpar (.icon-close) não encontrado!');
+            console.error('Ícone .icon-close não encontrado');
         }
 
-        // Função Sacar tudo
-        function sacarTudo() {
-            console.log('Executando sacarTudo', { balanceRaw, maxWithdrawDaily });
+        // Sacar tudo
+        function sacarTudo(e) {
+            e.preventDefault();
+            console.log('Sacar tudo clicado', { balanceRaw, maxWithdrawDaily });
+            alert('Sacar tudo clicado!');
             if (isNaN(balanceRaw) || isNaN(maxWithdrawDaily)) {
-                console.error('Erro: balanceRaw ou maxWithdrawDaily inválidos', { balanceRaw, maxWithdrawDaily });
-                document.getElementById('amount-error').textContent = 'Erro interno. Tente novamente.';
+                console.error('Variáveis inválidas', { balanceRaw, maxWithdrawDaily });
+                document.getElementById('amount-error').textContent = 'Erro interno. Contate o suporte.';
                 return;
             }
             let maxAmount = Math.min(balanceRaw, maxWithdrawDaily);
             if (amountInput) {
                 amountInput.value = formatarMoeda(maxAmount);
             } else {
-                console.error('Input de quantia (#id_amount) não encontrado em sacarTudo!');
+                console.error('Input #id_amount não encontrado');
             }
         }
 
         // Mostrar preview
-        function showPreview() {
-            console.log('Executando showPreview');
+        function showPreview(e) {
+            e.preventDefault();
+            console.log('Continuar clicado');
+            alert('Continuar clicado!');
             const pixKeyInput = document.getElementById('id_pix_key');
             const errorDiv = document.getElementById('amount-error');
             const pixKeyError = document.getElementById('pix-key-error');
@@ -465,7 +506,7 @@
             const footerBar = document.getElementById('footer-bar');
 
             if (!pixKeyInput || !errorDiv || !pixKeyError || !withdrawForm || !transactionPreview || !footerBar) {
-                console.error('Elementos do formulário não encontrados', { pixKeyInput, errorDiv, pixKeyError, withdrawForm, transactionPreview, footerBar });
+                console.error('Elementos não encontrados', { pixKeyInput, errorDiv, pixKeyError, withdrawForm, transactionPreview, footerBar });
                 return;
             }
 
@@ -480,7 +521,7 @@
 
             let amountStr = amountInput.value.replace(/[.,]/g, '');
             let amount = parseFloat(amountStr) / 100;
-            console.log('Valor inserido:', amount);
+            console.log('Valor:', amount);
 
             if (isNaN(amount) || amount <= 0) {
                 errorDiv.textContent = 'Quantia inválida.';
@@ -489,12 +530,12 @@
             }
             if (amount < minWithdraw) {
                 errorDiv.textContent = 'Quantia abaixo do mínimo.';
-                console.log('Erro: Quantia abaixo do mínimo', { amount, minWithdraw });
+                console.log('Erro: Abaixo do mínimo', { amount, minWithdraw });
                 return;
             }
             if (amount > maxWithdrawDaily) {
                 errorDiv.textContent = 'Quantia acima do máximo diário.';
-                console.log('Erro: Quantia acima do máximo diário', { amount, maxWithdrawDaily });
+                console.log('Erro: Acima do máximo', { amount, maxWithdrawDaily });
                 return;
             }
             if (amount > balanceRaw) {
@@ -514,7 +555,7 @@
 
         // Editar
         function editWithdraw() {
-            console.log('Executando editWithdraw');
+            console.log('Editar clicado');
             const withdrawForm = document.getElementById('withdraw-form');
             const transactionPreview = document.getElementById('transaction-preview');
             const footerBar = document.getElementById('footer-bar');
@@ -523,19 +564,18 @@
                 withdrawForm.style.display = 'block';
                 footerBar.style.display = 'block';
             } else {
-                console.error('Elementos não encontrados em editWithdraw', { withdrawForm, transactionPreview, footerBar });
+                console.error('Elementos não encontrados', { withdrawForm, transactionPreview, footerBar });
             }
         }
 
-        // Confirmar e abrir modal de PIN
+        // Confirmar PIN
         function confirmWithdraw() {
-            console.log('Executando confirmWithdraw');
+            console.log('Confirmar clicado');
             const otpModalElement = document.getElementById('otpPin');
             if (otpModalElement && typeof bootstrap !== 'undefined') {
-                var otpModal = new bootstrap.Modal(otpModalElement);
-                otpModal.show();
+                new bootstrap.Modal(otpModalElement).show();
             } else {
-                console.error('Modal de PIN ou Bootstrap não encontrado', { otpModalElement, bootstrap });
+                console.error('Modal ou Bootstrap não encontrado', { otpModalElement, bootstrap });
             }
         }
 
@@ -545,7 +585,7 @@
         if (pinInputs.length && confirmBtn) {
             pinInputs.forEach((input, index) => {
                 input.addEventListener('input', (e) => {
-                    console.log('Input de PIN', index + 1, 'valor:', e.target.value);
+                    console.log('PIN input', index + 1, ':', e.target.value);
                     if (e.target.value.length === 1 && index < pinInputs.length - 1) {
                         pinInputs[index + 1].focus();
                     }
@@ -555,17 +595,18 @@
                         pinInput.value = pin;
                         confirmBtn.disabled = pin.length !== 4;
                     } else {
-                        console.error('Input de PIN (#pin) não encontrado');
+                        console.error('Input #pin não encontrado');
                     }
                 });
             });
         } else {
-            console.error('Inputs de PIN ou botão Confirmar não encontrados', { pinInputs, confirmBtn });
+            console.error('PIN inputs ou Confirmar não encontrados', { pinInputs, confirmBtn });
         }
 
-        // Submeter formulário via AJAX
-        function submitWithdrawForm() {
-            console.log('Executando submitWithdrawForm');
+        // Submeter formulário
+        function submitWithdrawForm(e) {
+            e.preventDefault();
+            console.log('Submetendo formulário');
             const pinInput = document.getElementById('pin');
             if (!pinInput || pinInput.value.length !== 4) {
                 console.log('PIN inválido', { length: pinInput ? pinInput.value.length : 'não encontrado' });
@@ -574,7 +615,7 @@
 
             const form = document.getElementById('withdraw-form');
             if (!form) {
-                console.error('Formulário (#withdraw-form) não encontrado');
+                console.error('Form #withdraw-form não encontrado');
                 return;
             }
 
@@ -588,12 +629,12 @@
                 }
             })
             .then(response => {
-                console.log('Resposta do servidor:', response.status);
+                console.log('Resposta:', response.status);
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 return response.json();
             })
             .then(data => {
-                console.log('Dados recebidos:', data);
+                console.log('Dados:', data);
                 const pinMessage = document.getElementById('pin-message');
                 const otpModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('otpPin'));
                 if (data.success) {
@@ -601,8 +642,7 @@
                     showLoading();
                     setTimeout(() => {
                         document.getElementById('loading-overlay').classList.remove('active');
-                        const successModal = new bootstrap.Modal(document.getElementById('success'));
-                        successModal.show();
+                        new bootstrap.Modal(document.getElementById('success')).show();
                     }, 3000);
                 } else if (data.error_message.includes("PIN de saque inválido")) {
                     pinMessage.textContent = 'Senha incorreta. Tente novamente.';
@@ -617,22 +657,20 @@
                 } else {
                     otpModal.hide();
                     document.getElementById('error-message').textContent = data.error_message;
-                    const errorModal = new bootstrap.Modal(document.getElementById('error'));
-                    errorModal.show();
+                    new bootstrap.Modal(document.getElementById('error')).show();
                 }
             })
             .catch(error => {
-                console.error('Erro na requisição:', error);
+                console.error('Erro:', error);
                 bootstrap.Modal.getOrCreateInstance(document.getElementById('otpPin')).hide();
                 document.getElementById('error-message').textContent = 'Erro na conexão. Tente novamente.';
-                const errorModal = new bootstrap.Modal(document.getElementById('error'));
-                errorModal.show();
+                new bootstrap.Modal(document.getElementById('error')).show();
             });
         }
 
         // Mostrar loading
         function showLoading() {
-            console.log('Exibindo overlay de loading');
+            console.log('Mostrando loading');
             const loadingOverlay = document.getElementById('loading-overlay');
             const loadingMessage = document.getElementById('loading-message');
             if (loadingOverlay && loadingMessage) {
@@ -643,58 +681,40 @@
             }
         }
 
-        // Inicializar event listeners
+        // Inicializar
         document.addEventListener('DOMContentLoaded', () => {
-            console.log('DOM carregado, inicializando botões...');
+            console.log('DOM inicializado');
             const sacarTudoBtn = document.getElementById('sacar-tudo-btn');
             const continuarBtn = document.getElementById('continuar-btn');
             const confirmBtn = document.getElementById('confirm-btn');
 
             if (!sacarTudoBtn) {
-                console.error('Botão Sacar tudo (#sacar-tudo-btn) não encontrado!');
+                console.error('Botão #sacar-tudo-btn não encontrado');
             } else {
-                sacarTudoBtn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    console.log('Botão Sacar tudo clicado');
-                    sacarTudo();
-                });
-                // Teste de interatividade
-                sacarTudoBtn.addEventListener('click', () => alert('Sacar tudo clicado!'));
+                sacarTudoBtn.addEventListener('click', sacarTudo);
             }
 
             if (!continuarBtn) {
-                console.error('Botão Continuar (#continuar-btn) não encontrado!');
+                console.error('Botão #continuar-btn não encontrado');
             } else {
-                continuarBtn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    console.log('Botão Continuar clicado');
-                    showPreview();
-                });
-                // Teste de interatividade
-                continuarBtn.addEventListener('click', () => alert('Continuar clicado!'));
+                continuarBtn.addEventListener('click', showPreview);
             }
 
             if (!confirmBtn) {
-                console.error('Botão Confirmar (#confirm-btn) não encontrado!');
+                console.error('Botão #confirm-btn não encontrado');
             } else {
-                confirmBtn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    console.log('Botão Confirmar clicado');
-                    submitWithdrawForm();
-                });
+                confirmBtn.addEventListener('click', submitWithdrawForm);
             }
 
-            // Abrir modais de sucesso ou erro, se aplicável
+            // Modais iniciais
             {% if success %}
-            console.log('Exibindo modal de sucesso');
-            const successModal = new bootstrap.Modal(document.getElementById('success'));
-            successModal.show();
+            console.log('Modal sucesso');
+            new bootstrap.Modal(document.getElementById('success')).show();
             {% endif %}
 
             {% if error_message %}
-            console.log('Exibindo modal de erro');
-            const errorModal = new bootstrap.Modal(document.getElementById('error'));
-            errorModal.show();
+            console.log('Modal erro');
+            new bootstrap.Modal(document.getElementById('error')).show();
             {% endif %}
         });
     </script>
