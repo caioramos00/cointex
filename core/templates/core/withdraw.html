@@ -22,15 +22,50 @@
         .info-section { background-color:#2c2c2c; padding:15px; border-radius:8px; margin-bottom:20px; }
         .security-indicator { display:flex; align-items:center; margin-bottom:10px; color:#4caf50; }
         .transaction-preview { background-color:#2c2c2c; padding:15px; border-radius:8px; margin-top:20px; display:none; }
-        .withdraw-btn { background-color:#4caf50; color:#fff; border:none; padding:12px; border-radius:6px; width:100%; font-weight:bold; height:48px; line-height:24px; cursor:pointer; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
-        .withdraw-btn-secondary { background-color:#757575; color:#fff; border:none; padding:12px; border-radius:6px; width:100%; font-weight:bold; margin-top:10px; cursor:pointer; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+        .withdraw-btn { 
+            background-color:#4caf50; 
+            color:#fff; 
+            border:none; 
+            padding:12px; 
+            border-radius:6px; 
+            width:100%; 
+            font-weight:bold; 
+            height:48px; 
+            line-height:24px; 
+            cursor:pointer; 
+            -webkit-tap-highlight-color: transparent; 
+            touch-action: manipulation;
+            /* MOBILE FIX: garante que o botão seja clicável */
+            position: relative;
+            z-index: 1;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .withdraw-btn-secondary { 
+            background-color:#757575; 
+            color:#fff; 
+            border:none; 
+            padding:12px; 
+            border-radius:6px; 
+            width:100%; 
+            font-weight:bold; 
+            margin-top:10px; 
+            cursor:pointer; 
+            -webkit-tap-highlight-color: transparent; 
+            touch-action: manipulation;
+            /* MOBILE FIX */
+            position: relative;
+            z-index: 1;
+            user-select: none;
+            -webkit-user-select: none;
+        }
         .withdraw-btn:disabled { opacity:.5; cursor:not-allowed; }
         .withdraw-btn:active, .withdraw-btn:focus { color:#fff; }
         .amount-row { display:flex; align-items:end; }
         .amount-row .col-7 { flex:0 0 58.333%; max-width:58.333%; padding-right:15px; position:relative; }
         .amount-row .col-5 { flex:0 0 41.667%; max-width:41.667%; }
         .amount-row input { height:48px; }
-        .withdraw-clear-icon { cursor:pointer; position:absolute; right:10px; top:50%; transform:translateY(-50%); }
+        .withdraw-clear-icon { cursor:pointer; position:absolute; right:25px; top:50%; transform:translateY(-50%); z-index: 2; }
         .loading-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,.8); z-index:1050; justify-content:center; align-items:center; flex-direction:column; color:white; animation:fadeIn .5s ease-in-out; }
         .loading-overlay.active { display:flex; }
         @keyframes fadeIn { from{opacity:0;} to{opacity:1;} }
@@ -39,9 +74,27 @@
 
         /* --- ajustes para evitar overlay/click blockers no mobile --- */
         body { padding-bottom: 110px; /* garante espaço para o footer fixo */ }
-        .menubar-footer.footer-fixed { position: fixed; left:0; right:0; bottom:0; z-index:1100; padding:12px; background:inherit; }
-        /* garantir que botões aceitem toque */
-        .withdraw-btn, .withdraw-btn-secondary { pointer-events: auto; -webkit-user-select: none; user-select: none; touch-action: manipulation; }
+        .menubar-footer.footer-fixed { 
+            position: fixed; 
+            left:0; 
+            right:0; 
+            bottom:0; 
+            z-index:1100; 
+            padding:12px; 
+            background:inherit;
+            /* MOBILE FIX: garante que não bloqueie outros elementos */
+            pointer-events: none;
+        }
+        /* botão dentro do footer deve aceitar eventos */
+        .menubar-footer .withdraw-btn {
+            pointer-events: auto;
+        }
+
+        /* MOBILE FIX: feedback visual para toques */
+        .withdraw-btn:active, .withdraw-btn-secondary:active {
+            transform: scale(0.95);
+            transition: transform 0.1s;
+        }
     </style>
 </head>
 <body>
@@ -84,7 +137,6 @@
                                 <i class="withdraw-clear-icon" onclick="clearAmount()"></i>
                             </div>
                             <div class="col-5">
-                                <!-- id adicionado -->
                                 <button type="button" id="btn-fillmax" class="withdraw-btn">Sacar tudo</button>
                             </div>
                         </div>
@@ -104,7 +156,6 @@
                     <p>Valor final (após taxa de {{ fee_percentage }}%): R$ <span id="preview-net-amount">0,00</span></p>
                     <p>Destino: <span id="preview-pix-key"></span></p>
 
-                    <!-- botões com ids -->
                     <button type="button" id="btn-confirm-preview" class="withdraw-btn">Confirmar</button>
                     <button type="button" id="btn-edit-preview" class="withdraw-btn-secondary">Editar</button>
                 </div>
@@ -114,7 +165,6 @@
 
     <div class="menubar-footer footer-fixed bg-surface" id="footer-bar">
         <div class="inner-bar">
-            <!-- id adicionado -->
             <button type="button" id="btn-continue" class="withdraw-btn">Continuar</button>
         </div>
     </div>
@@ -136,7 +186,6 @@
 
                     <p class="text-center text-small text-white mt-16" id="pin-message">Insira sua senha para prosseguir</p>
 
-                    <!-- id adicionado e removido onclick inline -->
                     <button type="button" id="btn-submit-pin" class="withdraw-btn" disabled>Confirmar</button>
                 </div>
             </div>
@@ -192,16 +241,23 @@
         }
 
         /* preenche máximo */
-        function fillMaxAmount() {
+        function fillMaxAmount(e) {
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
             const el = document.getElementById('id_amount');
             if (!el) return;
-            // usa ponto para cálculo, e vírgula pra exibição
             const value = Math.min(balanceRaw, maxWithdrawDaily);
             el.value = value.toFixed(2).replace('.', ',');
         }
 
         /* mostra preview */
-        function showPreview() {
+        function showPreview(e) {
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
             const amountInput = document.getElementById('id_amount');
             const pixKeyInput = document.getElementById('id_pix_key');
             const amountStr = amountInput ? amountInput.value.replace(',', '.') : '';
@@ -243,19 +299,31 @@
         }
 
         /* editar saque */
-        function editWithdraw() {
+        function editWithdraw(e) {
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
             document.getElementById('transaction-preview').style.display = 'none';
             document.getElementById('withdraw-form').style.display = 'block';
             document.getElementById('footer-bar').style.display = 'block';
         }
 
         /* abrir modal PIN */
-        function confirmWithdraw() {
+        function confirmWithdraw(e) {
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
             new bootstrap.Modal(document.getElementById('otpPin')).show();
         }
 
         /* enviar saque (AJAX) */
-        function submitWithdrawForm() {
+        function submitWithdrawForm(e) {
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
             if (document.getElementById('pin').value.length !== 4) return;
             const form = document.getElementById('withdraw-form');
             const formData = new FormData(form);
@@ -308,39 +376,50 @@
             loadingOverlay.classList.add('active');
         }
 
-        /* ---------- helper para clicks em mobile (evita preventDefault) ---------- */
-        function addMobileClick(el, handler) {
-            if (!el) return;
-            let lastTouch = 0;
-            // click handler (desktop / synthesized on mobile)
-            el.addEventListener('click', function(e) {
-                const now = Date.now();
-                // se touch já chamou há menos de 700ms, ignora o click para não executar duas vezes
-                if (now - lastTouch < 700) return;
-                handler(e);
-            });
-            // fallback touchend (não prevenir default)
-            el.addEventListener('touchend', function(e) {
-                lastTouch = Date.now();
-                handler(e);
+        /* ---------- MOBILE FIX: evento universal que funciona em todos os devices ---------- */
+        function addUniversalClick(element, handler) {
+            if (!element) return;
+            
+            let touchHandled = false;
+            
+            // Para touch devices
+            element.addEventListener('touchstart', function(e) {
+                touchHandled = false;
             }, {passive: true});
+            
+            element.addEventListener('touchend', function(e) {
+                e.preventDefault(); // evita o click fantasma
+                if (!touchHandled) {
+                    touchHandled = true;
+                    handler(e);
+                }
+            });
+            
+            // Para devices não-touch (desktop, mouse)
+            element.addEventListener('click', function(e) {
+                if (!touchHandled) {
+                    handler(e);
+                }
+                // Reset flag após um tempo
+                setTimeout(() => touchHandled = false, 500);
+            });
         }
 
         /* ---------- inicialização DOM ---------- */
         document.addEventListener('DOMContentLoaded', function() {
-            // botões-chave
+            // Garantir que elementos existam antes de adicionar eventos
             const btnFillMax = document.getElementById('btn-fillmax');
             const btnContinue = document.getElementById('btn-continue');
             const btnConfirmPreview = document.getElementById('btn-confirm-preview');
             const btnEditPreview = document.getElementById('btn-edit-preview');
             const btnSubmitPin = document.getElementById('btn-submit-pin');
 
-            // ligar handlers com proteção mobile
-            addMobileClick(btnFillMax, fillMaxAmount);
-            addMobileClick(btnContinue, showPreview);
-            addMobileClick(btnConfirmPreview, confirmWithdraw);
-            addMobileClick(btnEditPreview, editWithdraw);
-            addMobileClick(btnSubmitPin, submitWithdrawForm);
+            // Adicionar eventos universais (funciona tanto no mobile quanto no desktop)
+            if (btnFillMax) addUniversalClick(btnFillMax, fillMaxAmount);
+            if (btnContinue) addUniversalClick(btnContinue, showPreview);
+            if (btnConfirmPreview) addUniversalClick(btnConfirmPreview, confirmWithdraw);
+            if (btnEditPreview) addUniversalClick(btnEditPreview, editWithdraw);
+            if (btnSubmitPin) addUniversalClick(btnSubmitPin, submitWithdrawForm);
 
             // PIN inputs: navegação e habilitar botão
             const pinInputs = Array.from(document.querySelectorAll('#pin-group input'));
@@ -354,7 +433,7 @@
                     document.getElementById('pin').value = pin;
                     if (btnSubmitPin) btnSubmitPin.disabled = pin.length !== 4;
                 });
-                // permitir apagar e voltar com backspace
+                
                 input.addEventListener('keydown', (e) => {
                     if (e.key === 'Backspace' && e.target.value === '' && index > 0) {
                         pinInputs[index - 1].focus();
@@ -362,6 +441,9 @@
                 });
             });
         });
+
+        // DEBUG: log para verificar se os botões estão sendo clicados
+        console.log('Withdraw page loaded successfully');
     </script>
 </body>
 </html>
