@@ -4,14 +4,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, viewport-fit=cover">
-    <!-- font -->
     <link rel="stylesheet" href="{% static 'fonts/fonts.css' %}">
-    <!-- Icons -->
     <link rel="stylesheet" href="{% static 'fonts/font-icons.css' %}">
     <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
     <link rel="stylesheet" type="text/css" href="{% static 'css/styles.css' %}"/>
- 
-    <!-- Favicon and Touch Icons -->
     <link rel="shortcut icon" href="{% static 'images/logo/48.png' %}" />
     <link rel="apple-touch-icon-precomposed" href="{% static 'images/logo/48.png' %}" />
     <title>Sacar</title>
@@ -87,7 +83,7 @@
             margin: 8px 0;
             font-size: 15px;
         }
-        .tf-btn.primary {
+        .tf-btn.withdraw-primary {
             background-color: #4caf50;
             color: #fff;
             border: none;
@@ -102,17 +98,17 @@
             -webkit-tap-highlight-color: transparent;
             touch-action: manipulation;
         }
-        .tf-btn.primary:disabled {
+        .tf-btn.withdraw-primary:disabled {
             opacity: 0.5;
             cursor: not-allowed;
         }
-        .tf-btn.primary:active, .tf-btn.primary:focus {
+        .tf-btn.withdraw-primary:active, .tf-btn.withdraw-primary:focus {
             color: #fff;
         }
-        .tf-btn.primary:hover {
+        .tf-btn.withdraw-primary:hover {
             background-color: #388e3c;
         }
-        .tf-btn.secondary {
+        .tf-btn.withdraw-secondary {
             background-color: #757575;
             color: #fff;
             border: none;
@@ -125,7 +121,7 @@
             -webkit-tap-highlight-color: transparent;
             touch-action: manipulation;
         }
-        .tf-btn.secondary:hover {
+        .tf-btn.withdraw-secondary:hover {
             background-color: #616161;
         }
         .error-message {
@@ -145,6 +141,7 @@
             flex: 0 0 58.333%;
             max-width: 58.333%;
             padding-right: 15px;
+            position: relative;
         }
         .amount-row .col-5 {
             flex: 0 0 41.667%;
@@ -153,7 +150,7 @@
         .amount-row input {
             height: 48px;
         }
-        .clear-icon {
+        .withdraw-clear-icon {
             cursor: pointer;
             position: absolute;
             right: 10px;
@@ -225,7 +222,7 @@
                 </div>
                 <div class="security-indicator">
                     <i class="icon-lock"></i>
-                    <span>Saque protegido por PIN.1905</span>
+                    <span>Saque protegido por PIN.</span>
                 </div>
                 <form method="post" id="withdraw-form" action="{% url 'core:withdraw_balance' %}">
                     {% csrf_token %}
@@ -243,10 +240,10 @@
                         <div class="amount-row">
                             <div class="col-7 box-input-field pe-0">
                                 {{ form.amount }}
-                                <i class="clear-icon" onclick="clearAmount()"></i>
+                                <i class="withdraw-clear-icon" onclick="clearAmount()"></i>
                             </div>
                             <div class="col-5">
-                                <button type="button" class="tf-btn primary" onclick="sacarTudo()">Sacar tudo</button>
+                                <button type="button" class="tf-btn withdraw-primary" onclick="sacarTudo()">Sacar tudo</button>
                             </div>
                         </div>
                         <div id="amount-error" class="error-message"></div>
@@ -261,15 +258,15 @@
                     <p>Valor a sacar: R$ <span id="preview-amount">0,00</span></p>
                     <p>Valor final (após taxa de {{ fee_percentage }}%): R$ <span id="preview-net-amount">0,00</span></p>
                     <p>Destino: <span id="preview-pix-key"></span></p>
-                    <button type="button" class="tf-btn primary" onclick="confirmWithdraw()">Confirmar</button>
-                    <button type="button" class="tf-btn secondary" onclick="editWithdraw()">Editar</button>
+                    <button type="button" class="tf-btn withdraw-primary" onclick="confirmWithdraw()">Confirmar</button>
+                    <button type="button" class="tf-btn withdraw-secondary" onclick="editWithdraw()">Editar</button>
                 </div>
             </div>
         </div>
     </div>
     <div class="menubar-footer footer-fixed bg-surface" id="footer-bar">
         <div class="inner-bar">
-            <button type="button" class="tf-btn lg primary" onclick="showPreview()">Continuar</button>
+            <button type="button" class="tf-btn withdraw-primary" onclick="showPreview()">Continuar</button>
         </div>
     </div>
     <div class="modal fade modalCenter" id="otpPin">
@@ -287,7 +284,7 @@
                         <input required type="text" id="digit-4" name="digit-4" data-previous="digit-3" maxlength="1">
                     </div>
                     <p class="text-center text-small text-white mt-16" id="pin-message">Insira sua senha para prosseguir</p>
-                    <button type="button" class="tf-btn lg primary" onclick="submitWithdrawForm()" disabled>Confirmar</button>
+                    <button type="button" class="tf-btn withdraw-primary" onclick="submitWithdrawForm()" disabled>Confirmar</button>
                 </div>
             </div>
         </div>
@@ -307,7 +304,7 @@
                     <p class="mt-16 text-surface text-button">Via PIX para</p>
                     <p class="text-small mt-4">{{ pix_key }}</p>
                 </div>
-                <a href="{% url 'core:home' %}" class="tf-btn lg primary mt-40">Voltar à Home</a>
+                <a href="{% url 'core:home' %}" class="tf-btn withdraw-primary mt-40">Voltar à Home</a>
             </div>
         </div>
     </div>
@@ -318,13 +315,13 @@
                     <h2 class="text-surface">Erro!</h2>
                     <p class="text-small mt-8" id="error-message">{{ error_message|default:"Ocorreu um erro no saque. Tente novamente." }}</p>
                 </div>
-                <button class="tf-btn lg primary mt-40" data-bs-dismiss="modal">Fechar</button>
+                <button class="tf-btn withdraw-primary mt-40" data-bs-dismiss="modal">Fechar</button>
             </div>
         </div>
     </div>
   
-    <script type="text/javascript" src="{% static 'js/bootstrap.min.js' %}"></script>
     <script type="text/javascript" src="{% static 'js/jquery.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'js/bootstrap.min.js' %}"></script>
     <script type="text/javascript" src="{% static 'js/main.js' %}"></script>
     <script>
         const balanceRaw = {{ balance_raw|default:0 }};
@@ -333,19 +330,15 @@
         const maxWithdrawDaily = {{ max_withdraw_daily|default:'Infinity' }};
 
         function formatarMoeda(value) {
-            let valor = parseFloat(value);
-            if (isNaN(valor)) return '0,00';
-            valor = valor.toFixed(2).replace('.', ',');
-            valor = valor.replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.');
-            return valor;
+            let valor = parseFloat(value) || 0;
+            return valor.toFixed(2).replace('.', ',').replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.');
         }
 
         const amountInput = document.getElementById('id_amount');
         amountInput.addEventListener('input', (e) => {
-            let rawValue = e.target.value.replace(/\D/g, '');
+            let rawValue = e.target.value.replace(/[^\d]/g, '');
             if (rawValue) {
-                rawValue = parseFloat(rawValue) / 100;
-                e.target.value = formatarMoeda(rawValue);
+                e.target.value = formatarMoeda(rawValue / 100);
             } else {
                 e.target.value = '';
             }
@@ -353,13 +346,12 @@
 
         function clearAmount() {
             amountInput.value = '';
-            amountInput.focus();
         }
 
         function sacarTudo() {
             let maxAmount = Math.min(balanceRaw, maxWithdrawDaily);
             amountInput.value = formatarMoeda(maxAmount);
-            amountInput.focus();
+            console.log('Sacar tudo clicked, set value:', amountInput.value);
         }
 
         function showPreview() {
@@ -370,7 +362,7 @@
             const pixKeyError = document.getElementById('pix-key-error');
             errorDiv.textContent = '';
             pixKeyError.textContent = '';
-            if (pixKeyInput.value.trim() === '') {
+            if (!pixKeyInput.value.trim()) {
                 pixKeyError.textContent = 'Chave PIX obrigatória.';
                 return;
             }
@@ -397,6 +389,7 @@
             document.getElementById('withdraw-form').style.display = 'none';
             document.getElementById('transaction-preview').style.display = 'block';
             document.getElementById('footer-bar').style.display = 'none';
+            console.log('Continuar clicked, showing preview');
         }
 
         function editWithdraw() {
@@ -406,8 +399,7 @@
         }
 
         function confirmWithdraw() {
-            var otpModal = new bootstrap.Modal(document.getElementById('otpPin'));
-            otpModal.show();
+            new bootstrap.Modal(document.getElementById('otpPin')).show();
         }
 
         const pinInputs = document.querySelectorAll('.digit-group input');
@@ -426,8 +418,8 @@
 
         function submitWithdrawForm() {
             if (document.getElementById('pin').value.length === 4) {
-                var form = document.getElementById('withdraw-form');
-                var formData = new FormData(form);
+                let form = document.getElementById('withdraw-form');
+                let formData = new FormData(form);
                 fetch(form.action, {
                     method: 'POST',
                     body: formData,
@@ -437,21 +429,18 @@
                     }
                 })
                 .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                     return response.json();
                 })
                 .then(data => {
-                    var pinMessage = document.getElementById('pin-message');
-                    var otpModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('otpPin'));
+                    let pinMessage = document.getElementById('pin-message');
+                    let otpModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('otpPin'));
                     if (data.success) {
                         otpModal.hide();
                         showLoading();
                         setTimeout(() => {
                             document.getElementById('loading-overlay').classList.remove('active');
-                            var successModal = new bootstrap.Modal(document.getElementById('success'));
-                            successModal.show();
+                            new bootstrap.Modal(document.getElementById('success')).show();
                         }, 3000);
                     } else {
                         pinMessage.textContent = data.error_message.includes("PIN de saque inválido") ? 'Senha incorreta. Tente novamente.' : data.error_message;
@@ -468,28 +457,31 @@
                 .catch(error => {
                     bootstrap.Modal.getOrCreateInstance(document.getElementById('otpPin')).hide();
                     document.getElementById('error-message').textContent = 'Erro na conexão. Tente novamente.';
-                    var errorModal = new bootstrap.Modal(document.getElementById('error'));
-                    errorModal.show();
+                    new bootstrap.Modal(document.getElementById('error')).show();
                 });
             }
         }
 
         function showLoading() {
-            var loadingOverlay = document.getElementById('loading-overlay');
-            var loadingMessage = document.getElementById('loading-message');
+            let loadingOverlay = document.getElementById('loading-overlay');
+            let loadingMessage = document.getElementById('loading-message');
             loadingMessage.textContent = 'Processando pagamento...';
             loadingOverlay.classList.add('active');
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            document.querySelector('.preload-container').style.display = 'none';
+            jQuery('.preload').fadeOut('slow', function() { jQuery(this).remove(); });
+            document.querySelectorAll('.tf-btn.withdraw-primary').forEach(btn => {
+                btn.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    if (btn.onclick) btn.onclick();
+                });
+            });
             {% if success %}
-            var successModal = new bootstrap.Modal(document.getElementById('success'));
-            successModal.show();
+            new bootstrap.Modal(document.getElementById('success')).show();
             {% endif %}
             {% if error_message %}
-            var errorModal = new bootstrap.Modal(document.getElementById('error'));
-            errorModal.show();
+            new bootstrap.Modal(document.getElementById('error')).show();
             {% endif %}
         });
     </script>
