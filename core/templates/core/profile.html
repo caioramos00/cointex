@@ -1,0 +1,192 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, viewport-fit=cover">
+    <!-- font -->
+    <link rel="stylesheet" href="{% static 'fonts/fonts.css' %}">
+    <!-- Icons -->
+    <link rel="stylesheet" href="{% static 'fonts/font-icons.css' %}">
+    <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/styles.css' %}"/>
+
+   
+    <!-- Favicon and Touch Icons  -->
+    <link rel="shortcut icon" href="{% static 'images/logo/48.png' %}" />
+    <link rel="apple-touch-icon-precomposed" href="{% static 'images/logo/48.png' %}" />
+
+    <title>Perfil</title>
+</head>
+
+<body>
+    <!-- preloade -->
+    <div class="preload preload-container">
+        <div class="preload-logo" style="background-image: url('{% static 'images/logo/144.png' %}')">
+            <div class="spinner"></div>
+        </div>
+    </div>
+    <!-- /preload --> 
+    <div class="header fixed-top bg-surface">
+        <a href="javascript:void(0);" class="left back-btn"><i class="icon-left-btn"></i></a>
+        <a href="{% url 'core:home' %}" class="right"><i class="icon-home2 fs-20"></i></a>
+
+    </div>
+    <div class="pt-45 pb-16">
+        <div class="tf-container">
+            <a href="{% url 'core:verification' %}" data-title="Verificação" class="nested-link mt-16 d-flex justify-content-between align-items-center">
+                <div class="box-left">
+                    <h5 class="mb-8">Verificação</h5>
+                    <span class="{{ verification_class }}">{{ verification_status }}</span>
+                </div>
+                <span class="icon-arr-right text-secondary fs-12"></span>
+            </a>
+            <ul class="mt-16 pb-12 line-bt">
+                <li>
+                    <a href="javascript:void(0);" class="d-flex justify-content-between align-items-center">
+                        <p class="text-small">UID</p>
+                        <span class="text-secondary d-flex gap-8 align-items-center">{{ uid }} <i class="icon-copy fs-16 text-secondary"></i></span>
+                    </a>
+                </li>
+            </ul>
+            <ul class="mt-16 pb-16 line-bt">
+                <li>
+                    <h5>Configurações</h5>
+                </li>
+                <li>
+                    <a href="{% url 'core:change_name' %}" class="mt-16 d-flex justify-content-between align-items-center">
+                        <p class="text-small">Nome</p>
+                        <span class="text-secondary d-flex gap-8 align-items-center">{{ full_name }} <i class="icon-arr-right fs-12 text-secondary"></i></span>
+                    </a>
+                </li>
+                <li data-bs-toggle="modal" data-bs-target="#changeProfile">
+                    <a href="javascript:void(0);" class="mt-16 d-flex justify-content-between align-items-center">
+                        <p class="text-small">Foto de perfil</p>
+                        <span class="icon-arr-right text-secondary fs-12"></span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{% url 'core:change_email' %}" class="mt-16 d-flex justify-content-between align-items-center">
+                        <p class="text-small">E-mail</p>
+                        <span class="text-secondary d-flex gap-8 align-items-center">{{ request.user.email }} <i class="icon-arr-right fs-12 text-secondary"></i></span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{% url 'core:change_phone' %}" class="mt-16 d-flex justify-content-between align-items-center">
+                        <p class="text-small">Telefone</p>
+                        <span class="text-secondary d-flex gap-8 align-items-center">{{ request.user.phone_number|default:'Não informado' }} <i class="icon-arr-right fs-12 text-secondary"></i></span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{% url 'core:change_password' %}" class="mt-16 d-flex justify-content-between align-items-center">
+                        <p class="text-small">Senha</p>
+                        <span class="icon-arr-right text-secondary fs-12"></span>
+                    </a>
+                </li>
+                <!--
+                <li>
+                    <a href="option.html" class="mt-16 d-flex justify-content-between align-items-center">
+                        <p class="text-small">Opções</p>
+                        <span class="icon-arr-right text-secondary fs-12"></span>
+                    </a>
+                </li>
+                <li>
+                    <a href="security-center.html" class="mt-16 d-flex justify-content-between align-items-center">
+                        <p class="text-small">Centro de segurança</p>
+                        <span class="icon-arr-right text-secondary fs-12"></span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="mt-16 d-flex justify-content-between align-items-center">
+                        <p class="text-small">Privacidade</p>
+                        <span class="icon-arr-right text-secondary fs-12"></span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="mt-16 d-flex justify-content-between align-items-center">
+                        <p class="text-small">Autorizações</p>
+                        <span class="icon-arr-right text-secondary fs-12"></span>
+                    </a>
+                </li>
+                -->
+               
+            </ul>
+            <span class="text-button mt-32 d-flex justify-content-center text-red fw-6" data-bs-toggle="modal" data-bs-target="#logout">
+                Sair
+            </span>
+        </div>
+    </div>
+    <!-- modal logout -->
+    <div class="modal fade modalCenter" id="logout">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content modal-sm">
+                <div class="p-16 line-bt">
+                    <h4 class="text-center">Sair</h4>
+                    <p class="mt-12 text-center text-large">Tem certeza de que deseja sair?</p>
+                </div>
+                <div class="grid-2">
+                   <a href="#" class="line-r text-center text-button fw-6 p-10" data-bs-dismiss="modal">Cancelar</a>
+                   <a href="{% url 'accounts:logout_view' %}" class="text-center text-button fw-6 p-10 text-red">Sair</a>
+                </div>
+               
+            </div>
+        </div>
+    </div>
+    <!-- modal change profile -->
+    <div class="modal fade modalCenter" id="changeProfile">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content modal-sm">
+                <div class="p-16 line-bt">
+                    <h4 class="text-center">Alterar foto de perfil</h4>
+                    <p class="mt-2 text-center text-large">Essa função está indisponível no momento.</p>
+                </div>
+                <div class="grid-2">
+                   <a href="#" class="line-r text-center text-button fw-6 p-12" data-bs-dismiss="modal">Cancelar</a>
+                   <a href="#" class="text-center text-button fw-6 p-12 text-primary" data-bs-dismiss="modal">Confirmar</a>
+                </div>
+               
+            </div>
+        </div>
+    </div>
+    <!-- modal change profile picture-->
+    <div class="modal fade action-sheet" id="filterPicture">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <span>Foto</span>
+                    <span class="icon-cancel" data-bs-dismiss="modal"></span>
+                </div>
+                <ul class="mt-20 pb-16">
+                    <li data-bs-dismiss="modal"><div class="d-flex justify-content-between align-items-center gap-8 text-large  item-check active">Tirar uma foto <i class="icon icon-check-circle"></i> </div></li>
+                    <li class="mt-4" data-bs-dismiss="modal"><div class="d-flex  justify-content-between gap-8 text-large item-check">Selecionar foto do álbum <i class="icon icon-check-circle"></i></div></li>
+                </ul>
+            </div>
+            
+        </div>
+    </div>
+     <!-- account -->
+     <div class="modal fade action-sheet" id="account">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <span>Carteira</span>
+                    <span class="icon-cancel" data-bs-dismiss="modal"></span>
+                </div>
+                <ul class="mt-20 pb-16">
+                    <li data-bs-dismiss="modal"><div class="d-flex justify-content-between align-items-center gap-8 text-large item-check active">Conta 1 <i class="icon icon-check-circle"></i> </div></li>
+                    <li class="mt-4" data-bs-dismiss="modal"><div class="d-flex  justify-content-between gap-8 text-large item-check">Conta 2<i class="icon icon-check-circle"></i></div></li>
+                </ul>
+            </div>
+            
+        </div>
+    </div>
+
+    <script type="text/javascript" src="{% static 'js/bootstrap.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'js/jquery.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'js/main.js' %}"></script>
+
+    <script>
+    </script>
+    
+</body>
+</html>

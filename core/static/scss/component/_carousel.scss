@@ -1,0 +1,33 @@
+.swiper-wrapper-r {
+    margin-right: -16px;
+}
+
+.market-swiper {
+    position: relative;
+    .menu-tab-v3 {
+        gap: 0;
+        border: 0;
+        .swiper-slide {
+            width: auto;
+            .icon-star {
+                color: var(--remake);
+            }
+        }
+    }
+}
+
+.dots-tes {
+    position: unset;
+    .swiper-pagination-bullet {
+        width: 4px;
+        height: 4px;
+        background-color: #b9b9bf;
+        opacity: 0.5;
+    }
+    .swiper-pagination-bullet-active {
+        background-color: $primary;
+        opacity: 1;
+        width: 28px;
+        border-radius: 30px;
+    }
+}

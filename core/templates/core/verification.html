@@ -1,0 +1,85 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, viewport-fit=cover">
+
+    <!-- font -->
+    <link rel="stylesheet" href="{% static 'fonts/fonts.css' %}">
+    <!-- Icons -->
+    <link rel="stylesheet" href="{% static 'fonts/font-icons.css' %}">
+    <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/styles.css' %}"/>
+
+   
+    <!-- Favicon and Touch Icons  -->
+    <link rel="shortcut icon" href="{% static 'images/logo/48.png' %}" />
+    <link rel="apple-touch-icon-precomposed" href="{% static 'images/logo/48.png' %}" />
+
+    <title>Verificação</title>
+</head>
+
+<body>
+
+    <div class="header fixed-top bg-surface d-flex justify-content-center align-items-center">
+        <a href="javascript:void(0);" class="left back-btn"><i class="icon-left-btn"></i></a>
+        <h3>Verificação</h3>
+        <a href="javascript:void(0);" class="right"><i class="icon-question"></i></a>
+    </div>
+    <div class="pt-45 pb-16">
+        <div class="tf-container">
+            <div class="accent-box bg-menuDark mt-4">
+                <h4>Verificação básica</h4>
+                <h5 class="mt-20">Recursos e limitações</h5>
+                <ul class="pt-16 pb-12 line-bt">
+                    <li class="d-flex justify-content-between align-items-center">
+                        <span class="text-small">Depósito</span>
+                        <span class="text-white text-large">R$ 5.000 por mês</span>
+                    </li>
+                    <li class="mt-12 d-flex justify-content-between align-items-center">
+                        <span class="text-small">Saque</span>
+                        <span class="text-white text-large">R$ 5.000 por mês</span>
+                    </li>
+                </ul>
+                <h5 class="mt-12">Requisitos</h5>
+                <div class="mt-16 d-flex gap-8 mr--16">
+                    <p class="text-small text-white d-flex align-items-center gap-6"><i class="dot-md bg-secondary"></i> Informações pessoais</p>
+                    <p class="text-small text-white d-flex align-items-center gap-6"><i class="dot-md bg-secondary"></i> Endereço de residência</p>
+                </div>
+                {% if not is_verified %}
+                <a href="{% url 'core:verification_choose_type' %}" data-title="Escolha o Tipo de Verificação" class="nested-link tf-btn xs primary mt-12">Iniciar verificação</a>
+                {% endif %}
+            </div>
+            <div class="accent-box bg-menuDark mt-16">
+                <h4>Verificação avançada</h4>
+                <h5 class="mt-20">Recursos e limitações</h5>
+                <ul class="pt-16 pb-12 line-bt">
+                    <li class="d-flex justify-content-between align-items-center">
+                        <span class="text-small">Depósito</span>
+                        <span class="text-white text-large">Ilimitado</span>
+                    </li>
+                    <li class="mt-12 d-flex justify-content-between align-items-center">
+                        <span class="text-small">Saque</span>
+                        <span class="text-white text-large">Ilimitado</span>
+                    </li>
+                </ul>
+                <h5 class="mt-12">Requisitos</h5>
+                <div class="mt-16 d-flex cg-8 rg-12 mr--16 flex-wrap">
+                    <p class="text-small text-white d-flex align-items-center gap-6"><i class="dot-md bg-secondary"></i> Verificação bancária</p>
+                </div>
+                {% if is_verified and not is_advanced_verified %}
+                <a href="verification-advanced.html" data-title="Iniciar Verificação Avançada" class="nested-link tf-btn xs primary mt-12" style="opacity: 0.5; pointer-events: none;">Iniciar verificação</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    
+    <script type="text/javascript" src="{% static 'js/bootstrap.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'js/jquery.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'js/main.js' %}"></script>
+
+    
+</body>
+</html>

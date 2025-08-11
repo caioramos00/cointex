@@ -1,0 +1,159 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, viewport-fit=cover">
+    <!-- font -->
+    <link rel="stylesheet" href="{% static 'fonts/fonts.css' %}">
+    <!-- Icons -->
+    <link rel="stylesheet" href="{% static 'fonts/font-icons.css' %}">
+    <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/styles.css' %}"/>
+  
+    <!-- Favicon and Touch Icons -->
+    <link rel="shortcut icon" href="{% static 'images/logo/48.png' %}" />
+    <link rel="apple-touch-icon-precomposed" href="{% static 'images/logo/48.png' %}" />
+    <title>Enviar Saldo</title>
+
+    <style>
+        /* Ajuste para alinhamento vertical do icon-close */
+        .box-input-field .icon-close {
+            position: absolute;
+            top: 50%;
+            right: 10px;
+            transform: translateY(-50%);
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <!-- preloade -->
+    <div class="preload preload-container">
+        <div class="preload-logo" style="background-image: url('{% static 'images/logo/144.png' %}')">
+            <div class="spinner"></div>
+        </div>
+    </div>
+    <!-- /preload -->
+    <div class="header fixed-top bg-surface d-flex justify-content-center align-items-center">
+        <a href="{% url 'core:home' %}" class="left back-btn"><i class="icon-left-btn"></i></a>
+        <h3>Enviar Saldo</h3>
+    </div>
+    <div class="pt-45 pb-90">
+        <div class="tf-container">
+            <div class="mt-4 accent-box-v2 bg-menuDark">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span>Seu Saldo:</span>
+                    <h5>R$ {{ formatted_balance|default:"0,00" }}</h5>  <!-- Mostra o saldo do balance da Wallet (BRL) -->
+                </div>
+                <form method="post" id="send-form">
+                    {% csrf_token %}
+                    <div class="mt-12 box-input-field">
+                        <label for="id_recipient_email" class="text-small">Email do Destinatário</label>
+                        <input type="email" name="recipient_email" id="id_recipient_email" required style="border: 1px solid var(--line); padding: 10px; border-radius: 5px; width: 100%;">
+                    </div>
+                    <div class="mt-12 box-input-field">
+                        <label for="id_amount" class="text-small">Quantia</label>
+                        <input type="text" name="amount" value="50" required class="clear-ip value_input ip-style2" id="id_amount" style="border: 1px solid var(--line); padding: 10px; border-radius: 5px; width: 100%;">
+                        <i class="icon-close"></i>  <!-- Ajuste de alinhamento via CSS acima -->
+                    </div>
+                </form>
+            </div>
+            <h5 class="mt-20">Valor para Enviar</h5>
+            <ul class="grid-3 gap-12 mt-16">
+                <li><a href="javascript:void(0);" class="tag-money text-small">R$50</a></li>
+                <li><a href="javascript:void(0);" class="tag-money text-small">R$100</a></li>
+                <li><a href="javascript:void(0);" class="tag-money text-small">R$200</a></li>
+                <li><a href="javascript:void(0);" class="tag-money text-small">R$500</a></li>
+                <li><a href="javascript:void(0);" class="tag-money text-small">R$1000</a></li>
+                <li><a href="javascript:void(0);" class="tag-money text-small">R$2000</a></li>
+            </ul>
+           
+        </div>
+    </div>
+    <div class="menubar-footer footer-fixed bg-surface">
+        <div class="inner-bar">
+            <button type="submit" form="send-form" class="tf-btn lg primary">Enviar</button>
+        </div>
+    </div>
+
+    <!-- Modal de Sucesso -->
+    <div class="modal fade modalCenter" id="success">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content success_box">
+                <div class="text-center">
+                    <h2 class="text-surface">Sucesso!</h2>
+                    <p class="text-small mt-8">Sua transferência foi realizada!</p>
+                    <h5 class="mt-16 text-surface">Valor transferido</h5>
+                    <h1 class="mt-8 text-primary">R$ {{ transaction_amount|default:"0,00" }}</h1>
+                    <p class="mt-16 text-surface text-button">Para</p>
+                    <p class="text-small mt-4">{{ recipient_email }}</p>
+                </div>
+                <a href="{% url 'core:home' %}" class="tf-btn lg primary mt-40">Voltar à Home</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Erro -->
+    <div class="modal fade modalCenter" id="error">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content success_box">  <!-- Reutilizando estilo, mas ajuste se quiser cor vermelha -->
+                <div class="text-center">
+                    <h2 class="text-surface">Erro!</h2>
+                    <p class="text-small mt-8">{{ error_message|default:"Ocorreu um erro na transferência. Tente novamente." }}</p>
+                </div>
+                <button class="tf-btn lg primary mt-40" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+   
+    <script type="text/javascript" src="{% static 'js/bootstrap.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'js/jquery.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'js/main.js' %}"></script>
+
+    <!-- JS para preencher input com tags pré-definidas e máscara monetária -->
+    <script>
+        // Função para formatar valor como monetário BR (ex: 1.234,56)
+        function formatarMoeda(input) {
+            let valor = input.value.replace(/\D/g, '');  // Remove não números
+            valor = (valor / 100).toFixed(2) + '';  // Divide por 100 e fixa 2 decimais
+            valor = valor.replace('.', ',');  // Troca ponto por vírgula
+            valor = valor.replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.');  // Adiciona pontos como milhar
+            input.value = valor;
+        }
+
+        // Aplicar máscara no input de quantia
+        const amountInput = document.getElementById('id_amount');
+        amountInput.addEventListener('input', () => {
+            formatarMoeda(amountInput);
+        });
+
+        // Preencher input com tags pré-definidas (apenas número, sem 'R$')
+        document.querySelectorAll('.tag-money').forEach(tag => {
+            tag.addEventListener('click', () => {
+                let valor = tag.textContent.replace(/R\$/g, '').trim();  // Remove 'R$' corretamente (escapa $)
+                amountInput.value = valor;
+                formatarMoeda(amountInput);  // Aplica formatação
+                document.querySelectorAll('.tag-money').forEach(t => t.classList.remove('active'));
+                tag.classList.add('active');
+            });
+        });
+
+        // Limpar icon-close
+        document.querySelector('.icon-close').addEventListener('click', () => {
+            amountInput.value = '';
+        });
+
+        // Abrir modal de sucesso ou erro baseado no context Django
+        {% if success %}
+        var successModal = new bootstrap.Modal(document.getElementById('success'));
+        successModal.show();
+        {% endif %}
+
+        {% if error_message %}
+        var errorModal = new bootstrap.Modal(document.getElementById('error'));
+        errorModal.show();
+        {% endif %}
+    </script>
+</body>
+</html>

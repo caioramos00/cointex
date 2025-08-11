@@ -1,0 +1,124 @@
+.nav-tabs {
+    padding: 0;
+    margin: 0;
+    position: relative;
+    z-index: 1;
+    box-shadow: none !important;
+    border: 0;
+}
+.tab-slide {
+    background-color: var(--surface);
+    border-radius: 8px;
+    padding: 4px;
+
+    &.style-2 {
+        padding: 0;
+        background-color: var(--menuDark);
+    }
+    &.trade-tab {
+        background-color: var(--menuDark);
+        .item-slide-effect {
+            background-color: var(--surface);
+        }
+        .nav-link {
+            &:hover,
+            &:focus {
+                border-color: var(--menuDark);
+            }
+            &.active {
+                background-color: var(--surface);
+                border-color: var(--surface);
+            }
+        }
+    }
+}
+.wallet-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+
+    .nav-link {
+        font-size: 16px;
+        font-weight: 600;
+        line-height: 21px;
+        color: var(--secondary);
+        padding: 8px 20px;
+        text-align: center;
+        border-radius: 0;
+        margin: 0;
+        &:hover,
+        &:focus {
+            border-color: var(--surface);
+            border-radius: 0;
+        }
+        &.active {
+            background-color: var(--menuDark);
+            border-color: var(--menuDark);
+            border-radius: 4px;
+            color: var(--white);
+        }
+    }
+}
+.item-slide-effect {
+    position: absolute;
+    height: 100%;
+    z-index: -1;
+    background-color: var(--menuDark);
+    border-radius: 4px;
+    -webkit-transition: all 0.5s;
+    -ms-transition: all 0.5s;
+    transition: all 0.5s;
+
+    &.style-2 {
+        background-color: var(--white);
+    }
+}
+
+.indentity-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    .nav-link {
+        padding: 0px;
+        height: 2px;
+        border-radius: 0;
+        margin: 0;
+        &:hover,
+        &:focus {
+            border-color: var(--surface);
+            border-radius: 0;
+        }
+        &.active {
+            background-color: var(--white);
+            border-color: var(--white);
+            color: var(--white);
+        }
+    }
+}
+
+.tabs-line {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    height: 2px;
+    background-color: var(--menuDark);
+    .active {
+        background-color: var(--white);
+    }
+}
+
+.menu-tab-v3 {
+    display: flex;
+    gap: 20px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--line);
+    cursor: pointer;
+    .nav-link {
+        font-size: 16px;
+        font-weight: 600;
+        line-height: 21px;
+        padding: 0;
+        color: var(--secondary);
+        &.active {
+            color: var(--white);
+        }
+    }
+}

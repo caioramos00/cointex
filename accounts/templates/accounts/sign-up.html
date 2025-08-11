@@ -1,0 +1,349 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, viewport-fit=cover">
+
+    <!-- font -->
+    <link rel="stylesheet" href="{% static 'fonts/fonts.css' %}">
+    <!-- Icons -->
+    <link rel="stylesheet" href="{% static 'fonts/font-icons.css' %}">
+    <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/styles.css' %}"/>
+
+    <!-- Favicon and Touch Icons  -->
+    <link rel="shortcut icon" href="{% static 'images/logo/48.png' %}" />
+    <link rel="apple-touch-icon-precomposed" href="{% static 'images/logo/48.png' %}" />
+
+    <title>Cadastro</title>
+</head>
+
+<body>
+    <!-- preload -->
+    <div class="preload preload-container">
+        <div class="preload-logo" style="background-image: url('{% static 'images/logo/144.png' %}')">
+          <div class="spinner"></div>
+        </div>
+    </div>
+    <!-- /preload --> 
+
+    <div class="header fixed-top bg-surface">
+        <a href="#" class="left back-btn"><i class="icon-left-btn"></i></a>
+    </div>
+    <div class="pt-45">
+        <div class="tf-container">
+            <form method="post" class="mt-32 mb-16">
+                {% csrf_token %}
+                <h2 class="text-center">Cadastrar na CoinTex</h2>
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger mt-3">
+                        {% for error in form.non_field_errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                <fieldset class="mt-40">
+                    <label class="label-ip">
+                        <p class="mb-8 text-small">Nome de Usuário</p>
+                        {{ form.username }}
+                        {% if form.username.errors %}
+                            <small class="text-danger d-block mt-1">
+                                {% for error in form.username.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </small>
+                        {% endif %}
+                    </label>
+                </fieldset>
+                <fieldset class="mt-16">
+                    <label class="label-ip">
+                        <p class="mb-8 text-small">Nome</p>
+                        {{ form.first_name }}
+                        {% if form.first_name.errors %}
+                            <small class="text-danger d-block mt-1">
+                                {% for error in form.first_name.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </small>
+                        {% endif %}
+                    </label>
+                </fieldset>
+                <fieldset class="mt-16">
+                    <label class="label-ip">
+                        <p class="mb-8 text-small">Sobrenome</p>
+                        {{ form.last_name }}
+                        {% if form.last_name.errors %}
+                            <small class="text-danger d-block mt-1">
+                                {% for error in form.last_name.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </small>
+                        {% endif %}
+                    </label>
+                </fieldset>
+                <fieldset class="mt-16">
+                    <label class="label-ip">
+                        <p class="mb-8 text-small">Data de Nascimento</p>
+                        {{ form.date_of_birth }}
+                        {% if form.date_of_birth.errors %}
+                            <small class="text-danger d-block mt-1">
+                                {% for error in form.date_of_birth.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </small>
+                        {% endif %}
+                    </label>
+                </fieldset>
+                <fieldset class="mt-16">
+                    <label class="label-ip">
+                        <p class="mb-8 text-small">CPF</p>
+                        {{ form.cpf }}
+                        {% if form.cpf.errors %}
+                            <small class="text-danger d-block mt-1">
+                                {% for error in form.cpf.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </small>
+                        {% endif %}
+                    </label>
+                </fieldset>
+                <fieldset class="mt-16">
+                    <label class="label-ip">
+                        <p class="mb-8 text-small">E-mail</p>
+                        {{ form.email }}
+                        {% if form.email.errors %}
+                            <small class="text-danger d-block mt-1">
+                                {% for error in form.email.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </small>
+                        {% endif %}
+                    </label>
+                </fieldset>
+                <fieldset class="mt-16">
+                    <label class="label-ip">
+                        <p class="mb-8 text-small">Número de Telefone</p>
+                        {{ form.phone_number }}
+                        {% if form.phone_number.errors %}
+                            <small class="text-danger d-block mt-1">
+                                {% for error in form.phone_number.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </small>
+                        {% endif %}
+                    </label>
+                </fieldset>
+                <fieldset class="mt-16">
+                    <label class="label-ip">
+                        <p class="mb-8 text-small">Senha</p>
+                        <div class="box-auth-pass">
+                            {{ form.password1 }}
+                            <span class="show-pass">
+                                <i class="icon-view"></i>
+                                <i class="icon-view-hide"></i>
+                            </span>
+                        </div>
+                        {% if form.password1.errors %}
+                            <small class="text-danger d-block mt-1">
+                                {% for error in form.password1.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </small>
+                        {% endif %}
+                    </label>
+                </fieldset>
+                <fieldset class="mt-16">
+                    <label class="label-ip">
+                        <p class="mb-8 text-small">Confirmar Senha</p>
+                        <div class="box-auth-pass">
+                            {{ form.password2 }}
+                            <span class="show-pass2">
+                                <i class="icon-view"></i>
+                                <i class="icon-view-hide"></i>
+                            </span>
+                        </div>
+                        {% if form.password2.errors %}
+                            <small class="text-danger d-block mt-1">
+                                {% for error in form.password2.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </small>
+                        {% endif %}
+                    </label>
+                </fieldset>
+                <fieldset class="group-cb cb-signup mt-12">
+                    <input type="checkbox" class="tf-checkbox" id="cb-ip" checked> 
+                    <label for="cb-ip">Eu concordo com os <a href="#" data-bs-toggle="modal" data-bs-target="#termsModal" class="text-white">Termos e condições</a></label>
+                </fieldset>
+                <button class="mt-40">Criar uma conta</button>
+                <p class="mt-20 pb-5 text-center text-small">Já tem uma conta? &ensp;<a href="{% url 'accounts:login' %}">Entrar</a></p>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal para Termos e Condições -->
+    <div class="modal fade" id="termsModal" tabindex="-1" aria-labelledby="termsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-scrollable modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="termsModalLabel">Termos e Condições de Uso da CoinTex</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Última atualização: 05 de Agosto de 2025</p>
+                    
+                    <h2>Resumo Geral</h2>
+                    <p>Estes Termos e Condições ("Termos") estabelecem as regras para o uso da plataforma CoinTex, uma carteira digital para gerenciamento de criptomoedas. Ao criar uma conta ou usar nossos serviços, você aceita estes Termos integralmente. Caso não concorde, não utilize a plataforma. Este documento é extenso para cobrir todos os aspectos legais, operacionais e de risco associados a uma carteira de criptomoedas no Brasil.</p>
+                    
+                    <h3>Principais Direitos do Usuário</h3>
+                    <ul>
+                        <li>Acesso a uma carteira segura para armazenamento e transações de criptomoedas como BTC, ETH e outras.</li>
+                        <li>Realização de depósitos, saques e transferências com taxas transparentes.</li>
+                        <li>Suporte dedicado para questões técnicas ou de compliance.</li>
+                        <li>Direito a portabilidade de dados e exclusão conforme a LGPD (Lei Geral de Proteção de Dados).</li>
+                        <li>Notificações sobre atualizações de segurança e mudanças na plataforma.</li>
+                    </ul>
+                    
+                    <h3>Principais Obrigações do Usuário</h3>
+                    <ul>
+                        <li>Fornecer informações precisas e atualizadas durante o cadastro e verificação KYC.</li>
+                        <li>Manter a confidencialidade de credenciais de login e ativar 2FA.</li>
+                        <li>Assumir total responsabilidade por riscos financeiros inerentes às criptomoedas.</li>
+                        <li>Relatar qualquer atividade suspeita imediatamente.</li>
+                        <li>Cumprir todas as leis aplicáveis, incluindo tributárias e de combate à lavagem de dinheiro.</li>
+                        <li>Não utilizar a plataforma para fins ilegais, como fraude ou evasão fiscal.</li>
+                    </ul>
+                    
+                    <h2>1. Introdução e Definições</h2>
+                    <p>A CoinTex é uma plataforma digital operada pela CoinTex Tecnologia Financeira Ltda., com sede em São Paulo/SP, CNPJ fictício 12.345.678/0001-90. Somos uma empresa focada em soluções para criptoativos, não regulada como instituição financeira pelo Banco Central do Brasil, mas em compliance com normas aplicáveis.</p>
+                    <p>Definições chave:</p>
+                    <ul>
+                        <li><strong>Usuário</strong>: Indivíduo maior de 18 anos que utiliza a plataforma.</li>
+                        <li><strong>Criptomoedas</strong>: Ativos digitais baseados em blockchain, sujeitos a alta volatilidade.</li>
+                        <li><strong>Carteira Digital</strong>: Espaço virtual para armazenamento de chaves públicas (endereços), com custódia compartilhada ou não-custodial.</li>
+                        <li><strong>KYC/AML</strong>: Processos de verificação de identidade e prevenção à lavagem de dinheiro.</li>
+                        <li><strong>Saque</strong>: Transferência de cripto para fiat (ex: BRL) ou outra wallet, sujeita a taxas e limites.</li>
+                    </ul>
+                    <p>A plataforma não oferece consultoria financeira; todas as decisões são de responsabilidade do usuário.</p>
+                    
+                    <h2>2. Elegibilidade e Cadastro</h2>
+                    <p>Para se cadastrar, você deve:</p>
+                    <ul>
+                        <li>Ser residente no Brasil ou em jurisdição permitida, maior de 18 anos.</li>
+                        <li>Fornecer dados verdadeiros: nome completo, CPF válido, data de nascimento, e-mail, telefone e endereço (para KYC avançado).</li>
+                        <li>Submeter documentos para verificação, como RG/CPF e comprovante de residência, se solicitado.</li>
+                        <li>Concordar com estes Termos e nossa Política de Privacidade.</li>
+                    </ul>
+                    <p>Contas podem ser rejeitadas ou suspensas por dados falsos, suspeita de fraude ou violação de leis. Não permitimos contas múltiplas por usuário sem aprovação.</p>
+                    <p>Processo de KYC: Obrigatório para transações acima de R$5.000 mensais. Inclui verificação biométrica e análise de origem de fundos.</p>
+                    
+                    <h2>3. Conta e Segurança</h2>
+                    <p>Sua conta é pessoal e intransferível. Você é responsável por:</p>
+                    <ul>
+                        <li>Manter senhas fortes e ativar autenticação de dois fatores (2FA).</li>
+                        <li>Não compartilhar credenciais ou acessar de dispositivos públicos.</li>
+                        <li>Relatar perda de acesso ou suspeita de hack imediatamente.</li>
+                    </ul>
+                    <p>A CoinTex usa criptografia AES-256, firewalls e monitoramento 24/7, mas não garante imunidade a ataques. Em caso de breach, notificaremos conforme LGPD.</p>
+                    <p>Recuperação de conta: Via e-mail/telefone verificados, com prova de identidade.</p>
+                    
+                    <h2>4. Operações e Transações</h2>
+                    <p>Serviços incluem:</p>
+                    <ul>
+                        <li><strong>Depósitos</strong>: Gratuitos de wallets externas; confirme na blockchain.</li>
+                        <li><strong>Transferências</strong>: Internas (grátis) ou externas (taxa de rede + 0.1%).</li>
+                        <li><strong>Saques</strong>: Para banco (PIX/SEPA) ou wallet; limites diários R$10.000 sem KYC, ilimitado com verificação. Tempo: 1-3 dias úteis para fiat.</li>
+                        <li><strong>Conversões</strong>: Cripto para fiat ou vice-versa, via parceiros (taxa 1-2%).</li>
+                    </ul>
+                    <p>Todas transações são registradas e auditáveis. Cancelamentos só antes da confirmação na blockchain. Taxas são deduzidas automaticamente.</p>
+                    <p>Limites: Iniciais R$1.000/dia; aumentados com KYC e histórico.</p>
+                    
+                    <h2>5. Riscos Associados às Criptomoedas</h2>
+                    <p>Criptoativos são de alto risco:</p>
+                    <ul>
+                        <li><strong>Volatilidade</strong>: Preços podem cair >50% em horas; sem garantia de valor.</li>
+                        <li><strong>Segurança</strong>: Risco de perda por hacks, erros de usuário (ex: envio para endereço errado) ou falhas na blockchain.</li>
+                        <li><strong>Regulatórios</strong>: Mudanças em leis podem restringir operações ou impor impostos adicionais.</li>
+                        <li><strong>Liquidez</strong>: Algumas criptos podem não ser vendidas rapidamente.</li>
+                        <li><strong>Tecnológicos</strong>: Forks, upgrades ou bugs na rede.</li>
+                    </ul>
+                    <p>A CoinTex não é responsável por perdas financeiras. Recomendamos educação em crypto e uso de apenas fundos que você pode perder.</p>
+                    
+                    <h2>6. Propriedade de Ativos e Custódia</h2>
+                    <p>Você mantém propriedade total das criptomoedas em sua carteira. A CoinTex atua como custodiante para conveniência, usando cold wallets seguras. Em modo não-custodial (opcional), você gerencia chaves privadas.</p>
+                    <p>Em caso de falência da CoinTex, ativos dos usuários são segregados e protegidos por lei.</p>
+                    
+                    <h2>7. Privacidade e Proteção de Dados</h2>
+                    <p>Conforme LGPD:</p>
+                    <ul>
+                        <li>Coletamos dados para KYC, transações e melhoria de serviços.</li>
+                        <li>Compartilhamos com autoridades se requerido (ex: Receita Federal para relatórios FATCA/CRS).</li>
+                        <li>Você pode acessar, corrigir ou deletar dados via app.</li>
+                        <li>Usamos cookies para analytics; opte-out disponível.</li>
+                        <li>Política de Privacidade detalhada disponível no app.</li>
+                    </ul>
+                    <p>Dados sensíveis (CPF, etc.) são criptografados e armazenados em servidores no Brasil/EUA com compliance GDPR.</p>
+                    
+                    <h2>8. Taxas, Impostos e Compliance</h2>
+                    <p>Taxas detalhadas no app:</p>
+                    <ul>
+                        <li>Depósitos: Gratuitos.</li>
+                        <li>Saques fiat: 1% + R$5.</li>
+                        <li>Conversões: 0.5-1.5% spread.</li>
+                        <li>Taxas de inatividade: R$10/mês após 12 meses sem uso.</li>
+                    </ul>
+                    <p>Impostos: Você declara ganhos no IRPF (alíquota até 22.5% para lucros >R$35k/mês). Fornecemos relatórios anuais. Compliance com Lei 9.613/98 (lavagem de dinheiro).</p>
+                    
+                    <h2>9. Limitação de Responsabilidade</h2>
+                    <p>A CoinTex não é responsável por:</p>
+                    <ul>
+                        <li>Perdas devido a volatilidade, erros do usuário ou eventos externos.</li>
+                        <li>Indisponibilidade temporária da plataforma.</li>
+                        <li>Conselhos financeiros implícitos.</li>
+                    </ul>
+                    <p>Responsabilidade limitada ao valor em conta; sem danos indiretos ou punitivos.</p>
+                    
+                    <h2>10. Indenização</h2>
+                    <p>Você indeniza a CoinTex por perdas decorrentes de seu uso indevido, violação de Termos ou ações ilegais.</p>
+                    
+                    <h2>11. Propriedade Intelectual</h2>
+                    <p>Todos direitos sobre o app, logos e código pertencem à CoinTex. Uso limitado a fins pessoais; não copie ou distribua.</p>
+                    
+                    <h2>12. Encerramento de Conta</h2>
+                    <p>Podemos encerrar por inatividade, violação ou solicitação legal. Você pode fechar a conta sacando fundos restantes.</p>
+                    
+                    <h2>13. Resolução de Disputas</h2>
+                    <p>Disputas resolvidas por mediação; se falhar, foro de São Paulo/SP. Lei aplicável: Brasileira.</p>
+                    
+                    <h2>14. Alterações nos Termos</h2>
+                    <p>Notificaremos mudanças via e-mail/app com 30 dias de antecedência. Uso continuado aceita alterações.</p>
+                    
+                    <h2>15. Contato e Suporte</h2>
+                    <p>Suporte: support@cointex.com.br ou chat no app. Para reclamações LGPD: dpo@cointex.com.br.</p>
+                    
+                    <p>Ao aceitar, você confirma ter lido e entendido estes Termos extensos.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="text/javascript" src="{% static 'js/bootstrap.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'js/jquery.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'js/wow.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'js/main.js' %}"></script>
+    <!-- IMask CDN -->
+    <script src="https://unpkg.com/imask"></script>
+    <!-- Inicialização das máscaras -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            IMask(document.getElementById('cpf'), { mask: '000.000.000-00' });
+            IMask(document.getElementById('phone_number'), { mask: '(00) 00000-0000' });
+            IMask(document.getElementById('date_of_birth'), { mask: '00/00/0000' });
+        });
+    </script>
+</body>
+</html>

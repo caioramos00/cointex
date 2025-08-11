@@ -1,0 +1,131 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, viewport-fit=cover">
+
+    <!-- font -->
+    <link rel="stylesheet" href="{% static 'fonts/fonts.css' %}">
+    <!-- Icons -->
+    <link rel="stylesheet" href="{% static 'fonts/font-icons.css' %}">
+    <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/styles.css' %}">
+
+   
+    <!-- Favicon and Touch Icons  -->
+    <link rel="shortcut icon" href="{% static 'images/logo/48.png' %}" />
+    <link rel="apple-touch-icon-precomposed" href="{% static 'images/logo/48.png' %}" />
+
+    <title>informações de verificação pessoal</title>
+</head>
+
+<body>
+
+    <div class="header fixed-top bg-surface d-flex justify-content-center align-items-center">
+        <a href="javascript:void(0);" class="left back-btn"><i class="icon-left-btn"></i></a>
+        <h3>Verificação de identidade</h3>
+    </div>
+    <div class="pt-45 pb-90">
+        <div class="tf-container">
+            <ul class="mt-4 tabs-line">
+                <li></li>
+                <li class="active"></li>
+            </ul>
+            <h3 class="mt-12">Insira seu endereço</h3>     
+            <p class="mt-8 text-small">Insira seu endereço principal de residência. Por favor, não use caixas postais ou endereços comerciais.</p>
+            <form method="post" action="{% url 'core:verification_address' %}" class="mt-20">
+                {% csrf_token %}
+                <fieldset class="mt-20">
+                    <label class="label-ip">
+                        <p class="mb-8 text-small">CEP ou código postal</p>
+                        <input type="text" name="cep" id="cep-input" placeholder="Insira o CEP ou código postal" maxlength="9" oninput="this.value = maskCEP(this.value)" onblur="fetchCEP()" required>
+                    </label>
+                </fieldset>
+                <fieldset class="mt-20">
+                    <label class="label-ip">
+                        <p class="mb-8 text-small">Endereço</p>
+                        <input type="text" name="endereco" id="endereco-input" placeholder="Insira endereço da rua, avenida etc." required>
+                    </label>
+                </fieldset>
+                <fieldset class="mt-20">
+                    <label class="label-ip">
+                        <p class="mb-8 text-small">Número</p>
+                        <input type="text" name="numero" id="numero-input" placeholder="Insira o número" required>
+                    </label>
+                </fieldset>
+                <fieldset class="mt-20">
+                    <label class="label-ip">
+                        <p class="mb-8 text-small">Cidade</p>
+                        <input type="text" name="cidade" id="cidade-input" placeholder="Insira a cidade ou município" required>
+                    </label>
+                </fieldset>               
+                <fieldset class="mt-20">
+                    <label class="label-ip">
+                        <p class="mb-8 text-small">Estado</p>
+                        <input type="text" name="estado" id="estado-input" placeholder="Insira o estado" required>
+                    </label>
+                </fieldset>
+                <div class="menubar-footer footer-fixed bg-surface">
+                    <div class="inner-bar">
+                        <button type="submit" class="tf-btn lg primary">Concluído</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal fade modalCenter" id="successful">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content success_box">
+                <div class="icon-1 ani3">
+                    <span class="circle-box lg bg-circle check-icon bg-primary"></span>
+                </div>
+                <div class="icon-2 ani5">
+                    <span class="circle-box md bg-primary"></span>
+                </div>
+                <div class="icon-3 ani8">
+                    <span class="circle-box md bg-primary"></span>
+                </div>
+                <div class="icon-4 ani2">
+                    <span class="circle-box sm bg-primary"></span>
+                </div>
+                <h2 class="text-surface text-center">Sucesso!</h2>
+                <p class="text-large text-center mt-8">Suas informações pessoais foram verificadas</p>
+                <a href="verification-advanced.html" class="tf-btn lg primary mt-40">Concluído</a>
+            </div>
+        </div>
+    </div>
+
+    
+    <script type="text/javascript" src="{% static 'js/bootstrap.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'js/jquery.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'js/main.js' %}"></script>
+
+    <script>
+        function maskCEP(value) {
+            return value
+                .replace(/\D/g, '') // Remove tudo que não é dígito
+                .replace(/(\d{5})(\d)/, '$1-$2') // Coloca hífen após os primeiros 5 dígitos
+                .replace(/(-\d{3})\d+?$/, '$1'); // Limita o final após o hífen a 3 dígitos
+        }
+
+        function fetchCEP() {
+            var cep = document.getElementById('cep-input').value.replace(/\D/g, '');
+            if (cep.length === 8) {
+                fetch(`https://viacep.com.br/ws/${cep}/json/`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (!data.erro) {
+                            document.getElementById('endereco-input').value = data.logradouro;
+                            document.getElementById('cidade-input').value = data.localidade;
+                            document.getElementById('estado-input').value = data.uf;
+                        }
+                    })
+                    .catch(error => console.error('Error fetching CEP:', error));
+            }
+        }
+    </script>
+    
+</body>
+</html>

@@ -1,0 +1,28 @@
+.banner-boarding {
+    position: relative;
+    text-align: center;
+    img {
+        width: 340px;
+    }
+    svg {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        bottom: -25%;
+        z-index: -1;
+    }
+}
+.banner-boarding2 {
+    position: relative;
+    text-align: center;
+    img {
+        width: 358px;
+    }
+    svg {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        bottom: -50%;
+        z-index: -1;
+    }
+}

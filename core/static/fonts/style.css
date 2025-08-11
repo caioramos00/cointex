@@ -1,0 +1,346 @@
+@font-face {
+  font-family: 'icomoon';
+  src:  url('../fonts/icomoon.eot?73vlbj');
+  src:  url('../fonts/icomoon.eot?73vlbj#iefix') format('embedded-opentype'),
+    url('../fonts/icomoon.ttf?73vlbj') format('truetype'),
+    url('../fonts/icomoon.woff?73vlbj') format('woff'),
+    url('../fonts/icomoon.svg?73vlbj#icomoon') format('svg');
+  font-weight: normal;
+  font-style: normal;
+  font-display: block;
+}
+
+[class^="icon-"], [class*=" icon-"] {
+  /* use !important to prevent issues with browser extensions that change fonts */
+  font-family: 'icomoon' !important;
+  speak: never;
+  font-style: normal;
+  font-weight: normal;
+  font-variant: normal;
+  text-transform: none;
+  line-height: 1;
+
+  /* Better Font Rendering =========== */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.icon-check-circle-2 .path1:before {
+  content: "\e900";
+  color: rgb(255, 255, 255);
+}
+.icon-check-circle-2 .path2:before {
+  content: "\e901";
+  margin-left: -1em;
+  color: rgb(17, 21, 15);
+}
+.icon-globe:before {
+  content: "\e902";
+  color: #fff;
+}
+.icon-select-right:before {
+  content: "\e903";
+  color: #7e8088;
+}
+.icon-think:before {
+  content: "\e904";
+  color: #d33535;
+}
+.icon-clockwise2:before {
+  content: "\e905";
+  color: #fff;
+}
+.icon-gmail:before {
+  content: "\e906";
+  color: #fff;
+}
+.icon-discord:before {
+  content: "\e907";
+  color: #fff;
+}
+.icon-tw:before {
+  content: "\e908";
+  color: #fff;
+}
+.icon-fb:before {
+  content: "\e909";
+  color: #fff;
+}
+.icon-clock:before {
+  content: "\e90a";
+  color: #fff;
+}
+.icon-key:before {
+  content: "\e90b";
+  color: #fff;
+}
+.icon-funnel:before {
+  content: "\e90c";
+  color: #fff;
+}
+.icon-bluetooth:before {
+  content: "\e90d";
+  color: #fff;
+}
+.icon-phrase:before {
+  content: "\e90f";
+  color: #fff;
+}
+.icon-mpc:before {
+  content: "\e910";
+  color: #fff;
+}
+.icon-arr-right:before {
+  content: "\e911";
+  color: #fff;
+}
+.icon-wallet-money:before {
+  content: "\e912";
+  color: #10b981;
+}
+.icon-book:before {
+  content: "\e913";
+  color: #8358ff;
+}
+.icon-noti:before {
+  content: "\e914";
+  color: #fff;
+}
+.icon-view-hide:before {
+  content: "\e90e";
+  color: #fff;
+}
+.icon-bank2:before {
+  content: "\e915";
+  color: #fff;
+}
+.icon-history:before {
+  content: "\e916";
+  color: #fff;
+}
+.icon-cancel:before {
+  content: "\e92a";
+}
+.icon-left-btn:before {
+  content: "\e917";
+  color: #fff;
+}
+.icon-check:before {
+  content: "\e923";
+  color: #2dc28d;
+}
+.icon-view:before {
+  content: "\e918";
+  color: #fff;
+}
+.icon-select-up:before {
+  content: "\e919";
+  color: #fff;
+}
+.icon-select-down:before {
+  content: "\e91a";
+  color: #fff;
+}
+.icon-way2:before {
+  content: "\e91b";
+  color: #fff;
+}
+.icon-way:before {
+  content: "\e91c";
+  color: #fff;
+}
+.icon-wallet2:before {
+  content: "\e91d";
+  color: #fff;
+}
+.icon-wallet:before {
+  content: "\e91e";
+  color: #fff;
+}
+.icon-earn2:before {
+  content: "\e91f";
+  color: #fff;
+}
+.icon-earn:before {
+  content: "\e920";
+  color: #fff;
+}
+.icon-convert2:before {
+  content: "\e921";
+  color: #fff;
+}
+.icon-convert:before {
+  content: "\e922";
+  color: #fff;
+}
+.icon-exchange2:before {
+  content: "\e924";
+  color: #fff;
+}
+.icon-exchange:before {
+  content: "\e925";
+  color: #fff;
+}
+.icon-home2:before {
+  content: "\e926";
+  color: #fff;
+}
+.icon-home:before {
+  content: "\e927";
+  color: #7a798a;
+}
+.icon-tag:before {
+  content: "\e928";
+  color: #fff;
+}
+.icon-user:before {
+  content: "\e929";
+  color: #fff;
+}
+.icon-swap:before {
+  content: "\e92b";
+  color: #fff;
+}
+.icon-star:before {
+  content: "\e92c";
+  color: #fff;
+}
+.icon-star--2:before {
+  content: "\e92d";
+}
+.icon-share:before {
+  content: "\e92e";
+  color: #fff;
+}
+.icon-shapes:before {
+  content: "\e92f";
+  color: #fff;
+}
+.icon-search:before {
+  content: "\e930";
+  color: #fff;
+}
+.icon-robot:before {
+  content: "\e931";
+  color: #fff;
+}
+.icon-question:before {
+  content: "\e932";
+  color: #fff;
+}
+.icon-present:before {
+  content: "\e933";
+  color: #fff;
+}
+.icon-loan:before {
+  content: "\e934";
+  color: #fff;
+}
+.icon-metalogo:before {
+  content: "\e935";
+  color: #fff;
+}
+.icon-mobile:before {
+  content: "\e936";
+  color: #fff;
+}
+.icon-heart1:before {
+  content: "\e937";
+  color: #fff;
+}
+.icon-leftRight:before {
+  content: "\e938";
+  color: #fff;
+}
+.icon-hammer:before {
+  content: "\e939";
+  color: #fff;
+}
+.icon-headset:before {
+  content: "\e93a";
+  color: #fff;
+}
+.icon-grid-nine:before {
+  content: "\e93b";
+  color: #fff;
+}
+.icon-graph:before {
+  content: "\e93c";
+  color: #fff;
+}
+.icon-gift:before {
+  content: "\e93d";
+  color: #fff;
+}
+.icon-game-control:before {
+  content: "\e93e";
+  color: #fff;
+}
+.icon-fire:before {
+  content: "\e93f";
+  color: #fff;
+}
+.icon-filter:before {
+  content: "\e940";
+  color: #fff;
+}
+.icon-fileText:before {
+  content: "\e941";
+  color: #fff;
+}
+.icon-dimond:before {
+  content: "\e942";
+  color: #fff;
+}
+.icon-database:before {
+  content: "\e943";
+  color: #fff;
+}
+.icon-currency:before {
+  content: "\e944";
+  color: #fff;
+}
+.icon-credit-card:before {
+  content: "\e945";
+  color: #fff;
+}
+.icon-copy:before {
+  content: "\e946";
+  color: #fff;
+}
+.icon-coins:before {
+  content: "\e947";
+  color: #fff;
+}
+.icon-close:before {
+  content: "\e948";
+  color: #7e8088;
+}
+.icon-clockwise:before {
+  content: "\e949";
+  color: #fff;
+}
+.icon-circlesFour:before {
+  content: "\e94a";
+  color: #fff;
+}
+.icon-check-circle:before {
+  content: "\e94b";
+  color: #fff;
+}
+.icon-chartPie:before {
+  content: "\e94c";
+  color: #fff;
+}
+.icon-cart:before {
+  content: "\e94d";
+  color: #fff;
+}
+.icon-barcode:before {
+  content: "\e94e";
+  color: #fff;
+}
+.icon-arr-down:before {
+  content: "\e94f";
+  color: #fff;
+}

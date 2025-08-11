@@ -1,0 +1,49 @@
+.header {
+    height: 45px;
+    max-width: 1024px;
+    margin: 0 auto;
+    .left {
+        position: absolute;
+        left: 16px;
+        min-width: 40px;
+        height: 45px;
+        display: flex;
+        align-items: center;
+    }
+    .right {
+        right: 16px;
+        position: absolute;
+        min-width: 40px;
+        height: 45px;
+        @include flex(center, flex-end);
+    }
+    .box-icon {
+        width: 28px;
+        height: 28px;
+        @include flex(center, center);
+        border-radius: 100px;
+        background: rgba(255, 255, 255, 0.1);
+    }
+    &.absolute {
+        position: absolute;
+        width: 100%;
+        top: 0;
+        background: transparent;
+        border: 0;
+        left: 0;
+        z-index: 999;
+    }
+}
+.header-style2 {
+    padding: 8px 16px 12px;
+    max-width: 1024px;
+    margin: 0 auto;
+}
+
+.fixed-top {
+    position: fixed;
+    top: 0;
+    z-index: 1020;
+    left: 0;
+    right: 0;
+}

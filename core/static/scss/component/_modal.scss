@@ -1,0 +1,127 @@
+.modal {
+    .modal-content {
+        box-shadow: none;
+        border: 0;
+        border-radius: 0;
+        background-color: var(--menuDark);
+    }
+    .modal-sm {
+        max-width: 314px;
+        margin: 0 auto;
+    }
+    .success_box {
+        max-width: 343px;
+        margin: 0 auto;
+    }
+    &.action-sheet {
+        z-index: 5000;
+        .modal-dialog {
+            padding: 0;
+            bottom: 0;
+            position: fixed;
+            left: 0;
+            right: 0;
+            z-index: 10000;
+            transform: translate(0, 100%);
+            max-width: 1024px;
+            margin: 0 auto !important;
+        }
+        &.show {
+            .modal-dialog {
+                transform: translate(0, 0);
+            }
+        }
+
+        .modal-header {
+            padding: 16px;
+            border-bottom: 1px solid var(--line);
+        }
+        .modal-body {
+            padding: 20px 16px;
+        }
+
+        &.sheet-down {
+            .modal-dialog {
+                top: 0;
+                transform: translate(0, -30%);
+            }
+            .modal-content {
+                background-color: var(--surface);
+            }
+            &.show {
+                .modal-dialog {
+                    transform: translate(0, 0);
+                }
+            }
+        }
+    }
+    &.modalRight {
+        .modal-dialog {
+            transform: translate(100%, 0) !important;
+            min-width: 100%;
+            margin: 0;
+            transition: 0.5s all !important;
+            position: fixed;
+            left: 0;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            .modal-content {
+                border-radius: 0;
+                border: 0;
+                margin: auto;
+                overflow: hidden;
+                position: absolute;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                top: 0;
+                background-color: var(--surface);
+            }
+        }
+        &.show {
+            .modal-dialog {
+                transform: translate(0, 0) !important;
+            }
+        }
+        .modal-filter {
+            overflow: auto;
+        }
+    }
+    &.modalCenter {
+      
+        .modal-content {
+            border-radius: 14px;
+            backdrop-filter: blur(11px);
+        }
+    }
+    &#notiPrivacy,
+    &#modalNoti {
+        .modal-content {
+            border-radius: 8px;
+        }
+    }
+    &#notiPrivacy {
+        .modal-content {
+            max-width: 335px;
+            margin: 0 auto;
+        }
+    }
+    &.fade {
+        transition: opacity 0.3s linear;
+    }
+}
+.modal-backdrop {
+    background: var(--backdrop);
+    &.show {
+        opacity: 0.8;
+    }
+}
+.app-wallet {
+    #filterHistory {
+        z-index: 1062 !important;
+    }
+    .modal-backdrop.show:nth-of-type(even) {
+        z-index: 1061 !important;
+    }
+}

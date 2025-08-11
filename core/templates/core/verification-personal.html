@@ -1,0 +1,126 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, viewport-fit=cover">
+
+    <!-- font -->
+    <link rel="stylesheet" href="{% static 'fonts/fonts.css' %}">
+    <!-- Icons -->
+    <link rel="stylesheet" href="{% static 'fonts/font-icons.css' %}">
+    <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/styles.css' %}"/>
+
+   
+    <!-- Favicon and Touch Icons  -->
+    <link rel="shortcut icon" href="{% static 'images/logo/48.png' %}" />
+    <link rel="apple-touch-icon-precomposed" href="{% static 'images/logo/48.png' %}" />
+
+    <title>Informações de verificação pessoal</title>
+</head>
+
+<body>
+
+    <div class="header fixed-top bg-surface d-flex justify-content-center align-items-center">
+        <a href="javascript:void(0);" class="left back-btn"><i class="icon-left-btn"></i></a>
+        <h3>Verificação de identidade</h3>
+    </div>
+    <div class="pt-45 pb-90">
+        <div class="tf-container">
+            <ul class="mt-4 tabs-line">
+                <li class="active"></li>
+                <li></li>
+            </ul>
+            <h3 class="mt-12">Insira suas informações pessoais</h3>     
+            <p class="mt-8 text-small">Certifique-se de que suas informações apareçam exatamente como no seu documento de identificação.</p>
+            <form method="post" action="{% url 'core:verification_address' %}" class="mt-20" onsubmit="return validateForm()">
+                {% csrf_token %}
+                <fieldset>
+                    <label class="label-ip">
+                        <p class="mb-8 text-small">Nome completo</p>
+                        <input type="text" name="full_name" placeholder="Insira seu nome completo" required>
+                    </label>
+                </fieldset>
+                <fieldset class="mt-20">
+                    <label class="label-ip">
+                        <p class="mb-8 text-small">Tipo de documento</p> 
+                        <div class="select-wrapper">
+                            <select class="tf-select" name="document_type" required>
+                                <option>Selecione o tipo de documento</option>
+                                <option selected>CPF</option>
+                            </select>
+                        </div>
+                    </label>
+                </fieldset>
+                <fieldset class="mt-20">
+                    <label class="label-ip">
+                        <p class="mb-8 text-small">Número do documento</p>
+                        <input type="text" name="document_number" id="cpf-input" placeholder="Número do documento" maxlength="14" oninput="this.value = maskCPF(this.value)" required>
+                    </label>
+                    <p id="cpf-error" style="color: red; display: none; margin-top: 8px;">CPF inválido</p>
+                </fieldset>
+                <div class="menubar-footer footer-fixed bg-surface">
+                    <div class="inner-bar">
+                        <button class="tf-btn lg primary">Próximo</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    
+
+    
+    <script type="text/javascript" src="{% static 'js/bootstrap.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'js/jquery.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'js/main.js' %}"></script>
+
+    <script>
+        function maskCPF(value) {
+            return value
+                .replace(/\D/g, '') // Remove tudo que não é dígito
+                .replace(/(\d{3})(\d)/, '$1.$2') // Coloca ponto após os primeiros 3 dígitos
+                .replace(/(\d{3})(\d)/, '$1.$2') // Coloca ponto após os próximos 3 dígitos
+                .replace(/(\d{3})(\d{1,2})/, '$1-$2') // Coloca hífen após os próximos 3 dígitos
+                .replace/(-\d{2})\d+?$/, '$1'); // Limita o final após o hífen a 2 dígitos
+        }
+
+        function isValidCPF(cpf) {
+            cpf = cpf.replace(/\D/g, ''); // Remove non-digits
+            if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false;
+
+            let sum = 0;
+            for (let i = 1; i <= 9; i++) {
+                sum += parseInt(cpf[i - 1]) * (11 - i);
+            }
+            let remainder = (sum * 10) % 11;
+            if (remainder === 10 || remainder === 11) remainder = 0;
+            if (remainder !== parseInt(cpf[9])) return false;
+
+            sum = 0;
+            for (let i = 1; i <= 10; i++) {
+                sum += parseInt(cpf[i - 1]) * (12 - i);
+            }
+            remainder = (sum * 10) % 11;
+            if (remainder === 10 || remainder === 11) remainder = 0;
+            if (remainder !== parseInt(cpf[10])) return false;
+
+            return true;
+        }
+
+        function validateForm() {
+            var cpfInput = document.getElementById('cpf-input').value;
+            var error = document.getElementById('cpf-error');
+            if (!isValidCPF(cpfInput)) {
+                error.style.display = 'block';
+                return false;
+            } else {
+                error.style.display = 'none';
+                return true;
+            }
+        }
+    </script>
+    
+</body>
+</html>

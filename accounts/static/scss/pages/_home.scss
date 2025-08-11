@@ -1,0 +1,216 @@
+.box-noti {
+    position: relative;
+    &::after {
+        content: "2";
+        font-family: $font-main-family;
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 12px;
+        height: 12px;
+        color: var(--white);
+        background-color: var(--red);
+        font-size: 11px;
+        font-weight: 400;
+        line-height: 13px;
+        border-radius: 100px;
+        @include flex(center, center);
+    }
+}
+
+.trade-box {
+    .coin-item.style-1 {
+        padding: 0;
+        border-radius: 0;
+    }
+    .round-swap {
+        text-align: center;
+        margin: -20px 0px;
+    }
+}
+.trade-list-item {
+    display: flex;
+    justify-content: space-between;
+    .img {
+        width: 12px;
+    }
+    .icon-arr-right {
+        margin-left: 4px;
+    }
+}
+.trade-money-box {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-top: 1px solid var(--line);
+    background-color: $rgb;
+}
+
+#connectWallet {
+    .modal-header {
+        padding: 20px 16px 12px;
+        justify-content: flex-end;
+        border-bottom: 0;
+    }
+    .modal-body {
+        padding: 0px 16px 16px;
+        .logo {
+            font-size: 80px;
+            color: var(--primary);
+        }
+        .tf-btn {
+            width: auto;
+        }
+    }
+}
+#inflation {
+    .modal-body {
+        padding: 14px 16px 20px;
+    }
+}
+.coin-box {
+    background-color: $bg-coin;
+    display: flex;
+    padding: 16px 12px 17px 12px;
+    border-radius: 12px;
+    position: relative;
+    font-size: 11px;
+    line-height: 13px;
+    .coin-logo {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+
+        .logo {
+            width: 26px;
+            height: 26px;
+            border-radius: 50px;
+        }
+        .title {
+            p {
+                margin-bottom: 3px;
+            }
+            span {
+                opacity: 0.6;
+            }
+        }
+    }
+
+    .blur {
+        filter: blur(28px);
+        // -webkit-filter: blur(28px);
+
+        -webkit-filter: blur(28px);
+        -moz-filter: blur(28px);
+        -ms-filter: blur(28px);
+        position: absolute;
+        top: 27px;
+        left: 20px;
+        right: 16px;
+        bottom: 20px;
+        &.bg1 {
+            background-color: #ab00e7;
+            opacity: 0.4;
+        }
+        &.bg2 {
+            background-color: #25C866;
+            opacity: 0.4;
+        }
+        &.bg3 {
+            background-color: #0082FE;
+            opacity: 0.4;
+        }
+    }
+
+    .apexcharts-canvas {
+        z-index: 1;
+    }
+}
+
+.apexcharts-tooltip-series-group {
+    padding: 0 !important;
+}
+.apexcharts-tooltip.apexcharts-theme-light {
+    border: 0 !important;
+    background: none !important;
+    box-shadow: none !important;
+}
+.cb-noti {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    label {
+        font-size: 12px;
+        line-height: 16px;
+    }
+    .tf-checkbox {
+        flex-shrink: 0;
+        border-radius: 5px;
+        border-color: var(--white);
+
+        &:checked {
+            border-color: var(--primary);
+        }
+    }
+}
+
+.wrap-filter-swiper {
+    // display: flex;
+    // flex-direction: column;
+    // gap: 8px;
+    // border-bottom: 1px solid var(--line);
+    .cryptex-rating {
+        
+        display: inline-flex;
+        color: var(--primary);
+        gap: 2px;
+        i {
+            color: $remake;
+            font-size: 18px;
+            margin-top: 1px;
+        }
+    }
+    .menu-tab-v3 {
+        overflow-x: auto;
+        margin-right: -16px;
+        .nav-link{
+            white-space: nowrap;
+        }
+    }
+}
+
+.box-detail-chart {
+    .top {
+        padding: 20px 16px;
+    }
+    .content {
+        .tab-time {
+            display: flex;
+            gap: 8px;
+            padding-left: 28px;
+            padding-right: 29px;
+            .nav-link {
+                display: flex;
+                padding: 4px 16px;
+                align-items: center;
+                font-size: 14px;
+                font-weight: 400;
+                line-height: 18px;
+                color: var(--white);
+                border-radius: 8px;
+                &.active {
+                    background-color: var(--primary);
+                }
+            }
+        }
+        .apexcharts-tooltip.apexcharts-theme-light {
+            background-color: var(--surface) !important;
+            color: var(--white);
+            padding: 6px 20px;
+        }
+    }
+    .bottom {
+        padding: 20px 16px;
+    }
+}

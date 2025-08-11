@@ -1,0 +1,49 @@
+//settings
+$font-main-size: 12px;
+$font-main-line: 16px;
+$font-main-family: "Poppins", sans-serif;
+$fontIcon: "icomoon";
+
+$h1-fs: 34px;
+$h1-lh: 41px;
+$h2-fs: 28px;
+$h2-lh: 34px;
+$h3-fs: 22px;
+$h3-lh: 34px;
+$h4-fs: 20px;
+$h4-lh: 25px;
+$h5-fs: 18px;
+$h5-lh: 22px;
+// color
+$primary: #25c866;
+$interactive: #0076f3;
+$white: #fff;
+$secondary: #7e8088;
+$surface: #11150f;
+$red: #d33535;
+$remake: #f5c738;
+$line: #393737;
+$menuDark: #222223;
+$bg-coin: rgba(255, 255, 255, 0.12);
+$rgba-1: rgba(131, 88, 255, 0.10);
+$rgba-2: rgba(16, 185, 129, 0.10);
+$rgb: rgb(37, 57, 23);
+$blur: blur(28.070175170898438px);
+
+
+:root {
+    --primary: #25c866;
+    --interactive: #0076f3;
+    --white: #fff;
+    --secondary: #7e8088;
+    --secondary2: #D9D9D9;
+    --surface: #11150f;
+    --red: #d33535;
+    --critical: #f53966;
+    --remake: #f5c738;
+    --line: #393737;
+    --menuDark: #222223;
+    --backdrop: #161616;
+    --shadow1: 0px 5.31717px 13.29293px 0px rgba(0, 0, 0, 0.05);
+    
+}
