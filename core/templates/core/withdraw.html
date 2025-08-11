@@ -534,23 +534,31 @@
         }
 
         // Adiciona event listener diretamente ao botão para garantir que ele dispare
-        document.addEventListener('DOMContentLoaded', () => {
-            confirmBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                submitWithdrawForm();
-            });
+document.addEventListener('DOMContentLoaded', () => {
+    const sacarTudoBtn = document.getElementById('sacar-tudo-btn');
+    const continuarBtn = document.getElementById('continuar-btn');
+    const confirmBtn = document.getElementById('confirm-btn');
 
-            const sacarTudoBtn = document.getElementById('sacar-tudo-btn');
-            const continuarBtn = document.getElementById('continuar-btn');
-            if (sacarTudoBtn) {
-                sacarTudoBtn.addEventListener('click', sacarTudo);
-                sacarTudoBtn.addEventListener('touchstart', sacarTudo);  // Para touch devices
-            }
-            if (continuarBtn) {
-                continuarBtn.addEventListener('click', showPreview);
-                continuarBtn.addEventListener('touchstart', showPreview);  // Para touch devices
-            }
+    if (sacarTudoBtn) {
+        sacarTudoBtn.addEventListener('click', () => {
+            console.log('Sacar tudo clicado');
+            sacarTudo();
         });
+    }
+    if (continuarBtn) {
+        continuarBtn.addEventListener('click', () => {
+            console.log('Continuar clicado');
+            showPreview();
+        });
+    }
+    if (confirmBtn) {
+        confirmBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            console.log('Confirmar clicado');
+            submitWithdrawForm();
+        });
+    }
+});
 
         // Função para mostrar loading com mensagens fakes
         function showLoading() {
