@@ -28,7 +28,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('SECRET_KEY', default='django-insecure-0kaay6yyas=1an#cb=+!y7l77kfeo=hsgrn1eop$u7fm7h^5c5')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = 'RENDER' not in os.environ
+DEBUG = 'True'
 
 ALLOWED_HOSTS = ['localhost', 'www.cointex-r6co.onrender.com', 'www.cointex.com.br']
 RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
