@@ -83,7 +83,7 @@
             margin: 8px 0;
             font-size: 15px;
         }
-        .tf-btn.withdraw-primary {
+        .withdraw-btn-primary {
             background-color: #4caf50;
             color: #fff;
             border: none;
@@ -98,17 +98,17 @@
             -webkit-tap-highlight-color: transparent;
             touch-action: manipulation;
         }
-        .tf-btn.withdraw-primary:disabled {
+        .withdraw-btn-primary:disabled {
             opacity: 0.5;
             cursor: not-allowed;
         }
-        .tf-btn.withdraw-primary:active, .tf-btn.withdraw-primary:focus {
+        .withdraw-btn-primary:active, .withdraw-btn-primary:focus {
             color: #fff;
         }
-        .tf-btn.withdraw-primary:hover {
+        .withdraw-btn-primary:hover {
             background-color: #388e3c;
         }
-        .tf-btn.withdraw-secondary {
+        .withdraw-btn-secondary {
             background-color: #757575;
             color: #fff;
             border: none;
@@ -121,7 +121,7 @@
             -webkit-tap-highlight-color: transparent;
             touch-action: manipulation;
         }
-        .tf-btn.withdraw-secondary:hover {
+        .withdraw-btn-secondary:hover {
             background-color: #616161;
         }
         .error-message {
@@ -243,7 +243,7 @@
                                 <i class="withdraw-clear-icon" onclick="clearAmount()"></i>
                             </div>
                             <div class="col-5">
-                                <button type="button" class="tf-btn withdraw-primary" onclick="sacarTudo()">Sacar tudo</button>
+                                <button type="button" class="withdraw-btn-primary" onclick="sacarTudo()">Sacar tudo</button>
                             </div>
                         </div>
                         <div id="amount-error" class="error-message"></div>
@@ -258,15 +258,15 @@
                     <p>Valor a sacar: R$ <span id="preview-amount">0,00</span></p>
                     <p>Valor final (após taxa de {{ fee_percentage }}%): R$ <span id="preview-net-amount">0,00</span></p>
                     <p>Destino: <span id="preview-pix-key"></span></p>
-                    <button type="button" class="tf-btn withdraw-primary" onclick="confirmWithdraw()">Confirmar</button>
-                    <button type="button" class="tf-btn withdraw-secondary" onclick="editWithdraw()">Editar</button>
+                    <button type="button" class="withdraw-btn-primary" onclick="confirmWithdraw()">Confirmar</button>
+                    <button type="button" class="withdraw-btn-secondary" onclick="editWithdraw()">Editar</button>
                 </div>
             </div>
         </div>
     </div>
     <div class="menubar-footer footer-fixed bg-surface" id="footer-bar">
         <div class="inner-bar">
-            <button type="button" class="tf-btn withdraw-primary" onclick="showPreview()">Continuar</button>
+            <button type="button" class="withdraw-btn-primary" onclick="showPreview()">Continuar</button>
         </div>
     </div>
     <div class="modal fade modalCenter" id="otpPin">
@@ -284,7 +284,7 @@
                         <input required type="text" id="digit-4" name="digit-4" data-previous="digit-3" maxlength="1">
                     </div>
                     <p class="text-center text-small text-white mt-16" id="pin-message">Insira sua senha para prosseguir</p>
-                    <button type="button" class="tf-btn withdraw-primary" onclick="submitWithdrawForm()" disabled>Confirmar</button>
+                    <button type="button" class="withdraw-btn-primary" onclick="submitWithdrawForm()" disabled>Confirmar</button>
                 </div>
             </div>
         </div>
@@ -304,7 +304,7 @@
                     <p class="mt-16 text-surface text-button">Via PIX para</p>
                     <p class="text-small mt-4">{{ pix_key }}</p>
                 </div>
-                <a href="{% url 'core:home' %}" class="tf-btn withdraw-primary mt-40">Voltar à Home</a>
+                <a href="{% url 'core:home' %}" class="withdraw-btn-primary mt-40">Voltar à Home</a>
             </div>
         </div>
     </div>
@@ -315,13 +315,14 @@
                     <h2 class="text-surface">Erro!</h2>
                     <p class="text-small mt-8" id="error-message">{{ error_message|default:"Ocorreu um erro no saque. Tente novamente." }}</p>
                 </div>
-                <button class="tf-btn withdraw-primary mt-40" data-bs-dismiss="modal">Fechar</button>
+                <button class="withdraw-btn-primary mt-40" data-bs-dismiss="modal">Fechar</button>
             </div>
         </div>
     </div>
   
     <script type="text/javascript" src="{% static 'js/jquery.min.js' %}"></script>
     <script type="text/javascript" src="{% static 'js/bootstrap.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'js/main.js' %}"></script>
     <script>
         const balanceRaw = {{ balance_raw|default:0 }};
         const feePercentage = {{ fee_percentage|default:0 }} / 100;
@@ -350,7 +351,6 @@
         function sacarTudo() {
             let maxAmount = Math.min(balanceRaw, maxWithdrawDaily);
             amountInput.value = formatarMoeda(maxAmount);
-            console.log('Sacar tudo clicked, set value:', amountInput.value);
         }
 
         function showPreview() {
@@ -388,7 +388,6 @@
             document.getElementById('withdraw-form').style.display = 'none';
             document.getElementById('transaction-preview').style.display = 'block';
             document.getElementById('footer-bar').style.display = 'none';
-            console.log('Continuar clicked, showing preview');
         }
 
         function editWithdraw() {
@@ -402,7 +401,7 @@
         }
 
         const pinInputs = document.querySelectorAll('.digit-group input');
-        const confirmBtn = document.querySelector('#otpPin .tf-btn');
+        const confirmBtn = document.querySelector('#otpPin .withdraw-btn-primary');
         pinInputs.forEach((input, index) => {
             input.addEventListener('input', (e) => {
                 if (e.target.value.length === 1 && index < pinInputs.length - 1) {
@@ -469,8 +468,7 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            jQuery('.preload').fadeOut('slow', function() { jQuery(this).remove(); });
-            document.querySelectorAll('.tf-btn.withdraw-primary').forEach(btn => {
+            document.querySelectorAll('.withdraw-btn-primary').forEach(btn => {
                 btn.addEventListener('touchstart', (e) => {
                     e.preventDefault();
                     if (btn.onclick) btn.onclick();
