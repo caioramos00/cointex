@@ -216,7 +216,7 @@
                 </div>
                 <div class="security-indicator">
                     <i class="icon-lock"></i>
-                    <span>Saque protegido por PIN.1941</span>
+                    <span>Saque protegido por PIN.</span>
                 </div>
                 <form method="post" id="withdraw-form" action="{% url 'core:withdraw_balance' %}">
                     {% csrf_token %}
@@ -232,7 +232,7 @@
                     <div class="form-group">
                         <label for="{{ form.amount.id_for_label }}">Quantia</label>
                         <div class="amount-row">
-                            <div class="col-7 box-input-field pe-0">
+                            <div class="col-7 pe-0">
                                 {{ form.amount }}
                                 <i class="withdraw-clear-icon" onclick="clearAmount()"></i>
                             </div>
@@ -313,7 +313,7 @@
             </div>
         </div>
     </div>
-  
+
     <script type="text/javascript" src="{% static 'js/jquery.min.js' %}"></script>
     <script type="text/javascript" src="{% static 'js/bootstrap.min.js' %}"></script>
     <script>
@@ -323,28 +323,12 @@
         const maxWithdrawDaily = {{ max_withdraw_daily|default:999999999 }};
 
         // Remove preloader
-        document.addEventListener('DOMContentLoaded', () => {
-            setTimeout(() => {
-                const preload = document.querySelector('.preload');
-                if (preload) {
-                    preload.style.transition = 'opacity 0.5s';
-                    preload.style.opacity = '0';
-                    setTimeout(() => preload.remove(), 500);
-                }
-            }, 500);
-            // Add touchstart for buttons
-            document.querySelectorAll('.withdraw-btn').forEach(btn => {
-                btn.addEventListener('touchstart', (e) => {
-                    e.preventDefault();
-                    if (btn.onclick) btn.onclick();
-                });
-            });
-            {% if success %}
-            new bootstrap.Modal(document.getElementById('success')).show();
-            {% endif %}
-            {% if error_message %}
-            new bootstrap.Modal(document.getElementById('error')).show();
-            {% endif %}
+        window.addEventListener('load', () => {
+            const preload = document.querySelector('.preload');
+            if (preload) {
+                preload.style.opacity = '0';
+                setTimeout(() => preload.remove(), 500);
+            }
         });
 
         // Clear amount input
@@ -354,14 +338,13 @@
 
         // Fill max amount
         function fillMaxAmount() {
-            let maxAmount = Math.min(balanceRaw, maxWithdrawDaily);
-            document.getElementById('id_amount').value = maxAmount.toFixed(2).replace('.', ',');
+            document.getElementById('id_amount').value = Math.min(balanceRaw, maxWithdrawDaily).toFixed(2).replace('.', ',');
         }
 
         // Show preview
         function showPreview() {
-            let amountStr = document.getElementById('id_amount').value.replace(',', '.');
-            let amount = parseFloat(amountStr);
+            const amountStr = document.getElementById('id_amount').value.replace(',', '.');
+            const amount = parseFloat(amountStr);
             const errorDiv = document.getElementById('amount-error');
             const pixKeyInput = document.getElementById('id_pix_key');
             const pixKeyError = document.getElementById('pix-key-error');
@@ -387,7 +370,7 @@
                 errorDiv.textContent = 'Saldo insuficiente.';
                 return;
             }
-            let netAmount = amount * (1 - feePercentage);
+            const netAmount = amount * (1 - feePercentage);
             document.getElementById('preview-amount').textContent = amount.toFixed(2).replace('.', ',');
             document.getElementById('preview-net-amount').textContent = netAmount.toFixed(2).replace('.', ',');
             document.getElementById('preview-pix-key').textContent = pixKeyInput.value;
@@ -426,8 +409,8 @@
         // Submit withdraw form
         function submitWithdrawForm() {
             if (document.getElementById('pin').value.length === 4) {
-                let form = document.getElementById('withdraw-form');
-                let formData = new FormData(form);
+                const form = document.getElementById('withdraw-form');
+                const formData = new FormData(form);
                 fetch(form.action, {
                     method: 'POST',
                     body: formData,
@@ -441,8 +424,8 @@
                     return response.json();
                 })
                 .then(data => {
-                    let pinMessage = document.getElementById('pin-message');
-                    let otpModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('otpPin'));
+                    const pinMessage = document.getElementById('pin-message');
+                    const otpModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('otpPin'));
                     if (data.success) {
                         otpModal.hide();
                         showLoading();
@@ -472,11 +455,21 @@
 
         // Show loading overlay
         function showLoading() {
-            let loadingOverlay = document.getElementById('loading-overlay');
-            let loadingMessage = document.getElementById('loading-message');
+            const loadingOverlay = document.getElementById('loading-overlay');
+            const loadingMessage = document.getElementById('loading-message');
             loadingMessage.textContent = 'Processando pagamento...';
             loadingOverlay.classList.add('active');
         }
+
+        // Add touchstart for mobile
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('.withdraw-btn').forEach(btn => {
+                btn.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    if (btn.onclick) btn.onclick();
+                });
+            });
+        });
     </script>
 </body>
 </html>
