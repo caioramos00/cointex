@@ -16,7 +16,6 @@
     <link rel="apple-touch-icon-precomposed" href="{% static 'images/logo/48.png' %}" />
     <title>Sacar</title>
     <style>
-        /* Estilos gerais melhorados para layout moderno */
         .withdraw-container {
             background-color: #1a1a1a;
             color: #fff;
@@ -34,7 +33,7 @@
             align-items: center;
         }
         .balance-card h5 {
-            color: #4caf50; /* Verde escuro */
+            color: #4caf50;
         }
         .form-group {
             margin-bottom: 20px;
@@ -97,18 +96,18 @@
             width: 100%;
             font-weight: bold;
             transition: background-color 0.3s;
-            height: 48px; /* Altura fixa para alinhar */
+            height: 48px;
             line-height: 24px;
-            cursor: pointer; /* Garante cursor pointer para interatividade */
-            -webkit-tap-highlight-color: transparent; /* Remove highlight no iOS */
-            touch-action: manipulation; /* Melhora resposta ao toque */
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
         }
         .tf-btn.primary:disabled {
             opacity: 0.5;
             cursor: not-allowed;
         }
         .tf-btn.primary:active, .tf-btn.primary:focus {
-            color: #fff; /* Manter texto branco ao clicar */
+            color: #fff;
         }
         .tf-btn.primary:hover {
             background-color: #388e3c;
@@ -122,9 +121,9 @@
             width: 100%;
             font-weight: bold;
             margin-top: 10px;
-            cursor: pointer; /* Garante cursor pointer */
+            cursor: pointer;
             -webkit-tap-highlight-color: transparent;
-            touch-action: manipulation; /* Melhora resposta ao toque */
+            touch-action: manipulation;
         }
         .tf-btn.secondary:hover {
             background-color: #616161;
@@ -138,7 +137,6 @@
             color: red !important;
             font-weight: 600 !important;
         }
-        /* Ajuste para botão Sacar tudo dividindo a linha */
         .amount-row {
             display: flex;
             align-items: end;
@@ -146,22 +144,20 @@
         .amount-row .col-7 {
             flex: 0 0 58.333%;
             max-width: 58.333%;
-            padding-right: 15px; /* Espaçamento aumentado */
+            padding-right: 15px;
         }
         .amount-row .col-5 {
             flex: 0 0 41.667%;
             max-width: 41.667%;
         }
         .amount-row input {
-            height: 48px; /* Altura fixa para alinhar com botão */
+            height: 48px;
         }
-        /* Responsividade */
         @media (max-width: 768px) {
             .withdraw-container {
                 padding: 15px;
             }
         }
-        /* Melhorias na animação de carregamento */
         .loading-overlay {
             display: none;
             position: fixed;
@@ -204,13 +200,11 @@
     </style>
 </head>
 <body>
-    <!-- preloade -->
     <div class="preload preload-container">
         <div class="preload-logo" style="background-image: url('{% static 'images/logo/144.png' %}')">
             <div class="spinner"></div>
         </div>
     </div>
-    <!-- /preload -->
     <div class="header fixed-top bg-surface d-flex justify-content-center align-items-center">
         <a href="{% url 'core:home' %}" class="left back-btn"><i class="icon-left-btn"></i></a>
         <h3>Sacar</h3>
@@ -218,17 +212,14 @@
     <div class="pt-45 pb-90">
         <div class="tf-container">
             <div class="withdraw-container">
-                <!-- Cartão de Saldo -->
                 <div class="balance-card">
                     <span>Seu Saldo</span>
                     <h5>R$ {{ formatted_balance|default:"0,00" }}</h5>
                 </div>
-                <!-- Indicador de Segurança -->
                 <div class="security-indicator">
                     <i class="icon-lock"></i>
-                    <span>Saque protegido por PIN. 1841</span>
+                    <span>Saque protegido por PIN.</span>
                 </div>
-                <!-- Formulário de Saque -->
                 <form method="post" id="withdraw-form" action="{% url 'core:withdraw_balance' %}">
                     {% csrf_token %}
                     <div class="form-group">
@@ -248,19 +239,16 @@
                                 <i class="icon-close" onclick="clearAmount()"></i>
                             </div>
                             <div class="col-5">
-                                <button type="button" class="tf-btn primary" id="sacar-tudo-btn" onclick="sacarTudo()">Sacar tudo</button>
+                                <button type="button" class="tf-btn primary" onclick="sacarTudo()">Sacar tudo</button>
                             </div>
                         </div>
                         <div id="amount-error" class="error-message"></div>
                     </div>
-                    <!-- Campo hidden para PIN -->
                     <input type="hidden" name="pin" id="pin" value="">
                 </form>
-                <!-- Seção de Informações -->
                 <div class="info-section">
                     <p>Taxa de saque: {{ fee_percentage }}%</p>
                 </div>
-                <!-- Preview de Transação -->
                 <div class="transaction-preview" id="transaction-preview">
                     <h5>Confirme os dados</h5>
                     <p>Valor a sacar: R$ <span id="preview-amount">0,00</span></p>
@@ -274,10 +262,9 @@
     </div>
     <div class="menubar-footer footer-fixed bg-surface" id="footer-bar">
         <div class="inner-bar">
-            <button type="button" class="tf-btn lg primary" id="continuar-btn" onclick="showPreview()">Continuar</button>
+            <button type="button" class="tf-btn lg primary" onclick="showPreview()">Continuar</button>
         </div>
     </div>
-    <!-- Modal de PIN -->
     <div class="modal fade modalCenter" id="otpPin">
         <div class="modal-dialog modal-dialog-centered" role="document">
             <div class="modal-content">
@@ -293,17 +280,15 @@
                         <input required type="text" id="digit-4" name="digit-4" data-previous="digit-3" maxlength="1">
                     </div>
                     <p class="text-center text-small text-white mt-16" id="pin-message">Insira sua senha para prosseguir</p>
-                    <button type="button" class="mt-40 tf-btn lg primary" id="confirm-btn" onclick="submitWithdrawForm()" disabled>Confirmar</button>
+                    <button type="button" class="mt-40 tf-btn lg primary" onclick="submitWithdrawForm()" disabled>Confirmar</button>
                 </div>
             </div>
         </div>
     </div>
-    <!-- Overlay de Loading -->
     <div class="loading-overlay" id="loading-overlay">
         <div class="spinner"></div>
         <p id="loading-message"></p>
     </div>
-    <!-- Modal de Sucesso -->
     <div class="modal fade modalCenter" id="success">
         <div class="modal-dialog modal-dialog-centered" role="document">
             <div class="modal-content success_box">
@@ -319,7 +304,6 @@
             </div>
         </div>
     </div>
-    <!-- Modal de Erro -->
     <div class="modal fade modalCenter" id="error">
         <div class="modal-dialog modal-dialog-centered" role="document">
             <div class="modal-content success_box">
@@ -336,21 +320,19 @@
     <script type="text/javascript" src="{% static 'js/jquery.min.js' %}"></script>
     <script type="text/javascript" src="{% static 'js/main.js' %}"></script>
     <script>
-        const balanceRaw = {{ balance_raw|default:0 }}; // Saldo bruto do context (Decimal no view)
-        const feePercentage = {{ fee_percentage }} / 100;
+        const balanceRaw = {{ balance_raw|default:0 }};
+        const feePercentage = {{ fee_percentage|default:0 }} / 100;
         const minWithdraw = {{ min_withdraw|default:0 }};
-        const maxWithdrawDaily = {% if max_withdraw_daily %}{{ max_withdraw_daily }}{% else %}Infinity{% endif %};
+        const maxWithdrawDaily = {{ max_withdraw_daily|default:'Infinity' }};
 
-        // Função para formatar valor como monetário BR (ex: 1.234,56)
         function formatarMoeda(value) {
             let valor = parseFloat(value);
-            if (isNaN(valor)) return '';
+            if (isNaN(valor)) return '0,00';
             valor = valor.toFixed(2).replace('.', ',');
             valor = valor.replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.');
             return valor;
         }
 
-        // Aplicar máscara no input de quantia
         const amountInput = document.getElementById('id_amount');
         amountInput.addEventListener('input', (e) => {
             let rawValue = e.target.value.replace(/\D/g, '');
@@ -362,20 +344,18 @@
             }
         });
 
-        // Limpar input com icon-close
         function clearAmount() {
             amountInput.value = '';
             amountInput.focus();
         }
 
-        // Sacar tudo
         function sacarTudo() {
             let maxAmount = Math.min(balanceRaw, maxWithdrawDaily);
             amountInput.value = formatarMoeda(maxAmount);
+            amountInput.dispatchEvent(new Event('input'));
             amountInput.focus();
         }
 
-        // Mostrar preview
         function showPreview() {
             let amountStr = amountInput.value.replace('.', '').replace(',', '.');
             let amount = parseFloat(amountStr);
@@ -413,22 +393,19 @@
             document.getElementById('footer-bar').style.display = 'none';
         }
 
-        // Editar
         function editWithdraw() {
             document.getElementById('transaction-preview').style.display = 'none';
             document.getElementById('withdraw-form').style.display = 'block';
             document.getElementById('footer-bar').style.display = 'block';
         }
 
-        // Confirmar e abrir modal de PIN
         function confirmWithdraw() {
             var otpModal = new bootstrap.Modal(document.getElementById('otpPin'));
             otpModal.show();
         }
 
-        // Manipulação do PIN
         const pinInputs = document.querySelectorAll('.digit-group input');
-        const confirmBtn = document.getElementById('confirm-btn');
+        const confirmBtn = document.querySelector('#otpPin .tf-btn');
         pinInputs.forEach((input, index) => {
             input.addEventListener('input', (e) => {
                 if (e.target.value.length === 1 && index < pinInputs.length - 1) {
@@ -441,7 +418,6 @@
             });
         });
 
-        // Função para submeter o form via AJAX
         function submitWithdrawForm() {
             if (document.getElementById('pin').value.length === 4) {
                 var form = document.getElementById('withdraw-form');
@@ -492,7 +468,6 @@
             }
         }
 
-        // Função para mostrar loading
         function showLoading() {
             var loadingOverlay = document.getElementById('loading-overlay');
             var loadingMessage = document.getElementById('loading-message');
@@ -500,9 +475,8 @@
             loadingOverlay.classList.add('active');
         }
 
-        // Adicionar event listeners necessários
         document.addEventListener('DOMContentLoaded', () => {
-            // Mostrar modais de sucesso ou erro, se aplicável
+            document.querySelector('.preload-container').style.display = 'none';
             {% if success %}
             var successModal = new bootstrap.Modal(document.getElementById('success'));
             successModal.show();
