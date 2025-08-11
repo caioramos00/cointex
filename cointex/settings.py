@@ -30,7 +30,7 @@ SECRET_KEY = 'django-insecure-0kaay6yyas=1an#cb=+!y7l77kfeo=hsgrn1eop$u7fm7h^5c5
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['cointex-r6co.onrender.com', 'cointex.com.br']
+ALLOWED_HOSTS = ['www.cointex-r6co.onrender.com', 'www.cointex.com.br']
 
 
 # Application definition
