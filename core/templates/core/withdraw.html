@@ -83,7 +83,7 @@
             margin: 8px 0;
             font-size: 15px;
         }
-        .withdraw-btn-primary {
+        .withdraw-btn {
             background-color: #4caf50;
             color: #fff;
             border: none;
@@ -91,21 +91,20 @@
             border-radius: 6px;
             width: 100%;
             font-weight: bold;
-            transition: background-color 0.3s;
             height: 48px;
             line-height: 24px;
             cursor: pointer;
             -webkit-tap-highlight-color: transparent;
             touch-action: manipulation;
         }
-        .withdraw-btn-primary:disabled {
+        .withdraw-btn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
         }
-        .withdraw-btn-primary:active, .withdraw-btn-primary:focus {
+        .withdraw-btn:active, .withdraw-btn:focus {
             color: #fff;
         }
-        .withdraw-btn-primary:hover {
+        .withdraw-btn:hover {
             background-color: #388e3c;
         }
         .withdraw-btn-secondary {
@@ -156,11 +155,6 @@
             right: 10px;
             top: 50%;
             transform: translateY(-50%);
-        }
-        @media (max-width: 768px) {
-            .withdraw-container {
-                padding: 15px;
-            }
         }
         .loading-overlay {
             display: none;
@@ -243,7 +237,7 @@
                                 <i class="withdraw-clear-icon" onclick="clearAmount()"></i>
                             </div>
                             <div class="col-5">
-                                <button type="button" class="withdraw-btn-primary" onclick="sacarTudo()">Sacar tudo</button>
+                                <button type="button" class="withdraw-btn" onclick="fillMaxAmount()">Sacar tudo</button>
                             </div>
                         </div>
                         <div id="amount-error" class="error-message"></div>
@@ -258,7 +252,7 @@
                     <p>Valor a sacar: R$ <span id="preview-amount">0,00</span></p>
                     <p>Valor final (após taxa de {{ fee_percentage }}%): R$ <span id="preview-net-amount">0,00</span></p>
                     <p>Destino: <span id="preview-pix-key"></span></p>
-                    <button type="button" class="withdraw-btn-primary" onclick="confirmWithdraw()">Confirmar</button>
+                    <button type="button" class="withdraw-btn" onclick="confirmWithdraw()">Confirmar</button>
                     <button type="button" class="withdraw-btn-secondary" onclick="editWithdraw()">Editar</button>
                 </div>
             </div>
@@ -266,7 +260,7 @@
     </div>
     <div class="menubar-footer footer-fixed bg-surface" id="footer-bar">
         <div class="inner-bar">
-            <button type="button" class="withdraw-btn-primary" onclick="showPreview()">Continuar</button>
+            <button type="button" class="withdraw-btn" onclick="showPreview()">Continuar</button>
         </div>
     </div>
     <div class="modal fade modalCenter" id="otpPin">
@@ -284,7 +278,7 @@
                         <input required type="text" id="digit-4" name="digit-4" data-previous="digit-3" maxlength="1">
                     </div>
                     <p class="text-center text-small text-white mt-16" id="pin-message">Insira sua senha para prosseguir</p>
-                    <button type="button" class="withdraw-btn-primary" onclick="submitWithdrawForm()" disabled>Confirmar</button>
+                    <button type="button" class="withdraw-btn" onclick="submitWithdrawForm()" disabled>Confirmar</button>
                 </div>
             </div>
         </div>
@@ -304,7 +298,7 @@
                     <p class="mt-16 text-surface text-button">Via PIX para</p>
                     <p class="text-small mt-4">{{ pix_key }}</p>
                 </div>
-                <a href="{% url 'core:home' %}" class="withdraw-btn-primary mt-40">Voltar à Home</a>
+                <a href="{% url 'core:home' %}" class="withdraw-btn mt-40">Voltar à Home</a>
             </div>
         </div>
     </div>
@@ -315,46 +309,58 @@
                     <h2 class="text-surface">Erro!</h2>
                     <p class="text-small mt-8" id="error-message">{{ error_message|default:"Ocorreu um erro no saque. Tente novamente." }}</p>
                 </div>
-                <button class="withdraw-btn-primary mt-40" data-bs-dismiss="modal">Fechar</button>
+                <button class="withdraw-btn mt-40" data-bs-dismiss="modal">Fechar</button>
             </div>
         </div>
     </div>
   
     <script type="text/javascript" src="{% static 'js/jquery.min.js' %}"></script>
     <script type="text/javascript" src="{% static 'js/bootstrap.min.js' %}"></script>
-    <script type="text/javascript" src="{% static 'js/main.js' %}"></script>
     <script>
         const balanceRaw = {{ balance_raw|default:0 }};
         const feePercentage = {{ fee_percentage|default:0 }} / 100;
         const minWithdraw = {{ min_withdraw|default:0 }};
-        const maxWithdrawDaily = {{ max_withdraw_daily|default:'Infinity' }};
+        const maxWithdrawDaily = {{ max_withdraw_daily|default:999999999 }};
 
-        function formatarMoeda(value) {
-            let valor = parseFloat(value) || 0;
-            return valor.toFixed(2).replace('.', ',').replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.');
-        }
-
-        const amountInput = document.getElementById('id_amount');
-        amountInput.addEventListener('input', (e) => {
-            let rawValue = e.target.value.replace(/[^\d]/g, '');
-            if (rawValue) {
-                e.target.value = formatarMoeda(rawValue / 100);
-            } else {
-                e.target.value = '';
-            }
+        // Remove preloader
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                const preload = document.querySelector('.preload');
+                if (preload) {
+                    preload.style.transition = 'opacity 0.5s';
+                    preload.style.opacity = '0';
+                    setTimeout(() => preload.remove(), 500);
+                }
+            }, 500);
+            // Add touchstart for buttons
+            document.querySelectorAll('.withdraw-btn').forEach(btn => {
+                btn.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    if (btn.onclick) btn.onclick();
+                });
+            });
+            {% if success %}
+            new bootstrap.Modal(document.getElementById('success')).show();
+            {% endif %}
+            {% if error_message %}
+            new bootstrap.Modal(document.getElementById('error')).show();
+            {% endif %}
         });
 
+        // Clear amount input
         function clearAmount() {
-            amountInput.value = '';
+            document.getElementById('id_amount').value = '';
         }
 
-        function sacarTudo() {
+        // Fill max amount
+        function fillMaxAmount() {
             let maxAmount = Math.min(balanceRaw, maxWithdrawDaily);
-            amountInput.value = formatarMoeda(maxAmount);
+            document.getElementById('id_amount').value = maxAmount.toFixed(2).replace('.', ',');
         }
 
+        // Show preview
         function showPreview() {
-            let amountStr = amountInput.value.replace('.', '').replace(',', '.');
+            let amountStr = document.getElementById('id_amount').value.replace(',', '.');
             let amount = parseFloat(amountStr);
             const errorDiv = document.getElementById('amount-error');
             const pixKeyInput = document.getElementById('id_pix_key');
@@ -382,26 +388,29 @@
                 return;
             }
             let netAmount = amount * (1 - feePercentage);
-            document.getElementById('preview-amount').textContent = formatarMoeda(amount);
-            document.getElementById('preview-net-amount').textContent = formatarMoeda(netAmount);
+            document.getElementById('preview-amount').textContent = amount.toFixed(2).replace('.', ',');
+            document.getElementById('preview-net-amount').textContent = netAmount.toFixed(2).replace('.', ',');
             document.getElementById('preview-pix-key').textContent = pixKeyInput.value;
             document.getElementById('withdraw-form').style.display = 'none';
             document.getElementById('transaction-preview').style.display = 'block';
             document.getElementById('footer-bar').style.display = 'none';
         }
 
+        // Edit withdraw
         function editWithdraw() {
             document.getElementById('transaction-preview').style.display = 'none';
             document.getElementById('withdraw-form').style.display = 'block';
             document.getElementById('footer-bar').style.display = 'block';
         }
 
+        // Show PIN modal
         function confirmWithdraw() {
             new bootstrap.Modal(document.getElementById('otpPin')).show();
         }
 
+        // PIN input handling
         const pinInputs = document.querySelectorAll('.digit-group input');
-        const confirmBtn = document.querySelector('#otpPin .withdraw-btn-primary');
+        const confirmBtn = document.querySelector('#otpPin .withdraw-btn');
         pinInputs.forEach((input, index) => {
             input.addEventListener('input', (e) => {
                 if (e.target.value.length === 1 && index < pinInputs.length - 1) {
@@ -414,6 +423,7 @@
             });
         });
 
+        // Submit withdraw form
         function submitWithdrawForm() {
             if (document.getElementById('pin').value.length === 4) {
                 let form = document.getElementById('withdraw-form');
@@ -460,27 +470,13 @@
             }
         }
 
+        // Show loading overlay
         function showLoading() {
             let loadingOverlay = document.getElementById('loading-overlay');
             let loadingMessage = document.getElementById('loading-message');
             loadingMessage.textContent = 'Processando pagamento...';
             loadingOverlay.classList.add('active');
         }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            document.querySelectorAll('.withdraw-btn-primary').forEach(btn => {
-                btn.addEventListener('touchstart', (e) => {
-                    e.preventDefault();
-                    if (btn.onclick) btn.onclick();
-                });
-            });
-            {% if success %}
-            new bootstrap.Modal(document.getElementById('success')).show();
-            {% endif %}
-            {% if error_message %}
-            new bootstrap.Modal(document.getElementById('error')).show();
-            {% endif %}
-        });
     </script>
 </body>
 </html>
