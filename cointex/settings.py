@@ -28,8 +28,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('SECRET_KEY', default='django-insecure-0kaay6yyas=1an#cb=+!y7l77kfeo=hsgrn1eop$u7fm7h^5c5')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-# DEBUG = 'RENDER' not in os.environ
-DEBUG = 'True'
+DEBUG = 'RENDER' not in os.environ
 
 ALLOWED_HOSTS = ['localhost', 'www.cointex-r6co.onrender.com', 'www.cointex.com.br']
 RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
@@ -87,10 +86,14 @@ WSGI_APPLICATION = 'cointex.wsgi.application'
 
 DATABASES = {
     'default': dj_database_url.config(
-        default=os.getenv('DATABASE_URL', 'postgresql://creyp_invest_db_user:UKhKIP0JRn3kuubg5QfSe0Xf0NOo29bM@dpg-d18quq6mcj7s73ablnd0-a.oregon-postgres.render.com/creyp_invest_db'),
-        conn_max_age=300,
+        default=os.getenv('DATABASE_URL'),  # Sem fallback hardcoded; use .env local ou Render env
+        conn_max_age=60,  # Reduzido para 1 min para conexões mais frescas
+        conn_health_checks=True  # Ativa verificações para evitar conexões stale
     )
 }
+
+# Opcional: Forçar SSL (já incluso na URL do Render, mas garante)
+DATABASES['default']['OPTIONS'] = {'sslmode': 'require'}
 
 
 # Password validation
