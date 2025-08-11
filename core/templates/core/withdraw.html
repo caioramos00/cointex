@@ -1,6 +1,3 @@
-I'll reintroduce the "Sacar tudo" button and its functionality, keeping the simplified JavaScript from the previous version. The button will be added back to the withdrawal form, and the JavaScript will include the `sacarTudo` function to set the input amount to the maximum available balance, respecting the daily withdrawal limit. Since this is an update to the previous artifact, I'll reuse the same artifact_id and ensure only the requested changes are made.
-
-<xaiArtifact artifact_id="c4b04f08-9d84-401d-a817-35544c541f0d" artifact_version_id="b92dfc89-5e65-46ac-afce-cb4942154ca4" title="withdraw.html" contentType="text/html">
 {% load static %}
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -103,6 +100,7 @@ I'll reintroduce the "Sacar tudo" button and its functionality, keeping the simp
             line-height: 24px;
             cursor: pointer;
             -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
         }
         .tf-btn.primary:disabled {
             opacity: 0.5;
@@ -125,6 +123,7 @@ I'll reintroduce the "Sacar tudo" button and its functionality, keeping the simp
             margin-top: 10px;
             cursor: pointer;
             -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
         }
         .tf-btn.secondary:hover {
             background-color: #616161;
@@ -198,14 +197,12 @@ I'll reintroduce the "Sacar tudo" button and its functionality, keeping the simp
             font-size: 18px;
             font-weight: bold;
         }
+        .preload-container {
+            display: none;
+        }
     </style>
 </head>
 <body>
-    <div class="preload preload-container">
-        <div class="preload-logo" style="background-image: url('{% static 'images/logo/144.png' %}')">
-            <div class="spinner"></div>
-        </div>
-    </div>
     <div class="header fixed-top bg-surface d-flex justify-content-center align-items-center">
         <a href="{% url 'core:home' %}" class="left back-btn"><i class="icon-left-btn"></i></a>
         <h3>Sacar</h3>
@@ -321,20 +318,31 @@ I'll reintroduce the "Sacar tudo" button and its functionality, keeping the simp
     <script type="text/javascript" src="{% static 'js/main.js' %}"></script>
     <script>
         const balanceRaw = {{ balance_raw|default:0 }};
-        const feePercentage = {{ fee_percentage }} / 100;
-        const maxWithdrawDaily = {% if max_withdraw_daily %}{{ max_withdraw_daily }}{% else %}Infinity{% endif %};
-        
+        const feePercentage = {{ fee_percentage|default:0 }} / 100;
+        const maxWithdrawDaily = {{ max_withdraw_daily|default:"Infinity" }};
+
         function sacarTudo() {
-            const maxAmount = Math.min(balanceRaw, maxWithdrawDaily);
-            document.getElementById('id_amount').value = maxAmount.toFixed(2);
+            console.log('Sacar tudo clicked');
+            const maxAmount = Math.min(balanceRaw || 0, maxWithdrawDaily === "Infinity" ? Infinity : maxWithdrawDaily);
+            const amountInput = document.getElementById('id_amount');
+            if (amountInput) {
+                amountInput.value = maxAmount.toFixed(2);
+            } else {
+                console.error('Amount input not found');
+            }
         }
 
         function showPreview() {
+            console.log('Continuar clicked');
             const amountInput = document.getElementById('id_amount');
             const pixKeyInput = document.getElementById('id_pix_key');
-            const amount = parseFloat(amountInput.value);
             const pixKeyError = document.getElementById('pix-key-error');
             const amountError = document.getElementById('amount-error');
+            if (!amountInput || !pixKeyInput) {
+                console.error('Form inputs not found');
+                return;
+            }
+            const amount = parseFloat(amountInput.value);
             pixKeyError.textContent = '';
             amountError.textContent = '';
             if (!pixKeyInput.value.trim()) {
@@ -355,12 +363,14 @@ I'll reintroduce the "Sacar tudo" button and its functionality, keeping the simp
         }
 
         function editWithdraw() {
+            console.log('Editar clicked');
             document.getElementById('transaction-preview').style.display = 'none';
             document.getElementById('withdraw-form').style.display = 'block';
             document.getElementById('footer-bar').style.display = 'block';
         }
 
         function confirmWithdraw() {
+            console.log('Confirmar clicked');
             new bootstrap.Modal(document.getElementById('otpPin')).show();
         }
 
@@ -376,6 +386,7 @@ I'll reintroduce the "Sacar tudo" button and its functionality, keeping the simp
         });
 
         function submitWithdrawForm() {
+            console.log('Submit withdraw form');
             if (document.getElementById('pin').value.length === 4) {
                 const form = document.getElementById('withdraw-form');
                 const formData = new FormData(form);
@@ -420,9 +431,37 @@ I'll reintroduce the "Sacar tudo" button and its functionality, keeping the simp
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('confirm-btn').addEventListener('click', submitWithdrawForm);
-            document.getElementById('continuar-btn').addEventListener('click', showPreview);
-            document.getElementById('sacar-tudo-btn').addEventListener('click', sacarTudo);
+            console.log('DOM loaded');
+            const sacarTudoBtn = document.getElementById('sacar-tudo-btn');
+            const continuarBtn = document.getElementById('continuar-btn');
+            const confirmBtn = document.getElementById('confirm-btn');
+            if (sacarTudoBtn) {
+                sacarTudoBtn.addEventListener('click', sacarTudo);
+                sacarTudoBtn.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    sacarTudo();
+                });
+            } else {
+                console.error('Sacar tudo button not found');
+            }
+            if (continuarBtn) {
+                continuarBtn.addEventListener('click', showPreview);
+                continuarBtn.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    showPreview();
+                });
+            } else {
+                console.error('Continuar button not found');
+            }
+            if (confirmBtn) {
+                confirmBtn.addEventListener('click', submitWithdrawForm);
+                confirmBtn.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    submitWithdrawForm();
+                });
+            } else {
+                console.error('Confirm button not found');
+            }
             {% if success %}
             new bootstrap.Modal(document.getElementById('success')).show();
             {% endif %}
@@ -433,4 +472,3 @@ I'll reintroduce the "Sacar tudo" button and its functionality, keeping the simp
     </script>
 </body>
 </html>
-</xaiArtifact>
