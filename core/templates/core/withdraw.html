@@ -1,3 +1,6 @@
+I'll reintroduce the "Sacar tudo" button and its functionality, keeping the simplified JavaScript from the previous version. The button will be added back to the withdrawal form, and the JavaScript will include the `sacarTudo` function to set the input amount to the maximum available balance, respecting the daily withdrawal limit. Since this is an update to the previous artifact, I'll reuse the same artifact_id and ensure only the requested changes are made.
+
+<xaiArtifact artifact_id="c4b04f08-9d84-401d-a817-35544c541f0d" artifact_version_id="b92dfc89-5e65-46ac-afce-cb4942154ca4" title="withdraw.html" contentType="text/html">
 {% load static %}
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -38,7 +41,7 @@
         .form-group {
             margin-bottom: 20px;
         }
-        .form-group label mniej
+        .form-group label {
             display: block;
             margin-bottom: 8px;
             font-weight: bold;
@@ -135,6 +138,22 @@
             color: red !important;
             font-weight: 600 !important;
         }
+        .amount-row {
+            display: flex;
+            align-items: end;
+        }
+        .amount-row .col-7 {
+            flex: 0 0 58.333%;
+            max-width: 58.333%;
+            padding-right: 15px;
+        }
+        .amount-row .col-5 {
+            flex: 0 0 41.667%;
+            max-width: 41.667%;
+        }
+        .amount-row input {
+            height: 48px;
+        }
         @media (max-width: 768px) {
             .withdraw-container {
                 padding: 15px;
@@ -215,7 +234,14 @@
                     </div>
                     <div class="form-group">
                         <label for="{{ form.amount.id_for_label }}">Quantia</label>
-                        {{ form.amount }}
+                        <div class="amount-row">
+                            <div class="col-7 box-input-field pe-0">
+                                {{ form.amount }}
+                            </div>
+                            <div class="col-5">
+                                <button type="button" class="tf-btn primary" id="sacar-tudo-btn">Sacar tudo</button>
+                            </div>
+                        </div>
                         <div id="amount-error" class="error-message"></div>
                     </div>
                     <input type="hidden" name="pin" id="pin" value="">
@@ -294,7 +320,15 @@
     <script type="text/javascript" src="{% static 'js/jquery.min.js' %}"></script>
     <script type="text/javascript" src="{% static 'js/main.js' %}"></script>
     <script>
+        const balanceRaw = {{ balance_raw|default:0 }};
         const feePercentage = {{ fee_percentage }} / 100;
+        const maxWithdrawDaily = {% if max_withdraw_daily %}{{ max_withdraw_daily }}{% else %}Infinity{% endif %};
+        
+        function sacarTudo() {
+            const maxAmount = Math.min(balanceRaw, maxWithdrawDaily);
+            document.getElementById('id_amount').value = maxAmount.toFixed(2);
+        }
+
         function showPreview() {
             const amountInput = document.getElementById('id_amount');
             const pixKeyInput = document.getElementById('id_pix_key');
@@ -319,14 +353,17 @@
             document.getElementById('transaction-preview').style.display = 'block';
             document.getElementById('footer-bar').style.display = 'none';
         }
+
         function editWithdraw() {
             document.getElementById('transaction-preview').style.display = 'none';
             document.getElementById('withdraw-form').style.display = 'block';
             document.getElementById('footer-bar').style.display = 'block';
         }
+
         function confirmWithdraw() {
             new bootstrap.Modal(document.getElementById('otpPin')).show();
         }
+
         document.querySelectorAll('.digit-group input').forEach((input, index, inputs) => {
             input.addEventListener('input', () => {
                 if (input.value.length === 1 && index < inputs.length - 1) {
@@ -337,6 +374,7 @@
                 document.getElementById('confirm-btn').disabled = pin.length !== 4;
             });
         });
+
         function submitWithdrawForm() {
             if (document.getElementById('pin').value.length === 4) {
                 const form = document.getElementById('withdraw-form');
@@ -380,9 +418,11 @@
                 });
             }
         }
+
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('confirm-btn').addEventListener('click', submitWithdrawForm);
             document.getElementById('continuar-btn').addEventListener('click', showPreview);
+            document.getElementById('sacar-tudo-btn').addEventListener('click', sacarTudo);
             {% if success %}
             new bootstrap.Modal(document.getElementById('success')).show();
             {% endif %}
@@ -393,3 +433,4 @@
     </script>
 </body>
 </html>
+</xaiArtifact>
