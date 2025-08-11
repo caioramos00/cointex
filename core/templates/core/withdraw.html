@@ -23,9 +23,9 @@
         .security-indicator { display:flex; align-items:center; margin-bottom:10px; color:#4caf50; }
         .transaction-preview { background-color:#2c2c2c; padding:15px; border-radius:8px; margin-top:20px; display:none; }
         .withdraw-btn { 
-            background-color:#4caf50; 
-            color:#fff; 
-            border:none; 
+            background-color:#4caf50 !important; 
+            color:#fff !important; 
+            border:none !important; 
             padding:12px; 
             border-radius:6px; 
             width:100%; 
@@ -33,34 +33,37 @@
             height:48px; 
             line-height:24px; 
             cursor:pointer; 
-            -webkit-tap-highlight-color: transparent; 
-            touch-action: manipulation;
-            /* MOBILE FIX: garante que o botão seja clicável */
-            position: relative;
-            z-index: 1;
-            user-select: none;
-            -webkit-user-select: none;
+            display: block;
+            text-align: center;
+            text-decoration: none;
+            font-size: 14px;
         }
         .withdraw-btn-secondary { 
-            background-color:#757575; 
-            color:#fff; 
-            border:none; 
+            background-color:#757575 !important; 
+            color:#fff !important; 
+            border:none !important; 
             padding:12px; 
             border-radius:6px; 
             width:100%; 
             font-weight:bold; 
             margin-top:10px; 
             cursor:pointer; 
-            -webkit-tap-highlight-color: transparent; 
-            touch-action: manipulation;
-            /* MOBILE FIX */
-            position: relative;
-            z-index: 1;
-            user-select: none;
-            -webkit-user-select: none;
+            display: block;
+            text-align: center;
+            text-decoration: none;
+            font-size: 14px;
+            height:48px; 
+            line-height:24px; 
         }
         .withdraw-btn:disabled { opacity:.5; cursor:not-allowed; }
-        .withdraw-btn:active, .withdraw-btn:focus { color:#fff; }
+        .withdraw-btn:hover, .withdraw-btn:focus, .withdraw-btn:active { 
+            background-color:#45a049 !important; 
+            color:#fff !important; 
+        }
+        .withdraw-btn-secondary:hover, .withdraw-btn-secondary:focus, .withdraw-btn-secondary:active { 
+            background-color:#666 !important; 
+            color:#fff !important; 
+        }
         .amount-row { display:flex; align-items:end; }
         .amount-row .col-7 { flex:0 0 58.333%; max-width:58.333%; padding-right:15px; position:relative; }
         .amount-row .col-5 { flex:0 0 41.667%; max-width:41.667%; }
@@ -72,8 +75,8 @@
         .spinner { border:8px solid rgba(255,255,255,.3); border-top:8px solid #4caf50; border-radius:50%; width:60px; height:60px; animation:spin 1s linear infinite; margin-bottom:20px; }
         @keyframes spin { 0%{transform:rotate(0deg);} 100%{transform:rotate(360deg);} }
 
-        /* --- ajustes para evitar overlay/click blockers no mobile --- */
-        body { padding-bottom: 110px; /* garante espaço para o footer fixo */ }
+        /* --- ajustes para mobile --- */
+        body { padding-bottom: 110px; }
         .menubar-footer.footer-fixed { 
             position: fixed; 
             left:0; 
@@ -82,18 +85,11 @@
             z-index:1100; 
             padding:12px; 
             background:inherit;
-            /* MOBILE FIX: garante que não bloqueie outros elementos */
-            pointer-events: none;
         }
-        /* botão dentro do footer deve aceitar eventos */
-        .menubar-footer .withdraw-btn {
-            pointer-events: auto;
-        }
-
-        /* MOBILE FIX: feedback visual para toques */
-        .withdraw-btn:active, .withdraw-btn-secondary:active {
-            transform: scale(0.95);
-            transition: transform 0.1s;
+        
+        /* Debugging - ver se elemento está sendo clicado */
+        .withdraw-btn.clicked {
+            background-color: #ff0000 !important;
         }
     </style>
 </head>
@@ -137,7 +133,8 @@
                                 <i class="withdraw-clear-icon" onclick="clearAmount()"></i>
                             </div>
                             <div class="col-5">
-                                <button type="button" id="btn-fillmax" class="withdraw-btn">Sacar tudo</button>
+                                <!-- VOLTA AO ONCLICK INLINE - mais simples para mobile -->
+                                <button type="button" onclick="fillMaxAmount()" class="withdraw-btn">Sacar tudo</button>
                             </div>
                         </div>
                         <div id="amount-error" class="error-message"></div>
@@ -156,8 +153,8 @@
                     <p>Valor final (após taxa de {{ fee_percentage }}%): R$ <span id="preview-net-amount">0,00</span></p>
                     <p>Destino: <span id="preview-pix-key"></span></p>
 
-                    <button type="button" id="btn-confirm-preview" class="withdraw-btn">Confirmar</button>
-                    <button type="button" id="btn-edit-preview" class="withdraw-btn-secondary">Editar</button>
+                    <button type="button" onclick="confirmWithdraw()" class="withdraw-btn">Confirmar</button>
+                    <button type="button" onclick="editWithdraw()" class="withdraw-btn-secondary">Editar</button>
                 </div>
             </div>
         </div>
@@ -165,7 +162,8 @@
 
     <div class="menubar-footer footer-fixed bg-surface" id="footer-bar">
         <div class="inner-bar">
-            <button type="button" id="btn-continue" class="withdraw-btn">Continuar</button>
+            <!-- VOLTA AO ONCLICK INLINE -->
+            <button type="button" onclick="showPreview()" class="withdraw-btn">Continuar</button>
         </div>
     </div>
 
@@ -186,7 +184,7 @@
 
                     <p class="text-center text-small text-white mt-16" id="pin-message">Insira sua senha para prosseguir</p>
 
-                    <button type="button" id="btn-submit-pin" class="withdraw-btn" disabled>Confirmar</button>
+                    <button type="button" onclick="submitWithdrawForm()" id="btn-submit-pin" class="withdraw-btn" disabled>Confirmar</button>
                 </div>
             </div>
         </div>
@@ -228,63 +226,79 @@
     <script type="text/javascript" src="{% static 'js/jquery.min.js' %}"></script>
     <script type="text/javascript" src="{% static 'js/bootstrap.min.js' %}"></script>
     <script>
+        // Debugging - verificar se JS está rodando
+        console.log('🚀 Página carregada!');
+        
         /* variáveis do template */
         const balanceRaw = {{ balance_raw|default:0 }};
         const feePercentage = {{ fee_percentage|default:0 }} / 100;
         const minWithdraw = {{ min_withdraw|default:0 }};
         const maxWithdrawDaily = {{ max_withdraw_daily|default:999999999 }};
+        
+        console.log('💰 Saldo:', balanceRaw, 'Taxa:', feePercentage);
 
         /* util: limpa campo quantia */
         function clearAmount() {
+            console.log('🧹 Limpando campo');
             const el = document.getElementById('id_amount');
             if (el) el.value = '';
         }
 
         /* preenche máximo */
-        function fillMaxAmount(e) {
-            if (e) {
-                e.preventDefault();
-                e.stopPropagation();
-            }
+        function fillMaxAmount() {
+            console.log('💯 Preenchendo valor máximo');
             const el = document.getElementById('id_amount');
-            if (!el) return;
+            if (!el) {
+                console.error('❌ Elemento id_amount não encontrado');
+                return;
+            }
             const value = Math.min(balanceRaw, maxWithdrawDaily);
             el.value = value.toFixed(2).replace('.', ',');
+            console.log('✅ Valor preenchido:', el.value);
         }
 
         /* mostra preview */
-        function showPreview(e) {
-            if (e) {
-                e.preventDefault();
-                e.stopPropagation();
-            }
+        function showPreview() {
+            console.log('👀 Mostrando preview');
             const amountInput = document.getElementById('id_amount');
             const pixKeyInput = document.getElementById('id_pix_key');
-            const amountStr = amountInput ? amountInput.value.replace(',', '.') : '';
+            
+            if (!amountInput || !pixKeyInput) {
+                console.error('❌ Inputs não encontrados');
+                return;
+            }
+            
+            const amountStr = amountInput.value.replace(',', '.');
             const amount = parseFloat(amountStr);
             const errorDiv = document.getElementById('amount-error');
             const pixKeyError = document.getElementById('pix-key-error');
-            errorDiv.textContent = '';
-            pixKeyError.textContent = '';
+            
+            if (errorDiv) errorDiv.textContent = '';
+            if (pixKeyError) pixKeyError.textContent = '';
 
-            if (!pixKeyInput || !pixKeyInput.value.trim()) {
+            if (!pixKeyInput.value.trim()) {
                 if (pixKeyError) pixKeyError.textContent = 'Chave PIX obrigatória.';
+                console.log('❌ PIX key vazia');
                 return;
             }
             if (isNaN(amount) || amount <= 0) {
                 if (errorDiv) errorDiv.textContent = 'Quantia inválida.';
+                console.log('❌ Quantia inválida:', amount);
                 return;
             }
             if (amount < minWithdraw) {
                 if (errorDiv) errorDiv.textContent = 'Quantia abaixo do mínimo.';
+                console.log('❌ Abaixo do mínimo');
                 return;
             }
             if (amount > maxWithdrawDaily) {
                 if (errorDiv) errorDiv.textContent = 'Quantia acima do máximo diário.';
+                console.log('❌ Acima do máximo');
                 return;
             }
             if (amount > balanceRaw) {
                 if (errorDiv) errorDiv.textContent = 'Saldo insuficiente.';
+                console.log('❌ Saldo insuficiente');
                 return;
             }
 
@@ -296,34 +310,27 @@
             document.getElementById('withdraw-form').style.display = 'none';
             document.getElementById('transaction-preview').style.display = 'block';
             document.getElementById('footer-bar').style.display = 'none';
+            
+            console.log('✅ Preview exibido');
         }
 
         /* editar saque */
-        function editWithdraw(e) {
-            if (e) {
-                e.preventDefault();
-                e.stopPropagation();
-            }
+        function editWithdraw() {
+            console.log('✏️ Editando saque');
             document.getElementById('transaction-preview').style.display = 'none';
             document.getElementById('withdraw-form').style.display = 'block';
             document.getElementById('footer-bar').style.display = 'block';
         }
 
         /* abrir modal PIN */
-        function confirmWithdraw(e) {
-            if (e) {
-                e.preventDefault();
-                e.stopPropagation();
-            }
+        function confirmWithdraw() {
+            console.log('🔐 Abrindo modal PIN');
             new bootstrap.Modal(document.getElementById('otpPin')).show();
         }
 
         /* enviar saque (AJAX) */
-        function submitWithdrawForm(e) {
-            if (e) {
-                e.preventDefault();
-                e.stopPropagation();
-            }
+        function submitWithdrawForm() {
+            console.log('📤 Enviando formulário');
             if (document.getElementById('pin').value.length !== 4) return;
             const form = document.getElementById('withdraw-form');
             const formData = new FormData(form);
@@ -362,6 +369,7 @@
                 }
             })
             .catch(error => {
+                console.error('Erro:', error);
                 bootstrap.Modal.getOrCreateInstance(document.getElementById('otpPin')).hide();
                 document.getElementById('error-message').textContent = 'Erro na conexão. Tente novamente.';
                 new bootstrap.Modal(document.getElementById('error')).show();
@@ -376,53 +384,14 @@
             loadingOverlay.classList.add('active');
         }
 
-        /* ---------- MOBILE FIX: evento universal que funciona em todos os devices ---------- */
-        function addUniversalClick(element, handler) {
-            if (!element) return;
-            
-            let touchHandled = false;
-            
-            // Para touch devices
-            element.addEventListener('touchstart', function(e) {
-                touchHandled = false;
-            }, {passive: true});
-            
-            element.addEventListener('touchend', function(e) {
-                e.preventDefault(); // evita o click fantasma
-                if (!touchHandled) {
-                    touchHandled = true;
-                    handler(e);
-                }
-            });
-            
-            // Para devices não-touch (desktop, mouse)
-            element.addEventListener('click', function(e) {
-                if (!touchHandled) {
-                    handler(e);
-                }
-                // Reset flag após um tempo
-                setTimeout(() => touchHandled = false, 500);
-            });
-        }
-
         /* ---------- inicialização DOM ---------- */
         document.addEventListener('DOMContentLoaded', function() {
-            // Garantir que elementos existam antes de adicionar eventos
-            const btnFillMax = document.getElementById('btn-fillmax');
-            const btnContinue = document.getElementById('btn-continue');
-            const btnConfirmPreview = document.getElementById('btn-confirm-preview');
-            const btnEditPreview = document.getElementById('btn-edit-preview');
-            const btnSubmitPin = document.getElementById('btn-submit-pin');
-
-            // Adicionar eventos universais (funciona tanto no mobile quanto no desktop)
-            if (btnFillMax) addUniversalClick(btnFillMax, fillMaxAmount);
-            if (btnContinue) addUniversalClick(btnContinue, showPreview);
-            if (btnConfirmPreview) addUniversalClick(btnConfirmPreview, confirmWithdraw);
-            if (btnEditPreview) addUniversalClick(btnEditPreview, editWithdraw);
-            if (btnSubmitPin) addUniversalClick(btnSubmitPin, submitWithdrawForm);
-
+            console.log('📱 DOM carregado');
+            
             // PIN inputs: navegação e habilitar botão
             const pinInputs = Array.from(document.querySelectorAll('#pin-group input'));
+            const btnSubmitPin = document.getElementById('btn-submit-pin');
+            
             pinInputs.forEach((input, index) => {
                 input.addEventListener('input', (e) => {
                     const val = e.target.value;
@@ -440,10 +409,9 @@
                     }
                 });
             });
+            
+            console.log('✅ Eventos PIN configurados');
         });
-
-        // DEBUG: log para verificar se os botões estão sendo clicados
-        console.log('Withdraw page loaded successfully');
     </script>
 </body>
 </html>
