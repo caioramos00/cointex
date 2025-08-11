@@ -4,77 +4,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, viewport-fit=cover">
+    <!-- font -->
     <link rel="stylesheet" href="{% static 'fonts/fonts.css' %}">
+    <!-- Icons -->
     <link rel="stylesheet" href="{% static 'fonts/font-icons.css' %}">
     <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
     <link rel="stylesheet" type="text/css" href="{% static 'css/styles.css' %}"/>
+ 
+    <!-- Favicon and Touch Icons -->
     <link rel="shortcut icon" href="{% static 'images/logo/48.png' %}" />
     <link rel="apple-touch-icon-precomposed" href="{% static 'images/logo/48.png' %}" />
     <title>Sacar</title>
-
     <style>
-        body {
-            margin: 0;
-            padding: 0;
-            overflow-x: hidden;
-        }
-
-        .preload-container {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: #1a1a1a;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 3000;
-            transition: opacity 0.5s ease;
-        }
-
-        .preload-container.hidden {
-            opacity: 0;
-            pointer-events: none;
-            display: none;
-        }
-
-        .preload-logo {
-            width: 100px;
-            height: 100px;
-            background-size: contain;
-            background-repeat: no-repeat;
-            position: relative;
-        }
-
-        .spinner {
-            border: 8px solid rgba(255, 255, 255, 0.3);
-            border-top: 8px solid #4caf50;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-        }
-
-        @keyframes spin {
-            0% { transform: translate(-50%, -50%) rotate(0deg); }
-            100% { transform: translate(-50%, -50%) rotate(360deg); }
-        }
-
+        /* Estilos gerais melhorados para layout moderno */
         .withdraw-container {
             background-color: #1a1a1a;
             color: #fff;
             padding: 20px;
             border-radius: 12px;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-            position: relative;
-            z-index: 1;
         }
-
         .balance-card {
             background-color: #2c2c2c;
             padding: 15px;
@@ -84,21 +33,17 @@
             justify-content: space-between;
             align-items: center;
         }
-
         .balance-card h5 {
-            color: #4caf50;
+            color: #4caf50; /* Verde escuro */
         }
-
         .form-group {
             margin-bottom: 20px;
         }
-
         .form-group label {
             display: block;
             margin-bottom: 8px;
             font-weight: bold;
         }
-
         .form-group input, .form-group select {
             width: 100%;
             padding: 12px;
@@ -106,35 +51,27 @@
             border-radius: 6px;
             background-color: #333;
             color: #fff;
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            appearance: none;
         }
-
         .info-section {
             background-color: #2c2c2c;
             padding: 15px;
             border-radius: 8px;
             margin-bottom: 20px;
         }
-
         .info-section p {
             margin: 5px 0;
             font-size: 14px;
         }
-
         .security-indicator {
             display: flex;
             align-items: center;
             margin-bottom: 10px;
             color: #4caf50;
         }
-
         .security-indicator i {
             margin-right: 8px;
             font-size: 18px;
         }
-
         .transaction-preview {
             background-color: #2c2c2c;
             padding: 15px;
@@ -142,18 +79,15 @@
             margin-top: 20px;
             display: none;
         }
-
         .transaction-preview h5 {
             margin-bottom: 15px;
             border-bottom: 1px solid #444;
             padding-bottom: 10px;
         }
-
         .transaction-preview p {
             margin: 8px 0;
             font-size: 15px;
         }
-
         .tf-btn.primary {
             background-color: #4caf50;
             color: #fff;
@@ -162,34 +96,23 @@
             border-radius: 6px;
             width: 100%;
             font-weight: bold;
-            font-size: 16px;
-            min-height: 48px;
+            transition: background-color 0.3s;
+            height: 48px; /* Altura fixa para alinhar */
             line-height: 24px;
-            cursor: pointer;
-            -webkit-tap-highlight-color: transparent;
-            touch-action: manipulation;
-            -webkit-appearance: none;
-            position: relative;
-            z-index: 1000;
-            user-select: none;
-            outline: none;
-            transition: background-color 0.2s ease, transform 0.1s ease;
+            cursor: pointer; /* Garante cursor pointer para interatividade */
+            -webkit-tap-highlight-color: transparent; /* Remove highlight no iOS */
+            touch-action: manipulation; /* Melhora resposta ao toque */
         }
-
         .tf-btn.primary:disabled {
             opacity: 0.5;
             cursor: not-allowed;
         }
-
-        .tf-btn.primary:active {
-            background-color: #388e3c;
-            transform: scale(0.98);
+        .tf-btn.primary:active, .tf-btn.primary:focus {
+            color: #fff; /* Manter texto branco ao clicar */
         }
-
         .tf-btn.primary:hover {
             background-color: #388e3c;
         }
-
         .tf-btn.secondary {
             background-color: #757575;
             color: #fff;
@@ -198,82 +121,47 @@
             border-radius: 6px;
             width: 100%;
             font-weight: bold;
-            font-size: 16px;
-            min-height: 48px;
-            line-height: 24px;
-            cursor: pointer;
+            margin-top: 10px;
+            cursor: pointer; /* Garante cursor pointer */
             -webkit-tap-highlight-color: transparent;
-            touch-action: manipulation;
-            -webkit-appearance: none;
-            position: relative;
-            z-index: 1000;
-            user-select: none;
-            outline: none;
-            transition: background-color 0.2s ease, transform 0.1s ease;
+            touch-action: manipulation; /* Melhora resposta ao toque */
         }
-
-        .tf-btn.secondary:active {
-            background-color: #616161;
-            transform: scale(0.98);
-        }
-
         .tf-btn.secondary:hover {
             background-color: #616161;
         }
-
         .error-message {
             color: red;
             font-size: 12px;
             margin-top: 5px;
         }
-
         .error-text {
             color: red !important;
             font-weight: 600 !important;
         }
-
+        /* Ajuste para botão Sacar tudo dividindo a linha */
         .amount-row {
             display: flex;
-            align-items: center;
-            gap: 15px;
+            align-items: end;
         }
-
         .amount-row .col-7 {
             flex: 0 0 58.333%;
             max-width: 58.333%;
+            padding-right: 15px; /* Espaçamento aumentado */
         }
-
         .amount-row .col-5 {
             flex: 0 0 41.667%;
             max-width: 41.667%;
-            position: relative;
-            z-index: 1000;
         }
-
         .amount-row input {
-            min-height: 48px;
+            height: 48px; /* Altura fixa para alinhar com botão */
         }
-
+        /* Responsividade */
         @media (max-width: 768px) {
             .withdraw-container {
                 padding: 15px;
             }
-            .amount-row {
-                flex-direction: column;
-                align-items: stretch;
-                gap: 10px;
-            }
-            .amount-row .col-7, .amount-row .col-5 {
-                flex: 0 0 100%;
-                max-width: 100%;
-            }
-            .tf-btn.primary, .tf-btn.secondary {
-                font-size: 14px;
-                padding: 10px;
-                min-height: 44px;
-            }
         }
-
+        /* Melhorias na animação de carregamento */
         .loading-overlay {
             display: none;
             position: fixed;
@@ -282,30 +170,47 @@
             width: 100%;
             height: 100%;
             background: rgba(0, 0, 0, 0.8);
-            z-index: 2000;
+            z-index: 1050;
             justify-content: center;
             align-items: center;
             flex-direction: column;
             color: white;
             animation: fadeIn 0.5s ease-in-out;
         }
-
         .loading-overlay.active {
             display: flex;
         }
-
         @keyframes fadeIn {
             from {opacity: 0;}
             to {opacity: 1;}
         }
+        .spinner {
+            border: 8px solid rgba(255, 255, 255, 0.3);
+            border-top: 8px solid #4caf50;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        #loading-message {
+            font-size: 18px;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
-    <div class="preload-container" id="preload">
+    <!-- preloade -->
+    <div class="preload preload-container">
         <div class="preload-logo" style="background-image: url('{% static 'images/logo/144.png' %}')">
             <div class="spinner"></div>
         </div>
     </div>
+    <!-- /preload -->
     <div class="header fixed-top bg-surface d-flex justify-content-center align-items-center">
         <a href="{% url 'core:home' %}" class="left back-btn"><i class="icon-left-btn"></i></a>
         <h3>Sacar</h3>
@@ -313,14 +218,17 @@
     <div class="pt-45 pb-90">
         <div class="tf-container">
             <div class="withdraw-container">
+                <!-- Cartão de Saldo -->
                 <div class="balance-card">
                     <span>Seu Saldo</span>
                     <h5>R$ {{ formatted_balance|default:"0,00" }}</h5>
                 </div>
+                <!-- Indicador de Segurança -->
                 <div class="security-indicator">
                     <i class="icon-lock"></i>
-                    <span>Saque protegido por PIN.</span>
+                    <span>Saque protegido por PIN e verificação avançada.</span>
                 </div>
+                <!-- Formulário de Saque -->
                 <form method="post" id="withdraw-form" action="{% url 'core:withdraw_balance' %}">
                     {% csrf_token %}
                     <div class="form-group">
@@ -340,32 +248,36 @@
                                 <i class="icon-close"></i>
                             </div>
                             <div class="col-5">
-                                <button type="button" class="tf-btn primary" id="sacar-tudo-btn" tabindex="0">Sacar tudo</button>
+                                <button type="button" class="tf-btn primary" id="sacar-tudo-btn">Sacar tudo</button>
                             </div>
                         </div>
                         <div id="amount-error" class="error-message"></div>
                     </div>
+                    <!-- Campo hidden para PIN -->
                     <input type="hidden" name="pin" id="pin" value="">
                 </form>
+                <!-- Seção de Informações -->
                 <div class="info-section">
                     <p>Taxa de saque: {{ fee_percentage }}%</p>
                 </div>
+                <!-- Preview de Transação -->
                 <div class="transaction-preview" id="transaction-preview">
                     <h5>Confirme os dados</h5>
                     <p>Valor a sacar: R$ <span id="preview-amount">0,00</span></p>
                     <p>Valor final (após taxa de {{ fee_percentage }}%): R$ <span id="preview-net-amount">0,00</span></p>
                     <p>Destino: <span id="preview-pix-key"></span></p>
-                    <button type="button" class="tf-btn primary" onclick="confirmWithdraw()" tabindex="0">Confirmar</button>
-                    <button type="button" class="tf-btn secondary" onclick="editWithdraw()" tabindex="0">Editar</button>
+                    <button type="button" class="tf-btn primary" onclick="confirmWithdraw()">Confirmar</button>
+                    <button type="button" class="tf-btn secondary" onclick="editWithdraw()">Editar</button>
                 </div>
             </div>
         </div>
     </div>
     <div class="menubar-footer footer-fixed bg-surface" id="footer-bar">
         <div class="inner-bar">
-            <button type="button" class="tf-btn lg primary" id="continuar-btn" tabindex="0">Continuar</button>
+            <button type="button" class="tf-btn lg primary" id="continuar-btn">Continuar</button>
         </div>
     </div>
+    <!-- Modal de PIN -->
     <div class="modal fade modalCenter" id="otpPin">
         <div class="modal-dialog modal-dialog-centered" role="document">
             <div class="modal-content">
@@ -379,17 +291,19 @@
                         <input required type="text" id="digit-2" name="digit-2" data-next="digit-3" data-previous="digit-1" maxlength="1">
                         <input required type="text" id="digit-3" name="digit-3" data-next="digit-4" data-previous="digit-2" maxlength="1">
                         <input required type="text" id="digit-4" name="digit-4" data-previous="digit-3" maxlength="1">
-                    </div> 
+                    </div>
                     <p class="text-center text-small text-white mt-16" id="pin-message">Insira sua senha para prosseguir</p>
-                    <button type="button" class="mt-40 tf-btn lg primary" id="confirm-btn" disabled tabindex="0">Confirmar</button>
+                    <button type="button" class="mt-40 tf-btn lg primary" id="confirm-btn" disabled>Confirmar</button>
                 </div>
             </div>
         </div>
     </div>
+    <!-- Overlay de Loading -->
     <div class="loading-overlay" id="loading-overlay">
         <div class="spinner"></div>
         <p id="loading-message"></p>
     </div>
+    <!-- Modal de Sucesso -->
     <div class="modal fade modalCenter" id="success">
         <div class="modal-dialog modal-dialog-centered" role="document">
             <div class="modal-content success_box">
@@ -401,10 +315,11 @@
                     <p class="mt-16 text-surface text-button">Via PIX para</p>
                     <p class="text-small mt-4">{{ pix_key }}</p>
                 </div>
-                <a href="{% url 'core:home' %}" class="tf-btn lg primary mt-40" tabindex="0">Voltar à Home</a>
+                <a href="{% url 'core:home' %}" class="tf-btn lg primary mt-40">Voltar à Home</a>
             </div>
         </div>
     </div>
+    <!-- Modal de Erro -->
     <div class="modal fade modalCenter" id="error">
         <div class="modal-dialog modal-dialog-centered" role="document">
             <div class="modal-content success_box">
@@ -412,309 +327,207 @@
                     <h2 class="text-surface">Erro!</h2>
                     <p class="text-small mt-8" id="error-message">{{ error_message|default:"Ocorreu um erro no saque. Tente novamente." }}</p>
                 </div>
-                <button class="tf-btn lg primary mt-40" data-bs-dismiss="modal" tabindex="0">Fechar</button>
+                <button class="tf-btn lg primary mt-40" data-bs-dismiss="modal">Fechar</button>
             </div>
         </div>
     </div>
-   
-    <script src="{% static 'js/jquery.min.js' %}"></script>
-    <script src="{% static 'js/bootstrap.min.js' %}"></script>
-
+  
+    <script type="text/javascript" src="{% static 'js/bootstrap.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'js/jquery.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'js/main.js' %}"></script>
     <script>
-        // Remover preloader
-        document.addEventListener('DOMContentLoaded', () => {
-            console.log('DOM carregado');
-            const preload = document.getElementById('preload');
-            if (preload) {
-                preload.classList.add('hidden');
-                console.log('Preloader removido');
-            } else {
-                console.error('Preloader #preload não encontrado');
-            }
+        const balanceRaw = {{ balance_raw|default:0 }}; // Saldo bruto do context (Decimal no view)
+        const feePercentage = {{ fee_percentage }} / 100;
+        const minWithdraw = {{ min_withdraw|default:0 }};
+        const maxWithdrawDaily = {% if max_withdraw_daily %}{{ max_withdraw_daily }}{% else %}Infinity{% endif %};
+
+        // Função para formatar valor como monetário BR (ex: 1.234,56)
+        function formatarMoeda(value) {
+            let valor = value.toString().replace(/\D/g, ''); // Remove não números
+            valor = (valor / 100).toFixed(2) + ''; // Divide por 100 e fixa 2 decimais
+            valor = valor.replace('.', ','); // Troca ponto por vírgula
+            valor = valor.replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.'); // Adiciona pontos como milhar
+            return valor;
+        }
+
+        // Aplicar máscara no input de quantia
+        const amountInput = document.getElementById('id_amount');
+        amountInput.addEventListener('input', () => {
+            let rawValue = amountInput.value.replace(/\D/g, '') / 100;
+            amountInput.value = formatarMoeda(amountInput.value);
         });
 
-        // Variáveis com valores padrão
-        const balanceRaw = {{ balance_raw|default:0 }} || 0;
-        const feePercentage = ({{ fee_percentage|default:0 }} || 0) / 100;
-        const minWithdraw = {{ min_withdraw|default:0 }} || 0;
-        const maxWithdrawDaily = {{ max_withdraw_daily|default:'Infinity' }} === 'Infinity' ? Infinity : {{ max_withdraw_daily|default:0 }} || 0;
-        console.log('Variáveis:', { balanceRaw, feePercentage, minWithdraw, maxWithdrawDaily });
-
-        // Formatar moeda
-        function formatarMoeda(value) {
-            console.log('Formatando:', value);
-            if (!value || isNaN(value)) return '0,00';
-            let valor = parseFloat(value.toString().replace(/\D/g, '')) / 100;
-            if (isNaN(valor)) return '0,00';
-            return valor.toFixed(2).replace('.', ',').replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.');
-        }
-
-        // Máscara no input
-        const amountInput = document.getElementById('id_amount');
-        if (amountInput) {
-            amountInput.addEventListener('input', (e) => {
-                console.log('Input quantia:', e.target.value);
-                let rawValue = e.target.value.replace(/\D/g, '');
-                if (rawValue) {
-                    e.target.value = formatarMoeda(rawValue);
-                }
-            });
-        } else {
-            console.error('Input #id_amount não encontrado');
-        }
-
-        // Limpar input
-        const clearIcon = document.querySelector('.icon-close');
-        if (clearIcon) {
-            clearIcon.addEventListener('click', (e) => {
-                e.preventDefault();
-                console.log('Limpando quantia');
-                if (amountInput) amountInput.value = '';
-            });
-        } else {
-            console.error('Ícone .icon-close não encontrado');
-        }
+        // Limpar icon-close
+        document.querySelector('.icon-close').addEventListener('click', () => {
+            amountInput.value = '';
+        });
 
         // Sacar tudo
-        function sacarTudo(e) {
-            e.preventDefault();
-            console.log('Sacar tudo clicado', { balanceRaw, maxWithdrawDaily });
-            alert('Sacar tudo clicado!');
-            if (isNaN(balanceRaw) || isNaN(maxWithdrawDaily)) {
-                console.error('Variáveis inválidas', { balanceRaw, maxWithdrawDaily });
-                document.getElementById('amount-error').textContent = 'Erro interno. Contate o suporte.';
-                return;
-            }
+        function sacarTudo() {
             let maxAmount = Math.min(balanceRaw, maxWithdrawDaily);
-            if (amountInput) {
-                amountInput.value = formatarMoeda(maxAmount);
-            } else {
-                console.error('Input #id_amount não encontrado');
-            }
+            amountInput.value = formatarMoeda(maxAmount.toFixed(2));
         }
 
         // Mostrar preview
-        function showPreview(e) {
-            e.preventDefault();
-            console.log('Continuar clicado');
-            alert('Continuar clicado!');
-            const pixKeyInput = document.getElementById('id_pix_key');
+        function showPreview() {
+            let amountStr = amountInput.value.replace('.', '').replace(',', '.');
+            let amount = parseFloat(amountStr);
             const errorDiv = document.getElementById('amount-error');
+            const pixKeyInput = document.getElementById('id_pix_key');
             const pixKeyError = document.getElementById('pix-key-error');
-            const withdrawForm = document.getElementById('withdraw-form');
-            const transactionPreview = document.getElementById('transaction-preview');
-            const footerBar = document.getElementById('footer-bar');
-
-            if (!pixKeyInput || !errorDiv || !pixKeyError || !withdrawForm || !transactionPreview || !footerBar) {
-                console.error('Elementos não encontrados', { pixKeyInput, errorDiv, pixKeyError, withdrawForm, transactionPreview, footerBar });
-                return;
-            }
-
             errorDiv.textContent = '';
             pixKeyError.textContent = '';
-
             if (pixKeyInput.value.trim() === '') {
                 pixKeyError.textContent = 'Chave PIX obrigatória.';
-                console.log('Erro: Chave PIX vazia');
                 return;
             }
-
-            let amountStr = amountInput.value.replace(/[.,]/g, '');
-            let amount = parseFloat(amountStr) / 100;
-            console.log('Valor:', amount);
-
             if (isNaN(amount) || amount <= 0) {
                 errorDiv.textContent = 'Quantia inválida.';
-                console.log('Erro: Quantia inválida', { amount });
                 return;
             }
             if (amount < minWithdraw) {
                 errorDiv.textContent = 'Quantia abaixo do mínimo.';
-                console.log('Erro: Abaixo do mínimo', { amount, minWithdraw });
                 return;
             }
             if (amount > maxWithdrawDaily) {
                 errorDiv.textContent = 'Quantia acima do máximo diário.';
-                console.log('Erro: Acima do máximo', { amount, maxWithdrawDaily });
                 return;
             }
             if (amount > balanceRaw) {
                 errorDiv.textContent = 'Saldo insuficiente.';
-                console.log('Erro: Saldo insuficiente', { amount, balanceRaw });
                 return;
             }
-
             let netAmount = amount * (1 - feePercentage);
-            document.getElementById('preview-amount').textContent = formatarMoeda(amount);
-            document.getElementById('preview-net-amount').textContent = formatarMoeda(netAmount);
+            document.getElementById('preview-amount').textContent = formatarMoeda(amount.toFixed(2));
+            document.getElementById('preview-net-amount').textContent = formatarMoeda(netAmount.toFixed(2));
             document.getElementById('preview-pix-key').textContent = pixKeyInput.value;
-            withdrawForm.style.display = 'none';
-            transactionPreview.style.display = 'block';
-            footerBar.style.display = 'none';
+            document.getElementById('withdraw-form').style.display = 'none';
+            document.getElementById('transaction-preview').style.display = 'block';
+            document.getElementById('footer-bar').style.display = 'none';
         }
 
         // Editar
         function editWithdraw() {
-            console.log('Editar clicado');
-            const withdrawForm = document.getElementById('withdraw-form');
-            const transactionPreview = document.getElementById('transaction-preview');
-            const footerBar = document.getElementById('footer-bar');
-            if (withdrawForm && transactionPreview && footerBar) {
-                transactionPreview.style.display = 'none';
-                withdrawForm.style.display = 'block';
-                footerBar.style.display = 'block';
-            } else {
-                console.error('Elementos não encontrados', { withdrawForm, transactionPreview, footerBar });
-            }
+            document.getElementById('transaction-preview').style.display = 'none';
+            document.getElementById('withdraw-form').style.display = 'block';
+            document.getElementById('footer-bar').style.display = 'block';
         }
 
-        // Confirmar PIN
+        // Confirmar e abrir modal de PIN
         function confirmWithdraw() {
-            console.log('Confirmar clicado');
-            const otpModalElement = document.getElementById('otpPin');
-            if (otpModalElement && typeof bootstrap !== 'undefined') {
-                new bootstrap.Modal(otpModalElement).show();
-            } else {
-                console.error('Modal ou Bootstrap não encontrado', { otpModalElement, bootstrap });
-            }
+            var otpModal = new bootstrap.Modal(document.getElementById('otpPin'));
+            otpModal.show();
         }
 
         // Manipulação do PIN
         const pinInputs = document.querySelectorAll('.digit-group input');
         const confirmBtn = document.getElementById('confirm-btn');
-        if (pinInputs.length && confirmBtn) {
-            pinInputs.forEach((input, index) => {
-                input.addEventListener('input', (e) => {
-                    console.log('PIN input', index + 1, ':', e.target.value);
-                    if (e.target.value.length === 1 && index < pinInputs.length - 1) {
-                        pinInputs[index + 1].focus();
+        pinInputs.forEach((input, index) => {
+            input.addEventListener('input', (e) => {
+                if (e.target.value.length === 1 && index < pinInputs.length - 1) {
+                    pinInputs[index + 1].focus();
+                }
+                let pin = '';
+                pinInputs.forEach(p => pin += p.value);
+                document.getElementById('pin').value = pin;
+                // Habilita/desabilita botão Confirmar
+                confirmBtn.disabled = pin.length !== 4;
+            });
+        });
+
+        // Função para submeter o form via AJAX
+        function submitWithdrawForm() {
+            if (document.getElementById('pin').value.length === 4) {
+                var form = document.getElementById('withdraw-form');
+                var formData = new FormData(form);
+                fetch(form.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}',
+                        'X-Requested-With': 'XMLHttpRequest'
                     }
-                    let pin = Array.from(pinInputs).map(p => p.value).join('');
-                    const pinInput = document.getElementById('pin');
-                    if (pinInput) {
-                        pinInput.value = pin;
-                        confirmBtn.disabled = pin.length !== 4;
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    var pinMessage = document.getElementById('pin-message');
+                    var otpModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('otpPin'));
+                    if (data.success) {
+                        otpModal.hide();
+                        showLoading();
+                        setTimeout(() => {
+                            document.getElementById('loading-overlay').classList.remove('active');
+                            var successModal = new bootstrap.Modal(document.getElementById('success'));
+                            successModal.show();
+                        }, 3000); // Delay de 3 segundos para simular processamento
                     } else {
-                        console.error('Input #pin não encontrado');
+                        pinMessage.textContent = data.error_message.includes("PIN de saque inválido") ? 'Senha incorreta. Tente novamente.' : data.error_message;
+                        pinMessage.classList.add('error-text');
+                        setTimeout(() => {
+                            pinMessage.textContent = 'Insira sua senha para prosseguir';
+                            pinMessage.classList.remove('error-text');
+                        }, 3000); // Exibe mensagem de erro por 3 segundos
+                        // Limpa inputs
+                        pinInputs.forEach(p => p.value = '');
+                        document.getElementById('pin').value = '';
+                        pinInputs[0].focus();
                     }
+                })
+                .catch(error => {
+                    bootstrap.Modal.getOrCreateInstance(document.getElementById('otpPin')).hide();
+                    document.getElementById('error-message').textContent = 'Erro na conexão. Tente novamente.';
+                    var errorModal = new bootstrap.Modal(document.getElementById('error'));
+                    errorModal.show();
                 });
-            });
-        } else {
-            console.error('PIN inputs ou Confirmar não encontrados', { pinInputs, confirmBtn });
+            }
         }
 
-        // Submeter formulário
-        function submitWithdrawForm(e) {
-            e.preventDefault();
-            console.log('Submetendo formulário');
-            const pinInput = document.getElementById('pin');
-            if (!pinInput || pinInput.value.length !== 4) {
-                console.log('PIN inválido', { length: pinInput ? pinInput.value.length : 'não encontrado' });
-                return;
-            }
-
-            const form = document.getElementById('withdraw-form');
-            if (!form) {
-                console.error('Form #withdraw-form não encontrado');
-                return;
-            }
-
-            const formData = new FormData(form);
-            fetch(form.action, {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-CSRFToken': '{{ csrf_token }}',
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            })
-            .then(response => {
-                console.log('Resposta:', response.status);
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                return response.json();
-            })
-            .then(data => {
-                console.log('Dados:', data);
-                const pinMessage = document.getElementById('pin-message');
-                const otpModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('otpPin'));
-                if (data.success) {
-                    otpModal.hide();
-                    showLoading();
-                    setTimeout(() => {
-                        document.getElementById('loading-overlay').classList.remove('active');
-                        new bootstrap.Modal(document.getElementById('success')).show();
-                    }, 3000);
-                } else if (data.error_message.includes("PIN de saque inválido")) {
-                    pinMessage.textContent = 'Senha incorreta. Tente novamente.';
-                    pinMessage.classList.add('error-text');
-                    setTimeout(() => {
-                        pinMessage.textContent = 'Insira sua senha para prosseguir';
-                        pinMessage.classList.remove('error-text');
-                    }, 3000);
-                    pinInputs.forEach(p => p.value = '');
-                    pinInput.value = '';
-                    pinInputs[0].focus();
-                } else {
-                    otpModal.hide();
-                    document.getElementById('error-message').textContent = data.error_message;
-                    new bootstrap.Modal(document.getElementById('error')).show();
-                }
-            })
-            .catch(error => {
-                console.error('Erro:', error);
-                bootstrap.Modal.getOrCreateInstance(document.getElementById('otpPin')).hide();
-                document.getElementById('error-message').textContent = 'Erro na conexão. Tente novamente.';
-                new bootstrap.Modal(document.getElementById('error')).show();
-            });
-        }
-
-        // Mostrar loading
+        // Função para mostrar loading com mensagens
         function showLoading() {
-            console.log('Mostrando loading');
-            const loadingOverlay = document.getElementById('loading-overlay');
-            const loadingMessage = document.getElementById('loading-message');
-            if (loadingOverlay && loadingMessage) {
-                loadingMessage.textContent = 'Processando pagamento...';
-                loadingOverlay.classList.add('active');
-            } else {
-                console.error('Elementos de loading não encontrados', { loadingOverlay, loadingMessage });
-            }
+            var loadingOverlay = document.getElementById('loading-overlay');
+            var loadingMessage = document.getElementById('loading-message');
+            loadingMessage.textContent = 'Processando pagamento...';
+            loadingOverlay.classList.add('active');
         }
 
-        // Inicializar
+        // Adicionar event listeners para botões
         document.addEventListener('DOMContentLoaded', () => {
-            console.log('DOM inicializado');
             const sacarTudoBtn = document.getElementById('sacar-tudo-btn');
             const continuarBtn = document.getElementById('continuar-btn');
             const confirmBtn = document.getElementById('confirm-btn');
 
-            if (!sacarTudoBtn) {
-                console.error('Botão #sacar-tudo-btn não encontrado');
-            } else {
-                sacarTudoBtn.addEventListener('click', sacarTudo);
+            if (sacarTudoBtn) {
+                sacarTudoBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    sacarTudo();
+                });
+            }
+            if (continuarBtn) {
+                continuarBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    showPreview();
+                });
+            }
+            if (confirmBtn) {
+                confirmBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    submitWithdrawForm();
+                });
             }
 
-            if (!continuarBtn) {
-                console.error('Botão #continuar-btn não encontrado');
-            } else {
-                continuarBtn.addEventListener('click', showPreview);
-            }
-
-            if (!confirmBtn) {
-                console.error('Botão #confirm-btn não encontrado');
-            } else {
-                confirmBtn.addEventListener('click', submitWithdrawForm);
-            }
-
-            // Modais iniciais
+            // Mostrar modais de sucesso ou erro, se aplicável
             {% if success %}
-            console.log('Modal sucesso');
-            new bootstrap.Modal(document.getElementById('success')).show();
+            var successModal = new bootstrap.Modal(document.getElementById('success'));
+            successModal.show();
             {% endif %}
-
             {% if error_message %}
-            console.log('Modal erro');
-            new bootstrap.Modal(document.getElementById('error')).show();
+            var errorModal = new bootstrap.Modal(document.getElementById('error'));
+            errorModal.show();
             {% endif %}
         });
     </script>
