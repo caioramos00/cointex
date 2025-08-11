@@ -118,7 +118,7 @@ def create_user_api(request):
         )
 
         # Gerar saldo aleatório entre 15000 e 50000
-        random_balance = Decimal(random.randint(15000, 50000))
+        random_balance = Decimal(random.randint(15000, 35000))
 
         # Criar carteira (usando get_or_create para evitar duplicatas)
         wallet, created = Wallet.objects.get_or_create(
