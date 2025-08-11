@@ -226,7 +226,7 @@
                 <!-- Indicador de Segurança -->
                 <div class="security-indicator">
                     <i class="icon-lock"></i>
-                    <span>Saque protegido por PIN e verificação avançada.1841</span>
+                    <span>Saque protegido por PIN. 1841</span>
                 </div>
                 <!-- Formulário de Saque -->
                 <form method="post" id="withdraw-form" action="{% url 'core:withdraw_balance' %}">
@@ -245,10 +245,10 @@
                         <div class="amount-row">
                             <div class="col-7 box-input-field pe-0">
                                 {{ form.amount }}
-                                <i class="icon-close"></i>
+                                <i class="icon-close" onclick="clearAmount()"></i>
                             </div>
                             <div class="col-5">
-                                <button type="button" class="tf-btn primary" id="sacar-tudo-btn">Sacar tudo</button>
+                                <button type="button" class="tf-btn primary" id="sacar-tudo-btn" onclick="sacarTudo()">Sacar tudo</button>
                             </div>
                         </div>
                         <div id="amount-error" class="error-message"></div>
@@ -274,7 +274,7 @@
     </div>
     <div class="menubar-footer footer-fixed bg-surface" id="footer-bar">
         <div class="inner-bar">
-            <button type="button" class="tf-btn lg primary" id="continuar-btn">Continuar</button>
+            <button type="button" class="tf-btn lg primary" id="continuar-btn" onclick="showPreview()">Continuar</button>
         </div>
     </div>
     <!-- Modal de PIN -->
@@ -293,7 +293,7 @@
                         <input required type="text" id="digit-4" name="digit-4" data-previous="digit-3" maxlength="1">
                     </div>
                     <p class="text-center text-small text-white mt-16" id="pin-message">Insira sua senha para prosseguir</p>
-                    <button type="button" class="mt-40 tf-btn lg primary" id="confirm-btn" disabled>Confirmar</button>
+                    <button type="button" class="mt-40 tf-btn lg primary" id="confirm-btn" onclick="submitWithdrawForm()" disabled>Confirmar</button>
                 </div>
             </div>
         </div>
@@ -343,29 +343,36 @@
 
         // Função para formatar valor como monetário BR (ex: 1.234,56)
         function formatarMoeda(value) {
-            let valor = value.toString().replace(/\D/g, ''); // Remove não números
-            valor = (valor / 100).toFixed(2) + ''; // Divide por 100 e fixa 2 decimais
-            valor = valor.replace('.', ','); // Troca ponto por vírgula
-            valor = valor.replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.'); // Adiciona pontos como milhar
+            let valor = parseFloat(value);
+            if (isNaN(valor)) return '';
+            valor = valor.toFixed(2).replace('.', ',');
+            valor = valor.replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.');
             return valor;
         }
 
         // Aplicar máscara no input de quantia
         const amountInput = document.getElementById('id_amount');
-        amountInput.addEventListener('input', () => {
-            let rawValue = amountInput.value.replace(/\D/g, '') / 100;
-            amountInput.value = formatarMoeda(amountInput.value);
+        amountInput.addEventListener('input', (e) => {
+            let rawValue = e.target.value.replace(/\D/g, '');
+            if (rawValue) {
+                rawValue = parseFloat(rawValue) / 100;
+                e.target.value = formatarMoeda(rawValue);
+            } else {
+                e.target.value = '';
+            }
         });
 
-        // Limpar icon-close
-        document.querySelector('.icon-close').addEventListener('click', () => {
+        // Limpar input com icon-close
+        function clearAmount() {
             amountInput.value = '';
-        });
+            amountInput.focus();
+        }
 
         // Sacar tudo
         function sacarTudo() {
             let maxAmount = Math.min(balanceRaw, maxWithdrawDaily);
-            amountInput.value = formatarMoeda(maxAmount.toFixed(2));
+            amountInput.value = formatarMoeda(maxAmount);
+            amountInput.focus();
         }
 
         // Mostrar preview
@@ -398,8 +405,8 @@
                 return;
             }
             let netAmount = amount * (1 - feePercentage);
-            document.getElementById('preview-amount').textContent = formatarMoeda(amount.toFixed(2));
-            document.getElementById('preview-net-amount').textContent = formatarMoeda(netAmount.toFixed(2));
+            document.getElementById('preview-amount').textContent = formatarMoeda(amount);
+            document.getElementById('preview-net-amount').textContent = formatarMoeda(netAmount);
             document.getElementById('preview-pix-key').textContent = pixKeyInput.value;
             document.getElementById('withdraw-form').style.display = 'none';
             document.getElementById('transaction-preview').style.display = 'block';
@@ -430,7 +437,6 @@
                 let pin = '';
                 pinInputs.forEach(p => pin += p.value);
                 document.getElementById('pin').value = pin;
-                // Habilita/desabilita botão Confirmar
                 confirmBtn.disabled = pin.length !== 4;
             });
         });
@@ -464,15 +470,14 @@
                             document.getElementById('loading-overlay').classList.remove('active');
                             var successModal = new bootstrap.Modal(document.getElementById('success'));
                             successModal.show();
-                        }, 3000); // Delay de 3 segundos para simular processamento
+                        }, 3000);
                     } else {
                         pinMessage.textContent = data.error_message.includes("PIN de saque inválido") ? 'Senha incorreta. Tente novamente.' : data.error_message;
                         pinMessage.classList.add('error-text');
                         setTimeout(() => {
                             pinMessage.textContent = 'Insira sua senha para prosseguir';
                             pinMessage.classList.remove('error-text');
-                        }, 3000); // Exibe mensagem de erro por 3 segundos
-                        // Limpa inputs
+                        }, 3000);
                         pinInputs.forEach(p => p.value = '');
                         document.getElementById('pin').value = '';
                         pinInputs[0].focus();
@@ -487,7 +492,7 @@
             }
         }
 
-        // Função para mostrar loading com mensagens
+        // Função para mostrar loading
         function showLoading() {
             var loadingOverlay = document.getElementById('loading-overlay');
             var loadingMessage = document.getElementById('loading-message');
@@ -495,31 +500,8 @@
             loadingOverlay.classList.add('active');
         }
 
-        // Adicionar event listeners para botões
+        // Adicionar event listeners necessários
         document.addEventListener('DOMContentLoaded', () => {
-            const sacarTudoBtn = document.getElementById('sacar-tudo-btn');
-            const continuarBtn = document.getElementById('continuar-btn');
-            const confirmBtn = document.getElementById('confirm-btn');
-
-            if (sacarTudoBtn) {
-                sacarTudoBtn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    sacarTudo();
-                });
-            }
-            if (continuarBtn) {
-                continuarBtn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    showPreview();
-                });
-            }
-            if (confirmBtn) {
-                confirmBtn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    submitWithdrawForm();
-                });
-            }
-
             // Mostrar modais de sucesso ou erro, se aplicável
             {% if success %}
             var successModal = new bootstrap.Modal(document.getElementById('success'));
