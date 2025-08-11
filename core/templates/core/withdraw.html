@@ -153,6 +153,13 @@
         .amount-row input {
             height: 48px;
         }
+        .clear-icon {
+            cursor: pointer;
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
         @media (max-width: 768px) {
             .withdraw-container {
                 padding: 15px;
@@ -218,7 +225,7 @@
                 </div>
                 <div class="security-indicator">
                     <i class="icon-lock"></i>
-                    <span>Saque protegido por PIN.</span>
+                    <span>Saque protegido por PIN.1905</span>
                 </div>
                 <form method="post" id="withdraw-form" action="{% url 'core:withdraw_balance' %}">
                     {% csrf_token %}
@@ -236,7 +243,7 @@
                         <div class="amount-row">
                             <div class="col-7 box-input-field pe-0">
                                 {{ form.amount }}
-                                <i class="icon-close" onclick="clearAmount()"></i>
+                                <i class="clear-icon" onclick="clearAmount()"></i>
                             </div>
                             <div class="col-5">
                                 <button type="button" class="tf-btn primary" onclick="sacarTudo()">Sacar tudo</button>
@@ -280,7 +287,7 @@
                         <input required type="text" id="digit-4" name="digit-4" data-previous="digit-3" maxlength="1">
                     </div>
                     <p class="text-center text-small text-white mt-16" id="pin-message">Insira sua senha para prosseguir</p>
-                    <button type="button" class="mt-40 tf-btn lg primary" onclick="submitWithdrawForm()" disabled>Confirmar</button>
+                    <button type="button" class="tf-btn lg primary" onclick="submitWithdrawForm()" disabled>Confirmar</button>
                 </div>
             </div>
         </div>
@@ -352,7 +359,6 @@
         function sacarTudo() {
             let maxAmount = Math.min(balanceRaw, maxWithdrawDaily);
             amountInput.value = formatarMoeda(maxAmount);
-            amountInput.dispatchEvent(new Event('input'));
             amountInput.focus();
         }
 
