@@ -5,6 +5,7 @@ from django.contrib.auth import get_user_model
 from django.http import JsonResponse
 from rest_framework.decorators import api_view
 from accounts.models import UserProfile, Wallet
+from unidecode import unidecode
 
 CustomUser = get_user_model()
 
@@ -43,20 +44,22 @@ PHONE_NUMBERS = [
 ]
 
 def generate_unique_username(first_name, last_name):
-    """Gera um username único combinando nome, sobrenome e um sufixo."""
-    base_username = f"{first_name.lower()}{last_name.lower()}{random.randint(1000, 9999)}"
+    """Gera um username único combinando nome, sobrenome e um sufixo, removendo acentos."""
+    first_name_no_accent = unidecode(first_name.lower())
+    last_name_no_accent = unidecode(last_name.lower())
+    base_username = f"{first_name_no_accent}{last_name_no_accent}{random.randint(1000, 9999)}"
     max_attempts = 10
     attempt = 0
     while attempt < max_attempts:
         if not CustomUser.objects.filter(email__startswith=base_username + '@').exists():  # Checa por email similar
             return base_username
-        base_username = f"{first_name.lower()}{last_name.lower()}{random.randint(1000, 9999)}"
+        base_username = f"{first_name_no_accent}{last_name_no_accent}{random.randint(1000, 9999)}"
         attempt += 1
     raise Exception("Não foi possível gerar um username único após várias tentativas")
 
 def generate_password(first_name, username):
-    """Gera uma senha no formato @<PrimeiraLetraMaiúsculaDoNome><SufixoNumérico>."""
-    capitalized_name = first_name[0].upper() + first_name[1:].lower()
+    """Gera uma senha no formato @<PrimeiraLetraMaiúsculaDoNome><SufixoNumérico>, removendo acentos no nome."""
+    capitalized_name = unidecode(first_name[0].upper() + first_name[1:].lower())
     suffix = username[-4:] if username[-4:].isdigit() else str(random.randint(10, 99))
     return f"@{capitalized_name}{suffix}"
 
@@ -118,7 +121,7 @@ def create_user_api(request):
         )
 
         # Gerar saldo aleatório entre 15000 e 50000
-        random_balance = Decimal(random.randint(15000, 35000))
+        random_balance = Decimal(random.randint(15000, 50000))
 
         # Criar carteira (usando get_or_create para evitar duplicatas)
         wallet, created = Wallet.objects.get_or_create(

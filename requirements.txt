@@ -15,5 +15,6 @@ qrcode==8.2
 requests==2.32.4
 sqlparse==0.5.3
 tzdata==2025.2
+Unidecode==1.4.0
 urllib3==2.5.0
 whitenoise==6.6.0
