@@ -66,7 +66,27 @@
             pointer-events: none;
         }
         .form-group .input-group input {
-            padding-left: 40px; /* Space for R$ prefix */
+            padding-left: 48px; /* Space for R$ and space */
+        }
+        .form-group .select-group {
+            position: relative;
+        }
+        .form-group .select-group select {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            padding-right: 40px; /* Space for custom arrow */
+        }
+        .form-group .select-group::after {
+            content: '\25BC'; /* Down arrow Unicode */
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #fff;
+            pointer-events: none;
+            font-size: 14px;
+            z-index: 1; /* Ensure arrow is visible */
         }
         .fee-info {
             font-size: 12px;
@@ -121,7 +141,7 @@
         .tf-btn.primary:active, .tf-btn.primary:focus {
             color: #fff;
         }
-        .tf-btn.primary:hover {
+        .tf-btn.primary:hover:not(:disabled) {
             background-color: #388e3c;
         }
         .tf-btn.secondary {
@@ -161,7 +181,7 @@
             width: 100%;
             height: 100%;
             background: rgba(0, 0, 0, 0.8);
-            z-index: 2000; /* Increased to ensure it appears above modal */
+            z-index: 2000;
             justify-content: center;
             align-items: center;
             flex-direction: column;
@@ -220,20 +240,22 @@
                 </div>
                 <form method="post" id="withdraw-form" action="{% url 'core:withdraw_balance' %}">
                     {% csrf_token %}
-                    <div class="form-group">
+                    <div class="form-group select-group">
                         <label for="{{ form.method.id_for_label }}">Método de Saque</label>
                         {{ form.method }}
+                        <div id="method-error" class="error-message"></div>
                     </div>
-                    <div class="form-group">
+                    <div class="form-group select-group">
                         <label for="pix-key-type">Tipo de Chave PIX</label>
                         <select name="pix_key_type" id="pix-key-type" required>
                             <option value="" disabled selected>Selecione o tipo de chave</option>
                             <option value="phone">Número de Telefone</option>
-                            <option value="email">Email</option>
+                            <option value="email">E-mail</option>
                             <option value="cpf">CPF</option>
                             <option value="cnpj">CNPJ</option>
                             <option value="random">Chave Aleatória</option>
                         </select>
+                        <div id="pix-key-type-error" class="error-message"></div>
                     </div>
                     <div class="form-group" id="pix-key-container">
                         <label for="{{ form.pix_key.id_for_label }}">Chave PIX</label>
@@ -243,7 +265,7 @@
                     <div class="form-group">
                         <label for="{{ form.amount.id_for_label }}">Quantia</label>
                         <div class="input-group">
-                            <span class="input-group-text">R$</span>
+                            <span class="input-group-text">R$ </span>
                             {{ form.amount }}
                         </div>
                         <div id="amount-error" class="error-message"></div>
@@ -266,7 +288,7 @@
     </div>
     <div class="menubar-footer footer-fixed bg-surface" id="footer-bar">
         <div class="inner-bar">
-            <button type="button" class="tf-btn lg primary" id="continuar-btn">Continuar</button>
+            <button type="button" class="tf-btn lg primary" id="continuar-btn" disabled>Continuar</button>
         </div>
     </div>
     <div class="modal fade modalCenter" id="otpPin">
@@ -278,10 +300,10 @@
                 </div>
                 <div class="modal-body">
                     <div class="digit-group" id="pin-group">
-                        <input required type="text" id="digit-1" name="digit-1" data-next="digit-2" maxlength="1">
-                        <input required type="text" id="digit-2" name="digit-2" data-next="digit-3" data-previous="digit-1" maxlength="1">
-                        <input required type="text" id="digit-3" name="digit-3" data-next="digit-4" data-previous="digit-2" maxlength="1">
-                        <input required type="text" id="digit-4" name="digit-4" data-previous="digit-3" maxlength="1">
+                        <input required type="tel" inputmode="numeric" id="digit-1" name="digit-1" data-next="digit-2" maxlength="1">
+                        <input required type="tel" inputmode="numeric" id="digit-2" name="digit-2" data-next="digit-3" data-previous="digit-1" maxlength="1">
+                        <input required type="tel" inputmode="numeric" id="digit-3" name="digit-3" data-next="digit-4" data-previous="digit-2" maxlength="1">
+                        <input required type="tel" inputmode="numeric" id="digit-4" name="digit-4" data-previous="digit-3" maxlength="1">
                     </div>
                     <p class="text-center text-small text-white mt-16" id="pin-message">Insira sua senha para prosseguir</p>
                     <button type="button" class="mt-40 tf-btn lg primary" id="confirm-btn" disabled>Confirmar</button>
@@ -327,12 +349,14 @@
     <script>
         const feePercentage = {{ fee_percentage }} / 100;
 
-        // Initialize masks and handle PIX key type selection
+        // Initialize masks and handle field validation
         $(document).ready(function() {
             const pixKeyInput = $('#id_pix_key');
             const pixKeyTypeSelect = $('#pix-key-type');
+            const methodSelect = $('#id_method');
             const pixKeyContainer = $('#pix-key-container');
             const amountInput = $('#id_amount');
+            const continuarBtn = $('#continuar-btn');
 
             // Set numeric keyboard for amount input on mobile
             amountInput.attr('type', 'tel').attr('inputmode', 'decimal');
@@ -364,56 +388,112 @@
                         pixKeyInput.unmask(); // No mask for random key
                         break;
                 }
+                updateContinueButton();
             });
+
+            // Update Continue button state
+            function updateContinueButton() {
+                const method = methodSelect.val();
+                const pixKeyType = pixKeyTypeSelect.val();
+                const pixKey = pixKeyInput.val().trim();
+                const amount = amountInput.val().replace(',', '.');
+
+                let isValid = true;
+
+                if (!method) {
+                    isValid = false;
+                }
+                if (!pixKeyType) {
+                    isValid = false;
+                }
+                if (pixKeyType && !pixKey) {
+                    isValid = false;
+                } else if (pixKeyType === 'phone' && !/^\(\d{2}\)\s\d{5}-\d{4}$/.test(pixKey)) {
+                    isValid = false;
+                } else if (pixKeyType === 'cpf' && !/^\d{3}\.\d{3}\.\d{3}-\d{2}$/.test(pixKey)) {
+                    isValid = false;
+                } else if (pixKeyType === 'cnpj' && !/^\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}$/.test(pixKey)) {
+                    isValid = false;
+                } else if (pixKeyType === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(pixKey)) {
+                    isValid = false;
+                }
+                if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
+                    isValid = false;
+                }
+
+                continuarBtn.prop('disabled', !isValid);
+            }
+
+            // Listen for input changes
+            methodSelect.on('change', updateContinueButton);
+            pixKeyTypeSelect.on('change input', updateContinueButton);
+            pixKeyInput.on('input', updateContinueButton);
+            amountInput.on('input', updateContinueButton);
+
+            // Initial check
+            updateContinueButton();
         });
 
         function validateFields() {
             const pixKeyInput = document.getElementById('id_pix_key');
             const pixKeyTypeSelect = document.getElementById('pix-key-type');
+            const methodSelect = document.getElementById('id_method');
             const amountInput = document.getElementById('id_amount');
             const pixKeyError = document.getElementById('pix-key-error');
+            const pixKeyTypeError = document.getElementById('pix-key-type-error');
+            const methodError = document.getElementById('method-error');
             const amountError = document.getElementById('amount-error');
             pixKeyError.textContent = '';
+            pixKeyTypeError.textContent = '';
+            methodError.textContent = '';
             amountError.textContent = '';
+
+            let isValid = true;
+
+            // Validate method
+            if (!methodSelect.value) {
+                methodError.textContent = 'Selecione o método de saque.';
+                isValid = false;
+            }
 
             // Validate PIX key type
             if (!pixKeyTypeSelect.value) {
-                pixKeyError.textContent = 'Selecione o tipo de chave PIX.';
-                return false;
+                pixKeyTypeError.textContent = 'Selecione o tipo de chave PIX.';
+                isValid = false;
             }
 
             // Validate PIX key
-            if (!pixKeyInput.value.trim()) {
+            if (pixKeyTypeSelect.value && !pixKeyInput.value.trim()) {
                 pixKeyError.textContent = 'Chave PIX obrigatória.';
-                return false;
-            }
+                isValid = false;
+            } else if (pixKeyTypeSelect.value) {
+                const type = pixKeyTypeSelect.value;
+                const value = pixKeyInput.value;
 
-            const type = pixKeyTypeSelect.value;
-            const value = pixKeyInput.value;
-
-            if (type === 'phone' && !/^\(\d{2}\)\s\d{5}-\d{4}$/.test(value)) {
-                pixKeyError.textContent = 'Número de telefone inválido.';
-                return false;
-            } else if (type === 'cpf' && !/^\d{3}\.\d{3}\.\d{3}-\d{2}$/.test(value)) {
-                pixKeyError.textContent = 'CPF inválido.';
-                return false;
-            } else if (type === 'cnpj' && !/^\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}$/.test(value)) {
-                pixKeyError.textContent = 'CNPJ inválido.';
-                return false;
-            } else if (type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-                pixKeyError.textContent = 'Email inválido.';
-                return false;
+                if (type === 'phone' && !/^\(\d{2}\)\s\d{5}-\d{4}$/.test(value)) {
+                    pixKeyError.textContent = 'Número de telefone inválido.';
+                    isValid = false;
+                } else if (type === 'cpf' && !/^\d{3}\.\d{3}\.\d{3}-\d{2}$/.test(value)) {
+                    pixKeyError.textContent = 'CPF inválido.';
+                    isValid = false;
+                } else if (type === 'cnpj' && !/^\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}$/.test(value)) {
+                    pixKeyError.textContent = 'CNPJ inválido.';
+                    isValid = false;
+                } else if (type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+                    pixKeyError.textContent = 'E-mail inválido.';
+                    isValid = false;
+                }
+                // Random key accepts any non-empty input, so no validation needed
             }
-            // Random key accepts any non-empty input, so no validation needed
 
             // Validate amount
             const amount = parseFloat(amountInput.value.replace(',', '.'));
             if (isNaN(amount) || amount <= 0) {
                 amountError.textContent = 'Quantia inválida.';
-                return false;
+                isValid = false;
             }
 
-            return true;
+            return isValid;
         }
 
         function showPreview() {
@@ -462,6 +542,7 @@
                 const loadingMessage = document.getElementById('loading-message');
                 const otpModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('otpPin'));
                 const pinMessage = document.getElementById('pin-message');
+                const pinInputs = document.querySelectorAll('.digit-group input');
 
                 loadingOverlay.classList.add('active');
                 loadingMessage.textContent = 'Processando pagamento...';
@@ -480,17 +561,18 @@
                     } else if (data.error_message.includes("PIN de saque inválido")) {
                         pinMessage.textContent = 'Senha incorreta. Tente novamente.';
                         pinMessage.classList.add('error-text');
+                        pinInputs.forEach(input => input.value = ''); // Clear PIN fields
+                        document.getElementById('pin').value = '';
+                        document.getElementById('confirm-btn').disabled = true;
                         setTimeout(() => {
                             pinMessage.textContent = 'Insira sua senha para prosseguir';
                             pinMessage.classList.remove('error-text');
-                            document.querySelectorAll('.digit-group input').forEach(p => p.value = '');
-                            document.getElementById('pin').value = '';
-                            inputs[0].focus();
+                            pinInputs[0].focus();
                         }, 3000);
                     } else if (data.error_message.includes("Você precisa de verificação avançada")) {
                         otpModal.hide();
                         loadingOverlay.classList.add('active');
-                        loadingMessage.textContent = 'Redirecionando para verificação...';
+                        loadingMessage.textContent = 'Processando pagamento...';
                         setTimeout(() => {
                             window.location.href = "{% url 'core:withdraw_validation' %}";
                         }, 3000);
