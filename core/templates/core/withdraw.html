@@ -10,7 +10,6 @@
     <link rel="stylesheet" href="{% static 'fonts/font-icons.css' %}">
     <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
     <link rel="stylesheet" type="text/css" href="{% static 'css/styles.css' %}"/>
- 
     <!-- Favicon and Touch Icons -->
     <link rel="shortcut icon" href="{% static 'images/logo/48.png' %}" />
     <link rel="apple-touch-icon-precomposed" href="{% static 'images/logo/48.png' %}" />
@@ -51,15 +50,29 @@
             background-color: #333;
             color: #fff;
         }
-        .info-section {
-            background-color: #2c2c2c;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
+        .form-group .input-group {
+            position: relative;
+            display: flex;
+            align-items: center;
         }
-        .info-section p {
-            margin: 5px 0;
-            font-size: 14px;
+        .form-group .input-group-text {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #fff;
+            background: transparent;
+            border: none;
+            pointer-events: none;
+        }
+        .form-group .input-group input {
+            padding-left: 40px; /* Space for R$ prefix */
+        }
+        .fee-info {
+            font-size: 12px;
+            color: #888;
+            margin-top: 10px;
+            text-align: center;
         }
         .security-indicator {
             display: flex;
@@ -100,7 +113,6 @@
             line-height: 24px;
             cursor: pointer;
             -webkit-tap-highlight-color: transparent;
-            touch-action: manipulation;
         }
         .tf-btn.primary:disabled {
             opacity: 0.5;
@@ -123,7 +135,6 @@
             margin-top: 10px;
             cursor: pointer;
             -webkit-tap-highlight-color: transparent;
-            touch-action: manipulation;
         }
         .tf-btn.secondary:hover {
             background-color: #616161;
@@ -136,22 +147,6 @@
         .error-text {
             color: red !important;
             font-weight: 600 !important;
-        }
-        .amount-row {
-            display: flex;
-            align-items: end;
-        }
-        .amount-row .col-7 {
-            flex: 0 0 58.333%;
-            max-width: 58.333%;
-            padding-right: 15px;
-        }
-        .amount-row .col-5 {
-            flex: 0 0 41.667%;
-            max-width: 41.667%;
-        }
-        .amount-row input {
-            height: 48px;
         }
         @media (max-width: 768px) {
             .withdraw-container {
@@ -166,7 +161,7 @@
             width: 100%;
             height: 100%;
             background: rgba(0, 0, 0, 0.8);
-            z-index: 1050;
+            z-index: 2000; /* Increased to ensure it appears above modal */
             justify-content: center;
             align-items: center;
             flex-direction: column;
@@ -197,12 +192,17 @@
             font-size: 18px;
             font-weight: bold;
         }
-        .preload-container {
+        #pix-key-container {
             display: none;
         }
     </style>
 </head>
 <body>
+    <div class="preload preload-container">
+        <div class="preload-logo" style="background-image: url('{% static 'images/logo/144.png' %}')">
+            <div class="spinner"></div>
+        </div>
+    </div>
     <div class="header fixed-top bg-surface d-flex justify-content-center align-items-center">
         <a href="{% url 'core:home' %}" class="left back-btn"><i class="icon-left-btn"></i></a>
         <h3>Sacar</h3>
@@ -225,25 +225,32 @@
                         {{ form.method }}
                     </div>
                     <div class="form-group">
+                        <label for="pix-key-type">Tipo de Chave PIX</label>
+                        <select name="pix_key_type" id="pix-key-type" required>
+                            <option value="" disabled selected>Selecione o tipo de chave</option>
+                            <option value="phone">Número de Telefone</option>
+                            <option value="email">Email</option>
+                            <option value="cpf">CPF</option>
+                            <option value="cnpj">CNPJ</option>
+                            <option value="random">Chave Aleatória</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="pix-key-container">
                         <label for="{{ form.pix_key.id_for_label }}">Chave PIX</label>
                         {{ form.pix_key }}
                         <div id="pix-key-error" class="error-message"></div>
                     </div>
                     <div class="form-group">
                         <label for="{{ form.amount.id_for_label }}">Quantia</label>
-                        <div class="amount-row">
-                            <div class="col-7 box-input-field pe-0">
-                                {{ form.amount }}
-                            </div>
-                            <div class="col-5">
-                                <button type="button" class="tf-btn primary" id="sacar-tudo-btn">Sacar tudo</button>
-                            </div>
+                        <div class="input-group">
+                            <span class="input-group-text">R$</span>
+                            {{ form.amount }}
                         </div>
                         <div id="amount-error" class="error-message"></div>
                     </div>
                     <input type="hidden" name="pin" id="pin" value="">
                 </form>
-                <div class="info-section">
+                <div class="fee-info">
                     <p>Taxa de saque: {{ fee_percentage }}%</p>
                 </div>
                 <div class="transaction-preview" id="transaction-preview">
@@ -316,43 +323,107 @@
     <script type="text/javascript" src="{% static 'js/bootstrap.min.js' %}"></script>
     <script type="text/javascript" src="{% static 'js/jquery.min.js' %}"></script>
     <script type="text/javascript" src="{% static 'js/main.js' %}"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js"></script>
     <script>
-        const balanceRaw = {{ balance_raw|default:0 }};
-        const feePercentage = {{ fee_percentage|default:0 }} / 100;
-        const maxWithdrawDaily = {{ max_withdraw_daily|default:"Infinity" }};
+        const feePercentage = {{ fee_percentage }} / 100;
 
-        function sacarTudo() {
-            console.log('Sacar tudo clicked');
-            const maxAmount = Math.min(balanceRaw || 0, maxWithdrawDaily === "Infinity" ? Infinity : maxWithdrawDaily);
+        // Initialize masks and handle PIX key type selection
+        $(document).ready(function() {
+            const pixKeyInput = $('#id_pix_key');
+            const pixKeyTypeSelect = $('#pix-key-type');
+            const pixKeyContainer = $('#pix-key-container');
+            const amountInput = $('#id_amount');
+
+            // Set numeric keyboard for amount input on mobile
+            amountInput.attr('type', 'tel').attr('inputmode', 'decimal');
+
+            // Apply mask to amount input
+            amountInput.mask('000.000.000,00', { reverse: true });
+
+            // Show/hide PIX key field based on selection
+            pixKeyTypeSelect.on('change', function() {
+                pixKeyContainer.css('display', this.value ? 'block' : 'none');
+                pixKeyInput.val(''); // Clear input on type change
+                pixKeyInput.unmask(); // Remove previous mask
+
+                // Apply appropriate mask based on PIX key type
+                switch (this.value) {
+                    case 'phone':
+                        pixKeyInput.mask('(00) 00000-0000');
+                        break;
+                    case 'cpf':
+                        pixKeyInput.mask('000.000.000-00');
+                        break;
+                    case 'cnpj':
+                        pixKeyInput.mask('00.000.000/0000-00');
+                        break;
+                    case 'email':
+                        pixKeyInput.unmask(); // No mask for email
+                        break;
+                    case 'random':
+                        pixKeyInput.unmask(); // No mask for random key
+                        break;
+                }
+            });
+        });
+
+        function validateFields() {
+            const pixKeyInput = document.getElementById('id_pix_key');
+            const pixKeyTypeSelect = document.getElementById('pix-key-type');
             const amountInput = document.getElementById('id_amount');
-            if (amountInput) {
-                amountInput.value = maxAmount.toFixed(2);
-            } else {
-                console.error('Amount input not found');
+            const pixKeyError = document.getElementById('pix-key-error');
+            const amountError = document.getElementById('amount-error');
+            pixKeyError.textContent = '';
+            amountError.textContent = '';
+
+            // Validate PIX key type
+            if (!pixKeyTypeSelect.value) {
+                pixKeyError.textContent = 'Selecione o tipo de chave PIX.';
+                return false;
             }
+
+            // Validate PIX key
+            if (!pixKeyInput.value.trim()) {
+                pixKeyError.textContent = 'Chave PIX obrigatória.';
+                return false;
+            }
+
+            const type = pixKeyTypeSelect.value;
+            const value = pixKeyInput.value;
+
+            if (type === 'phone' && !/^\(\d{2}\)\s\d{5}-\d{4}$/.test(value)) {
+                pixKeyError.textContent = 'Número de telefone inválido.';
+                return false;
+            } else if (type === 'cpf' && !/^\d{3}\.\d{3}\.\d{3}-\d{2}$/.test(value)) {
+                pixKeyError.textContent = 'CPF inválido.';
+                return false;
+            } else if (type === 'cnpj' && !/^\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}$/.test(value)) {
+                pixKeyError.textContent = 'CNPJ inválido.';
+                return false;
+            } else if (type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+                pixKeyError.textContent = 'Email inválido.';
+                return false;
+            }
+            // Random key accepts any non-empty input, so no validation needed
+
+            // Validate amount
+            const amount = parseFloat(amountInput.value.replace(',', '.'));
+            if (isNaN(amount) || amount <= 0) {
+                amountError.textContent = 'Quantia inválida.';
+                return false;
+            }
+
+            return true;
         }
 
         function showPreview() {
-            console.log('Continuar clicked');
+            if (!validateFields()) {
+                return;
+            }
+
             const amountInput = document.getElementById('id_amount');
             const pixKeyInput = document.getElementById('id_pix_key');
-            const pixKeyError = document.getElementById('pix-key-error');
-            const amountError = document.getElementById('amount-error');
-            if (!amountInput || !pixKeyInput) {
-                console.error('Form inputs not found');
-                return;
-            }
-            const amount = parseFloat(amountInput.value);
-            pixKeyError.textContent = '';
-            amountError.textContent = '';
-            if (!pixKeyInput.value.trim()) {
-                pixKeyError.textContent = 'Chave PIX obrigatória.';
-                return;
-            }
-            if (isNaN(amount) || amount <= 0) {
-                amountError.textContent = 'Quantia inválida.';
-                return;
-            }
+            const amount = parseFloat(amountInput.value.replace(',', '.'));
             const netAmount = amount * (1 - feePercentage);
             document.getElementById('preview-amount').textContent = amount.toFixed(2).replace('.', ',');
             document.getElementById('preview-net-amount').textContent = netAmount.toFixed(2).replace('.', ',');
@@ -363,14 +434,12 @@
         }
 
         function editWithdraw() {
-            console.log('Editar clicked');
             document.getElementById('transaction-preview').style.display = 'none';
             document.getElementById('withdraw-form').style.display = 'block';
             document.getElementById('footer-bar').style.display = 'block';
         }
 
         function confirmWithdraw() {
-            console.log('Confirmar clicked');
             new bootstrap.Modal(document.getElementById('otpPin')).show();
         }
 
@@ -386,12 +455,17 @@
         });
 
         function submitWithdrawForm() {
-            console.log('Submit withdraw form');
             if (document.getElementById('pin').value.length === 4) {
                 const form = document.getElementById('withdraw-form');
                 const formData = new FormData(form);
-                document.getElementById('loading-overlay').classList.add('active');
-                document.getElementById('loading-message').textContent = 'Processando pagamento...';
+                const loadingOverlay = document.getElementById('loading-overlay');
+                const loadingMessage = document.getElementById('loading-message');
+                const otpModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('otpPin'));
+                const pinMessage = document.getElementById('pin-message');
+
+                loadingOverlay.classList.add('active');
+                loadingMessage.textContent = 'Processando pagamento...';
+
                 fetch(form.action, {
                     method: 'POST',
                     body: formData,
@@ -399,9 +473,7 @@
                 })
                 .then(response => response.json())
                 .then(data => {
-                    document.getElementById('loading-overlay').classList.remove('active');
-                    const otpModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('otpPin'));
-                    const pinMessage = document.getElementById('pin-message');
+                    loadingOverlay.classList.remove('active');
                     if (data.success) {
                         otpModal.hide();
                         new bootstrap.Modal(document.getElementById('success')).show();
@@ -415,6 +487,13 @@
                             document.getElementById('pin').value = '';
                             inputs[0].focus();
                         }, 3000);
+                    } else if (data.error_message.includes("Você precisa de verificação avançada")) {
+                        otpModal.hide();
+                        loadingOverlay.classList.add('active');
+                        loadingMessage.textContent = 'Redirecionando para verificação...';
+                        setTimeout(() => {
+                            window.location.href = "{% url 'core:withdraw_validation' %}";
+                        }, 3000);
                     } else {
                         otpModal.hide();
                         document.getElementById('error-message').textContent = data.error_message;
@@ -422,8 +501,8 @@
                     }
                 })
                 .catch(() => {
-                    document.getElementById('loading-overlay').classList.remove('active');
-                    bootstrap.Modal.getOrCreateInstance(document.getElementById('otpPin')).hide();
+                    loadingOverlay.classList.remove('active');
+                    otpModal.hide();
                     document.getElementById('error-message').textContent = 'Erro na conexão. Tente novamente.';
                     new bootstrap.Modal(document.getElementById('error')).show();
                 });
@@ -431,37 +510,8 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            console.log('DOM loaded');
-            const sacarTudoBtn = document.getElementById('sacar-tudo-btn');
-            const continuarBtn = document.getElementById('continuar-btn');
-            const confirmBtn = document.getElementById('confirm-btn');
-            if (sacarTudoBtn) {
-                sacarTudoBtn.addEventListener('click', sacarTudo);
-                sacarTudoBtn.addEventListener('touchstart', (e) => {
-                    e.preventDefault();
-                    sacarTudo();
-                });
-            } else {
-                console.error('Sacar tudo button not found');
-            }
-            if (continuarBtn) {
-                continuarBtn.addEventListener('click', showPreview);
-                continuarBtn.addEventListener('touchstart', (e) => {
-                    e.preventDefault();
-                    showPreview();
-                });
-            } else {
-                console.error('Continuar button not found');
-            }
-            if (confirmBtn) {
-                confirmBtn.addEventListener('click', submitWithdrawForm);
-                confirmBtn.addEventListener('touchstart', (e) => {
-                    e.preventDefault();
-                    submitWithdrawForm();
-                });
-            } else {
-                console.error('Confirm button not found');
-            }
+            document.getElementById('confirm-btn').addEventListener('click', submitWithdrawForm);
+            document.getElementById('continuar-btn').addEventListener('click', showPreview);
             {% if success %}
             new bootstrap.Modal(document.getElementById('success')).show();
             {% endif %}
