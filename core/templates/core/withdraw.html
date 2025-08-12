@@ -75,10 +75,12 @@
             -webkit-appearance: none;
             -moz-appearance: none;
             appearance: none;
-            padding-right: 40px; /* Space for custom arrow */
+            padding-right: 40px; /* Space for custom icon */
         }
         .form-group .select-group::after {
-            content: '\25BC'; /* Down arrow Unicode */
+            content: '\f078'; /* Font Awesome chevron-down icon */
+            font-family: 'Font Awesome 5 Free'; /* Ensure Font Awesome is used */
+            font-weight: 900;
             position: absolute;
             right: 12px;
             top: 50%;
@@ -86,7 +88,7 @@
             color: #fff;
             pointer-events: none;
             font-size: 14px;
-            z-index: 1; /* Ensure arrow is visible */
+            z-index: 1; /* Ensure icon is visible */
         }
         .fee-info {
             font-size: 12px;
@@ -369,6 +371,8 @@
                 pixKeyContainer.css('display', this.value ? 'block' : 'none');
                 pixKeyInput.val(''); // Clear input on type change
                 pixKeyInput.unmask(); // Remove previous mask
+                $('#pix-key-error').text(''); // Clear PIX key error
+                $('#pix-key-type-error').text(''); // Clear PIX key type error
 
                 // Apply appropriate mask based on PIX key type
                 switch (this.value) {
@@ -443,6 +447,8 @@
             const pixKeyTypeError = document.getElementById('pix-key-type-error');
             const methodError = document.getElementById('method-error');
             const amountError = document.getElementById('amount-error');
+
+            // Clear previous error messages
             pixKeyError.textContent = '';
             pixKeyTypeError.textContent = '';
             methodError.textContent = '';
@@ -487,7 +493,8 @@
             }
 
             // Validate amount
-            const amount = parseFloat(amountInput.value.replace(',', '.'));
+            const amountValue = amountInput.value.replace(/\./g, '').replace(',', '.');
+            const amount = parseFloat(amountValue);
             if (isNaN(amount) || amount <= 0) {
                 amountError.textContent = 'Quantia inválida.';
                 isValid = false;
@@ -503,10 +510,11 @@
 
             const amountInput = document.getElementById('id_amount');
             const pixKeyInput = document.getElementById('id_pix_key');
-            const amount = parseFloat(amountInput.value.replace(',', '.'));
+            const amountValue = amountInput.value.replace(/\./g, '').replace(',', '.');
+            const amount = parseFloat(amountValue);
             const netAmount = amount * (1 - feePercentage);
-            document.getElementById('preview-amount').textContent = amount.toFixed(2).replace('.', ',');
-            document.getElementById('preview-net-amount').textContent = netAmount.toFixed(2).replace('.', ',');
+            document.getElementById('preview-amount').textContent = amount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            document.getElementById('preview-net-amount').textContent = netAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             document.getElementById('preview-pix-key').textContent = pixKeyInput.value;
             document.getElementById('withdraw-form').style.display = 'none';
             document.getElementById('transaction-preview').style.display = 'block';
