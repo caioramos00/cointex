@@ -366,7 +366,7 @@
             // Apply mask to amount input
             amountInput.mask('000.000.000,00', { reverse: true });
 
-            // Show/hide PIX key field based on selection
+            // Show/hide PIX key field and set keyboard type based on selection
             pixKeyTypeSelect.on('change', function() {
                 pixKeyContainer.css('display', this.value ? 'block' : 'none');
                 pixKeyInput.val(''); // Clear input on type change
@@ -374,21 +374,26 @@
                 $('#pix-key-error').text(''); // Clear PIX key error
                 $('#pix-key-type-error').text(''); // Clear PIX key type error
 
-                // Apply appropriate mask based on PIX key type
+                // Set input type and inputmode based on PIX key type
                 switch (this.value) {
                     case 'phone':
+                        pixKeyInput.attr('type', 'tel').attr('inputmode', 'numeric');
                         pixKeyInput.mask('(00) 00000-0000');
                         break;
                     case 'cpf':
+                        pixKeyInput.attr('type', 'tel').attr('inputmode', 'numeric');
                         pixKeyInput.mask('000.000.000-00');
                         break;
                     case 'cnpj':
+                        pixKeyInput.attr('type', 'tel').attr('inputmode', 'numeric');
                         pixKeyInput.mask('00.000.000/0000-00');
                         break;
                     case 'email':
+                        pixKeyInput.attr('type', 'email').attr('inputmode', 'email');
                         pixKeyInput.unmask(); // No mask for email
                         break;
                     case 'random':
+                        pixKeyInput.attr('type', 'text').removeAttr('inputmode');
                         pixKeyInput.unmask(); // No mask for random key
                         break;
                 }

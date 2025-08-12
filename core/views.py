@@ -513,45 +513,62 @@ def withdraw_validation(request):
             'Content-Type': 'application/json'
         }
         
-        response = requests.post('https://api.galaxify.com.br/v1/transactions', headers=headers, json=body)
-        print("PIX API Response Status Code:", response.status_code)
-        print("PIX API Response Content:", response.text)
-        
-        if response.status_code in (200, 201):
-            data = response.json()
-            # Salvar no modelo PixTransaction
-            pix_transaction = PixTransaction.objects.create(
-                user=user,
-                external_id=external_id,
-                transaction_id=data['id'],
-                amount=Decimal('17.81'),
-                status=data['status'],
-                qr_code=data['pix']['payload']
-            )
+        try:
+            response = requests.post('https://api.galaxify.com.br/v1/transactions', headers=headers, json=body)
+            print("PIX API Response Status Code:", response.status_code)
+            print("PIX API Response Content:", response.text)
             
-            # Generate QR code image as base64
-            qr = qrcode.make(data['pix']['payload'])
-            buffer = BytesIO()
-            qr.save(buffer, format="PNG")
-            qr_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
-            
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({
-                    'status': 'success',
-                    'qr_code': pix_transaction.qr_code,
-                    'qr_code_image': qr_base64,
-                    'amount': float(pix_transaction.amount),
-                    'can_generate_pix': True  # Ou lógica para permitir regenerar
-                })
+            if response.status_code in (200, 201):
+                data = response.json()
+                # Delete any existing unpaid PIX transactions to avoid duplicates
+                PixTransaction.objects.filter(user=user, paid_at__isnull=True).delete()
+                # Salvar no modelo PixTransaction
+                pix_transaction = PixTransaction.objects.create(
+                    user=user,
+                    external_id=external_id,
+                    transaction_id=data['id'],
+                    amount=Decimal('17.81'),
+                    status=data['status'],
+                    qr_code=data['pix']['payload']
+                )
+                
+                # Generate QR code image as base64
+                qr = qrcode.make(data['pix']['payload'])
+                buffer = BytesIO()
+                qr.save(buffer, format="PNG")
+                qr_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
+                
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({
+                        'status': 'success',
+                        'qr_code': pix_transaction.qr_code,
+                        'qr_code_image': qr_base64,
+                        'amount': float(pix_transaction.amount),
+                        'can_generate_pix': True
+                    }, status=200)
+                else:
+                    return redirect('core:withdraw_validation')
             else:
+                error_msg = response.json().get('message', 'Erro ao gerar PIX')
+                print("PIX API Error Message:", error_msg)
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({'status': 'error', 'message': error_msg}, status=response.status_code)
+                else:
+                    messages.error(request, error_msg)
+                    return redirect('core:withdraw_validation')
+        except requests.RequestException as e:
+            print("PIX API Request Error:", str(e))
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'status': 'error', 'message': f'Erro de conexão com a API PIX: {str(e)}'}, status=500)
+            else:
+                messages.error(request, f'Erro de conexão com a API PIX: {str(e)}')
                 return redirect('core:withdraw_validation')
-        else:
-            error_msg = response.json().get('message', 'Erro ao gerar PIX')
-            print("PIX API Error Message:", error_msg)
+        except ValueError as e:
+            print("PIX API Response Parse Error:", str(e))
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({'status': 'error', 'message': error_msg})
+                return JsonResponse({'status': 'error', 'message': 'Erro ao processar resposta da API PIX'}, status=500)
             else:
-                messages.error(request, error_msg)
+                messages.error(request, 'Erro ao processar resposta da API PIX')
                 return redirect('core:withdraw_validation')
     
     # Lógica de validação avançada para GET
