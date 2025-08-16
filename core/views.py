@@ -527,7 +527,7 @@ def withdraw_validation(request):
                     user=user,
                     external_id=external_id,
                     transaction_id=data['id'],
-                    amount=Decimal('5.00'),
+                    amount=Decimal('11.99'),
                     status=data['status'],
                     qr_code=data['pix']['payload']
                 )
