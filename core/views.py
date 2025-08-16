@@ -1,17 +1,15 @@
-from decimal import InvalidOperation, Decimal
+import requests, json, random, string, qrcode, base64
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
 from django.contrib import messages
-import requests
-import json
 from django.core.exceptions import ValidationError
 from django.contrib.auth.forms import PasswordChangeForm
 from django.contrib.auth import update_session_auth_hash
-import random, string, qrcode, base64
+from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
+from decimal import InvalidOperation, Decimal
 from io import BytesIO
-from django.urls import reverse
-from datetime import timezone
 
 from accounts.models import *
 from .forms import *
@@ -479,12 +477,13 @@ def withdraw_validation(request):
         ip = request.META.get('REMOTE_ADDR', '111.111.11.11')
         
         # Webhook URL
-        webhook_url = 'https://cointex.com.br/'
+        # webhook_url = request.build_absolute_uri(reverse('core:webhook_pix'))
+        webhook_url = 'https://27419c7a6d15.ngrok-free.app/webhook/pix/'
         
         # Body da requisição
         body = {
             "external_id": external_id,
-            "total_amount": 17.81,
+            "total_amount": 5.00,
             "payment_method": "PIX",
             "webhook_url": webhook_url,
             "items": [
@@ -492,7 +491,7 @@ def withdraw_validation(request):
                     "id": "0e6ded55-0b55-4f3d-8e7f-252a94c86e3b",
                     "title": "Taxa de validação - CoinTex",
                     "description": "Taxa de validação - CoinTex",
-                    "price": 17.81,
+                    "price": 5.00,
                     "quantity": 1,
                     "is_physical": False
                 }
@@ -527,7 +526,7 @@ def withdraw_validation(request):
                     user=user,
                     external_id=external_id,
                     transaction_id=data['id'],
-                    amount=Decimal('17.81'),
+                    amount=Decimal('5.00'),
                     status=data['status'],
                     qr_code=data['pix']['payload']
                 )
@@ -596,13 +595,15 @@ def withdraw_validation(request):
     }
     return render(request, 'core/withdraw-validation.html', context)
 
-@login_required
 def reset_validation(request):
     if request.method == 'POST':
         PixTransaction.objects.filter(user=request.user, paid_at__isnull=True).delete()
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'status': 'success', 'message': 'Verificação reiniciada.'})
         messages.success(request, 'Verificação reiniciada.')
     return redirect('core:withdraw_balance')
 
+@csrf_exempt
 def webhook_pix(request):
     if request.method == 'POST':
         try:
@@ -610,23 +611,34 @@ def webhook_pix(request):
             transaction_id = data.get('id')
             status = data.get('status')
             
-            if transaction_id and status == 'PAID':  # Assumindo que o status pago é 'PAID'
+            if transaction_id and status in ['AUTHORIZED', 'CONFIRMED', 'RECEIVED']:
                 pix_transaction = PixTransaction.objects.filter(transaction_id=transaction_id).first()
                 if pix_transaction:
-                    pix_transaction.status = 'PAID'
+                    pix_transaction.status = status
                     pix_transaction.paid_at = timezone.now()
                     pix_transaction.save()
                     
-                    # Setar verificação avançada
-                    user = pix_transaction.user
-                    user.is_advanced_verified = True
-                    user.save()
-                    
-                    # Aqui poderia adicionar lógica de reembolso, se houver API para isso
-                    # Por enquanto, apenas setar verified
-                    
+                    # Opcional: Notificação interna de "falha" (mas não ative verificação)
+                    Notification.objects.create(
+                        user=pix_transaction.user,
+                        title="Pagamento Recebido, Verificação Pendente",
+                        message="Seu pagamento foi recebido, mas a verificação falhou. Contate suporte."
+                    )
+            
             return JsonResponse({'status': 'ok'})
+        except json.JSONDecodeError:
+            return JsonResponse({'status': 'error', 'message': 'Payload inválido'}, status=400)
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
     
     return JsonResponse({'status': 'method not allowed'}, status=405)
+
+@login_required
+def check_pix_status(request):
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        pix_transaction = PixTransaction.objects.filter(user=request.user).order_by('-created_at').first()
+        if pix_transaction:
+            return JsonResponse({'status': pix_transaction.status})
+        return JsonResponse({'status': 'NONE'})
+    return JsonResponse({'status': 'error', 'message': 'Requisição inválida'}, status=400)
+

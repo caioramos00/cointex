@@ -2565,9 +2565,23 @@ input[type=text].ip-style2 {
   justify-content: center;
   transform: translateX(-50%);
 }
+.circle-box.error-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translateX(-50%);
+}
 .circle-box.check-icon::after {
   position: absolute;
   content: "\e923";
+  font-family: "icomoon";
+  font-size: 22px;
+  color: #fff;
+}
+.circle-box.error-icon::after {
+  position: absolute;
+  content: "\e92a";
   font-family: "icomoon";
   font-size: 22px;
   color: #fff;
