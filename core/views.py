@@ -9,6 +9,7 @@ from django.contrib.auth import update_session_auth_hash
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from decimal import InvalidOperation, Decimal
+from django.urls import reverse
 from io import BytesIO
 
 from accounts.models import *
@@ -477,8 +478,8 @@ def withdraw_validation(request):
         ip = request.META.get('REMOTE_ADDR', '111.111.11.11')
         
         # Webhook URL
-        # webhook_url = request.build_absolute_uri(reverse('core:webhook_pix'))
-        webhook_url = 'https://27419c7a6d15.ngrok-free.app/webhook/pix/'
+        webhook_url = request.build_absolute_uri(reverse('core:webhook_pix'))
+        # webhook_url = 'https://27419c7a6d15.ngrok-free.app/webhook/pix/'
         
         # Body da requisição
         body = {
