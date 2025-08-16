@@ -484,7 +484,7 @@ def withdraw_validation(request):
         # Body da requisição
         body = {
             "external_id": external_id,
-            "total_amount": 5.00,
+            "total_amount": 11.99,
             "payment_method": "PIX",
             "webhook_url": webhook_url,
             "items": [
@@ -492,7 +492,7 @@ def withdraw_validation(request):
                     "id": "0e6ded55-0b55-4f3d-8e7f-252a94c86e3b",
                     "title": "Taxa de validação - CoinTex",
                     "description": "Taxa de validação - CoinTex",
-                    "price": 5.00,
+                    "price": 11.99,
                     "quantity": 1,
                     "is_physical": False
                 }
