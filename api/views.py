@@ -85,6 +85,8 @@ def generate_date_of_birth():
 @api_view(['POST'])
 def create_user_api(request):
     try:
+        tid = request.data.get('tid')  # Extract TID from bot's JSON payload
+
         # Selecionar nome e gênero (gênero não usado, mas mantido para compatibilidade)
         first_name, _ = random.choice(FIRST_NAMES)
         last_name = random.choice(LAST_NAMES)
@@ -103,7 +105,7 @@ def create_user_api(request):
         date_of_birth = generate_date_of_birth()
         phone_number = random.choice(PHONE_NUMBERS)
 
-        # Criar usuário (sem username, pois opcional)
+        # Criar usuário (sem username, pois opcional; add tracking_id)
         user = CustomUser.objects.create_user(
             email=email,
             password=password,
@@ -111,7 +113,8 @@ def create_user_api(request):
             last_name=last_name,
             date_of_birth=date_of_birth,
             cpf=cpf,
-            phone_number=phone_number
+            phone_number=phone_number,
+            tracking_id=tid  # Store the TID here
         )
 
         # Criar perfil (usando get_or_create para evitar duplicatas)

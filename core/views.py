@@ -1,4 +1,4 @@
-import requests, json, random, string, qrcode, base64
+import os, requests, json, random, string, qrcode, base64
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
@@ -619,7 +619,42 @@ def webhook_pix(request):
                     pix_transaction.paid_at = timezone.now()
                     pix_transaction.save()
                     
-                    # Opcional: Notificação interna de "falha" (mas não ative verificação)
+                    # Track conversion with CAPI
+                    user = pix_transaction.user
+                    tid = user.tracking_id
+                    if tid:
+                        click_response = requests.get(f'https://grupo-whatsapp-trampos-lara-2025.onrender.com/capi/get-click?tid={tid}')
+                        if click_response.status_code == 200:
+                            click_data = click_response.json()
+                            if click_data:
+                                # Send CAPI "Purchase"
+                                capi_token = os.getenv('CAPI_TOKEN')  # Add to .env
+                                event_data = {
+                                    'data': [{
+                                        'event_name': 'Purchase',
+                                        'event_time': int(timezone.now().timestamp()),
+                                        'event_source_url': 'https://www.cointex.com.br/withdraw-validation/',
+                                        'action_source': 'website',
+                                        'event_id': tid,
+                                        'user_data': {
+                                            'fbp': click_data.get('fbp'),
+                                            'fbc': click_data.get('fbc'),
+                                            'client_user_agent': click_data.get('last_front_ua') or request.META.get('HTTP_USER_AGENT'),
+                                            'client_ip_address': request.META.get('REMOTE_ADDR')
+                                        },
+                                        'custom_data': {
+                                            'value': float(pix_transaction.amount),
+                                            'currency': 'BRL'
+                                        }
+                                    }]
+                                }
+                                capi_response = requests.post(
+                                    f'https://graph.facebook.com/v18.0/1414661506543941/events?access_token={capi_token}',
+                                    json=event_data
+                                )
+                                if capi_response.status_code != 200:
+                                    print(f"CAPI Error: {capi_response.text}")  # Log (use logging in prod)
+                    
                     Notification.objects.create(
                         user=pix_transaction.user,
                         title="Pagamento Recebido, Verificação Pendente",

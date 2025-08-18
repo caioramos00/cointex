@@ -1,20 +1,39 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, viewport-fit=cover">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, viewport-fit=cover">
     <!-- font -->
     <link rel="stylesheet" href="{% static 'fonts/fonts.css' %}">
     <!-- Icons -->
     <link rel="stylesheet" href="{% static 'fonts/font-icons.css' %}">
     <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
     <link rel="stylesheet" href="{% static 'css/swiper-bundle.min.css' %}">
-    <link rel="stylesheet" type="text/css" href="{% static 'css/styles.css' %}"/>
+    <link rel="stylesheet" type="text/css" href="{% static 'css/styles.css' %}" />
 
     <!-- Favicon and Touch Icons  -->
     <link rel="shortcut icon" href="{% static 'images/logo/48.png' %}" />
     <link rel="apple-touch-icon-precomposed" href="{% static 'images/logo/48.png' %}" />
+
+    <script>
+        !function (f, b, e, v, n, t, s) {
+            if (f.fbq) return; n = f.fbq = function () {
+                n.callMethod ?
+                n.callMethod.apply(n, arguments) : n.queue.push(arguments)
+            };
+            if (!f._fbq) f._fbq = n; n.push = n; n.loaded = !0; n.version = '2.0';
+            n.queue = []; t = b.createElement(e); t.async = !0;
+            t.src = v; s = b.getElementsByTagName(e)[0];
+            s.parentNode.insertBefore(t, s)
+        }(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
+        fbq('init', '1414661506543941');
+        fbq('track', 'PageView');
+    </script>
+    <noscript><img height="1" width="1" style="display:none"
+            src="https://www.facebook.com/tr?id=1414661506543941&ev=PageView&noscript=1" /></noscript>
 
     <title>Início</title>
 
@@ -26,13 +45,13 @@
 </head>
 
 <body>
-     <!-- preload -->
-     <div class="preload preload-container">
+    <!-- preload -->
+    <div class="preload preload-container">
         <div class="preload-logo" style="background-image: url('{% static 'images/logo/144.png' %}')">
-          <div class="spinner"></div>
+            <div class="spinner"></div>
         </div>
-      </div>
-      <!-- /preload --> 
+    </div>
+    <!-- /preload -->
 
     <div class="header-style2 fixed-top bg-menuDark">
         <div class="d-flex justify-content-between align-items-center gap-14">
@@ -54,14 +73,18 @@
                 <h1 class="mt-16"><a href="#">{{ formatted_balance }}</a></h1>
                 <ul class="mt-16 grid-2 m--16">
                     <li>
-                        <a href="{% url 'core:send_balance' %}" class="tf-list-item d-flex flex-column gap-8 align-items-center">
-                            <span class="box-round bg-surface d-flex justify-content-center align-items-center"><i class="icon icon-way"></i></span>
+                        <a href="{% url 'core:send_balance' %}"
+                            class="tf-list-item d-flex flex-column gap-8 align-items-center">
+                            <span class="box-round bg-surface d-flex justify-content-center align-items-center"><i
+                                    class="icon icon-way"></i></span>
                             Enviar
                         </a>
                     </li>
                     <li>
-                        <a href="{% url 'core:withdraw_balance' %}" class="tf-list-item d-flex flex-column gap-8 align-items-center">
-                            <span class="box-round bg-surface d-flex justify-content-center align-items-center"><i class="icon icon-way2"></i></span>
+                        <a href="{% url 'core:withdraw_balance' %}"
+                            class="tf-list-item d-flex flex-column gap-8 align-items-center">
+                            <span class="box-round bg-surface d-flex justify-content-center align-items-center"><i
+                                    class="icon icon-way2"></i></span>
                             Sacar
                         </a>
                     </li>
@@ -78,7 +101,8 @@
             <div class="pt-12 pb-12 mt-4">
                 <h5>Mercado</h5>
 
-                <div class="swiper tf-swiper swiper-wrapper-r mt-16" data-space-between="16" data-preview="2.8" data-tablet="2.8" data-desktop="3">
+                <div class="swiper tf-swiper swiper-wrapper-r mt-16" data-space-between="16" data-preview="2.8"
+                    data-tablet="2.8" data-desktop="3">
                     <div class="swiper-wrapper">
                         {% for coin in hot_coins %}
                         <div class="swiper-slide">
@@ -91,43 +115,51 @@
                                     </div>
                                 </div>
                                 <div class="mt-8 mb-8 coin-chart">
-                                    <div id="line-chart-{{ forloop.counter }}"></div>  <!-- ID único para cada chart -->
+                                    <div id="line-chart-{{ forloop.counter }}"></div> <!-- ID único para cada chart -->
                                 </div>
                                 <div class="coin-price">
                                     <span>{{ coin.formatted_current_price }}</span>
-                                    <span class="{% if coin.price_change_percentage_24h|default:0 > 0 %}text-primary{% else %}text-danger{% endif %} d-flex align-items-center gap-2">
-                                        <i class="{% if coin.price_change_percentage_24h|default:0 > 0 %}icon-select-up{% else %}icon-select-down{% endif %}"></i> {{ coin.formatted_price_change }}%
+                                    <span
+                                        class="{% if coin.price_change_percentage_24h|default:0 > 0 %}text-primary{% else %}text-danger{% endif %} d-flex align-items-center gap-2">
+                                        <i
+                                            class="{% if coin.price_change_percentage_24h|default:0 > 0 %}icon-select-up{% else %}icon-select-down{% endif %}"></i>
+                                        {{ coin.formatted_price_change }}%
                                     </span>
                                 </div>
                                 <div class="blur bg{{ forloop.counter }}">
                                 </div>
-                                
+
                             </a>
                         </div>
                         {% endfor %}
                     </div>
                 </div>
-               
+
             </div>
         </div>
         <div class="bg-menuDark tf-container">
             <div class="pt-12 pb-12 mt-4">
                 <div class="wrap-filter-swiper">
-                    <h5><a href="javascript:void(0);" onclick="return false;" class="cryptex-rating"><i class="icon-star"></i>Classificação CoinTex</a></h5> 
-                        <div class="swiper-wrapper1 menu-tab-v3 mt-12" role="tablist">
-                            <div class="swiper-slide1 nav-link active" data-bs-toggle="tab" data-bs-target="#favorites"  role="tab" aria-controls="favorites" aria-selected="true">
-                                Favoritos     
-                            </div>
-                            <div class="swiper-slide1 nav-link" data-bs-toggle="tab" data-bs-target="#top" role="tab" aria-controls="top" aria-selected="false">
-                                Top   
-                            </div>
-                            <div class="swiper-slide1 nav-link" data-bs-toggle="tab" data-bs-target="#popular" role="tab" aria-controls="popular" aria-selected="false">
-                                Popular  
-                            </div>
-                            <div class="swiper-slide1 nav-link" data-bs-toggle="tab" data-bs-target="#price" role="tab" aria-controls="price" aria-selected="false">
-                                Preço do Token   
-                            </div>
+                    <h5><a href="javascript:void(0);" onclick="return false;" class="cryptex-rating"><i
+                                class="icon-star"></i>Classificação CoinTex</a></h5>
+                    <div class="swiper-wrapper1 menu-tab-v3 mt-12" role="tablist">
+                        <div class="swiper-slide1 nav-link active" data-bs-toggle="tab" data-bs-target="#favorites"
+                            role="tab" aria-controls="favorites" aria-selected="true">
+                            Favoritos
                         </div>
+                        <div class="swiper-slide1 nav-link" data-bs-toggle="tab" data-bs-target="#top" role="tab"
+                            aria-controls="top" aria-selected="false">
+                            Top
+                        </div>
+                        <div class="swiper-slide1 nav-link" data-bs-toggle="tab" data-bs-target="#popular" role="tab"
+                            aria-controls="popular" aria-selected="false">
+                            Popular
+                        </div>
+                        <div class="swiper-slide1 nav-link" data-bs-toggle="tab" data-bs-target="#price" role="tab"
+                            aria-controls="price" aria-selected="false">
+                            Preço do Token
+                        </div>
+                    </div>
                 </div>
                 <div class="tab-content mt-8">
                     <div class="tab-pane fade show active" id="favorites" role="tabpanel">
@@ -149,13 +181,15 @@
                                         </div>
                                         <div class="d-flex align-items-center gap-12">
                                             <span class="text-small">{{ coin.formatted_current_price }}</span>
-                                            <span class="coin-btn {% if coin.price_change_percentage_24h|default:0 > 0 %}increase{% else %}decrease{% endif %}">{{ coin.formatted_price_change }}%</span>
+                                            <span
+                                                class="coin-btn {% if coin.price_change_percentage_24h|default:0 > 0 %}increase{% else %}decrease{% endif %}">{{
+                                                coin.formatted_price_change }}%</span>
                                         </div>
                                     </div>
                                 </a>
                             </li>
                             {% endfor %}
-                        </ul>  
+                        </ul>
                     </div>
                     <div class="tab-pane fade" id="top" role="tabpanel">
                         <div class="d-flex justify-content-between">
@@ -176,13 +210,15 @@
                                         </div>
                                         <div class="d-flex align-items-center gap-12">
                                             <span class="text-small">{{ coin.formatted_current_price }}</span>
-                                            <span class="coin-btn {% if coin.price_change_percentage_24h|default:0 > 0 %}increase{% else %}decrease{% endif %}">{{ coin.formatted_price_change }}%</span>
+                                            <span
+                                                class="coin-btn {% if coin.price_change_percentage_24h|default:0 > 0 %}increase{% else %}decrease{% endif %}">{{
+                                                coin.formatted_price_change }}%</span>
                                         </div>
                                     </div>
                                 </a>
                             </li>
                             {% endfor %}
-                        </ul>  
+                        </ul>
                     </div>
                     <div class="tab-pane fade" id="popular" role="tabpanel">
                         <div class="d-flex justify-content-between">
@@ -203,13 +239,15 @@
                                         </div>
                                         <div class="d-flex align-items-center gap-12">
                                             <span class="text-small">{{ coin.formatted_current_price }}</span>
-                                            <span class="coin-btn {% if coin.price_change_percentage_24h|default:0 > 0 %}increase{% else %}decrease{% endif %}">{{ coin.formatted_price_change }}%</span>
+                                            <span
+                                                class="coin-btn {% if coin.price_change_percentage_24h|default:0 > 0 %}increase{% else %}decrease{% endif %}">{{
+                                                coin.formatted_price_change }}%</span>
                                         </div>
                                     </div>
                                 </a>
                             </li>
                             {% endfor %}
-                        </ul>  
+                        </ul>
                     </div>
                     <div class="tab-pane fade" id="price" role="tabpanel">
                         <div class="d-flex justify-content-between">
@@ -230,19 +268,21 @@
                                         </div>
                                         <div class="d-flex align-items-center gap-12">
                                             <span class="text-small">{{ coin.formatted_current_price }}</span>
-                                            <span class="coin-btn {% if coin.price_change_percentage_24h|default:0 > 0 %}increase{% else %}decrease{% endif %}">{{ coin.formatted_price_change }}%</span>
+                                            <span
+                                                class="coin-btn {% if coin.price_change_percentage_24h|default:0 > 0 %}increase{% else %}decrease{% endif %}">{{
+                                                coin.formatted_price_change }}%</span>
                                         </div>
                                     </div>
                                 </a>
                             </li>
                             {% endfor %}
-                        </ul>  
+                        </ul>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    
+
     <!-- Comentei o navbar inferior -->
     <!-- <div class="menubar-footer footer-fixed">
         <ul class="inner-bar">
@@ -278,12 +318,12 @@
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="header fixed-top bg-surface d-flex justify-content-center align-items-center">
-                    <span class="left" data-bs-dismiss="modal"  aria-hidden="true"><i class="icon-left-btn"></i></span>
+                    <span class="left" data-bs-dismiss="modal" aria-hidden="true"><i class="icon-left-btn"></i></span>
                     <h3>Notificação</h3>
                 </div>
                 <div class="overflow-auto pt-45 pb-16">
                     <div class="tf-container">
-                        <p class="text-center text-secondary">Não há notificações.</p>  <!-- Mensagem de vazio -->
+                        <p class="text-center text-secondary">Não há notificações.</p> <!-- Mensagem de vazio -->
                         <!-- Conteúdo anterior comentado -->
                         <!-- <ul class="mt-12">
                             <li>
@@ -340,7 +380,7 @@
                         </ul> -->
                     </div>
                 </div>
-               
+
             </div>
         </div>
     </div>
@@ -355,7 +395,7 @@
                 </div>
                 <div class="overflow-auto pt-45 pb-16">
                     <div class="tf-container">
-                        <p class="text-center text-secondary">Não há recompensas.</p>  <!-- Mensagem de vazio -->
+                        <p class="text-center text-secondary">Não há recompensas.</p> <!-- Mensagem de vazio -->
                         <!-- Conteúdo anterior comentado -->
                         <!-- <ul class="mt-12">
                             <li>
@@ -397,7 +437,7 @@
                         </ul>
                     </div>
                 </div>
-               
+
             </div>
         </div>
     </div>
@@ -405,45 +445,55 @@
     <!-- noti popup -->
     <div class="modal fade modalCenter" id="modalNoti">
         <div class="modal-dialog modal-dialog-centered" role="document">
-           <div class="modal-content modal-sm">
-              <div class="p-16 line-bt text-center">
-                  <h4>“Cointex” Gostaria de Enviar Notificações para Você</h4>
-                  <p class="mt-8 text-large">As notificações podem incluir alertas, sons e badges de ícone. Elas podem ser configuradas nas Configurações.</p>
-              </div>
-              <div class="grid-2">
-                 <a href="#" class="line-r text-center text-button fw-6 p-10 text-secondary btn-hide-modal" data-bs-dismiss="modal" >Não Permitir</a>
-                 <a href="#" class="text-center text-button fw-6 p-10 text-primary btn-hide-modal"  data-bs-toggle="modal" data-bs-target="#notiPrivacy"> Permitir</a> 
-              </a>
-              </div>
-           </div>
+            <div class="modal-content modal-sm">
+                <div class="p-16 line-bt text-center">
+                    <h4>“Cointex” Gostaria de Enviar Notificações para Você</h4>
+                    <p class="mt-8 text-large">As notificações podem incluir alertas, sons e badges de ícone. Elas podem
+                        ser configuradas nas Configurações.</p>
+                </div>
+                <div class="grid-2">
+                    <a href="#" class="line-r text-center text-button fw-6 p-10 text-secondary btn-hide-modal"
+                        data-bs-dismiss="modal">Não Permitir</a>
+                    <a href="#" class="text-center text-button fw-6 p-10 text-primary btn-hide-modal"
+                        data-bs-toggle="modal" data-bs-target="#notiPrivacy"> Permitir</a>
+                    </a>
+                </div>
+            </div>
         </div>
     </div>
 
     <!-- noti popup 2-->
     <div class="modal fade modalCenter" id="notiPrivacy">
-       <div class="modal-dialog modal-dialog-centered">
-          <div class="modal-content p-20">
-             <div class="heading">
-              <h3>Privacidade</h3>
-              <div class="mt-4 text-small">
-                  <p>A política de privacidade de um app mobile é uma declaração legal que deve ser clara, conspícua e consentida por todos os usuários. Ela deve divulgar como um app mobile coleta, armazena e usa as informações pessoalmente identificáveis que coleta de seus usuários.</p>
-                  <p>A política de privacidade de um app mobile é desenvolvida e apresentada aos usuários para que os desenvolvedores de apps mobile permaneçam em conformidade com leis estaduais, federais e internacionais. Como resultado, eles cumprem o requisito legal de proteger a privacidade do usuário enquanto protegem a empresa de desafios legais.</p>
-              </div>
-              <h3 class="mt-12">Usuários Autorizados</h3>
-              <p class="mt-4 text-small">
-                  A política de privacidade de um app mobile é uma declaração legal que deve ser clara, conspícua e consentida por todos os usuários. Ela deve divulgar como um app mobile coleta, armazena e usa as informações pessoalmente identificáveis que coleta de seus usuários.
-              </p>
-              <div class="cb-noti mt-12">
-                <input type="checkbox" class="tf-checkbox" id="cb-ip"> 
-                <label for="cb-ip">Eu concordo com os Termos de Serviço e a Política de Privacidade</label>
-              </div>
-           
-             </div>
-             <div class="mt-20">
-                <a href="#" class="tf-btn md primary" data-bs-dismiss="modal">Eu Aceito</a>
-             </div>
-          </div>
-       </div>
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content p-20">
+                <div class="heading">
+                    <h3>Privacidade</h3>
+                    <div class="mt-4 text-small">
+                        <p>A política de privacidade de um app mobile é uma declaração legal que deve ser clara,
+                            conspícua e consentida por todos os usuários. Ela deve divulgar como um app mobile coleta,
+                            armazena e usa as informações pessoalmente identificáveis que coleta de seus usuários.</p>
+                        <p>A política de privacidade de um app mobile é desenvolvida e apresentada aos usuários para que
+                            os desenvolvedores de apps mobile permaneçam em conformidade com leis estaduais, federais e
+                            internacionais. Como resultado, eles cumprem o requisito legal de proteger a privacidade do
+                            usuário enquanto protegem a empresa de desafios legais.</p>
+                    </div>
+                    <h3 class="mt-12">Usuários Autorizados</h3>
+                    <p class="mt-4 text-small">
+                        A política de privacidade de um app mobile é uma declaração legal que deve ser clara, conspícua
+                        e consentida por todos os usuários. Ela deve divulgar como um app mobile coleta, armazena e usa
+                        as informações pessoalmente identificáveis que coleta de seus usuários.
+                    </p>
+                    <div class="cb-noti mt-12">
+                        <input type="checkbox" class="tf-checkbox" id="cb-ip">
+                        <label for="cb-ip">Eu concordo com os Termos de Serviço e a Política de Privacidade</label>
+                    </div>
+
+                </div>
+                <div class="mt-20">
+                    <a href="#" class="tf-btn md primary" data-bs-dismiss="modal">Eu Aceito</a>
+                </div>
+            </div>
+        </div>
     </div>
 
 
@@ -459,33 +509,34 @@
 
     <script type="text/javascript" src="{% static 'js/main.js' %}"></script>
 
-<script>
-    {% for coin in hot_coins %}
-    var options = {
-        series: [{
-            data: {{ coin.sparkline_json | safe }}
+    <script>
+        {% for coin in hot_coins %}
+        var options = {
+            series: [{
+                data: {{ coin.sparkline_json | safe }}
         }],
         chart: {
             type: 'line',
-            height: 26,
-            sparkline: {
+                height: 26,
+                    sparkline: {
                 enabled: true
             }
         },
         stroke: {
             curve: 'smooth',
-            width: 1,
-            colors: ['{{ coin.chart_color }}']
+                width: 1,
+                    colors: ['{{ coin.chart_color }}']
         },
         tooltip: {
             enabled: false
         },
     };
-    var chart = new ApexCharts(document.getElementById("line-chart-{{ forloop.counter }}"), options);
-    chart.render();
-    {% endfor %}
-</script>
-   
-    
+        var chart = new ApexCharts(document.getElementById("line-chart-{{ forloop.counter }}"), options);
+        chart.render();
+        {% endfor %}
+    </script>
+
+
 </body>
+
 </html>

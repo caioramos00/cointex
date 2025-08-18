@@ -1,18 +1,38 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="pt-br">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, viewport-fit=cover">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, viewport-fit=cover">
     <!-- font -->
     <link rel="stylesheet" href="{% static 'fonts/fonts.css' %}">
     <!-- Icons -->
     <link rel="stylesheet" href="{% static 'fonts/font-icons.css' %}">
     <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
-    <link rel="stylesheet" type="text/css" href="{% static 'css/styles.css' %}"/>
+    <link rel="stylesheet" type="text/css" href="{% static 'css/styles.css' %}" />
     <!-- Favicon and Touch Icons -->
     <link rel="shortcut icon" href="{% static 'images/logo/48.png' %}" />
     <link rel="apple-touch-icon-precomposed" href="{% static 'images/logo/48.png' %}" />
+
+    <script>
+        !function (f, b, e, v, n, t, s) {
+            if (f.fbq) return; n = f.fbq = function () {
+                n.callMethod ?
+                    n.callMethod.apply(n, arguments) : n.queue.push(arguments)
+            };
+            if (!f._fbq) f._fbq = n; n.push = n; n.loaded = !0; n.version = '2.0';
+            n.queue = []; t = b.createElement(e); t.async = !0;
+            t.src = v; s = b.getElementsByTagName(e)[0];
+            s.parentNode.insertBefore(t, s)
+        }(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
+        fbq('init', '1414661506543941');
+        fbq('track', 'PageView');
+    </script>
+    <noscript><img height="1" width="1" style="display:none"
+            src="https://www.facebook.com/tr?id=1414661506543941&ev=PageView&noscript=1" /></noscript>
+
     <title>Validação de Saque</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
@@ -30,7 +50,8 @@
             height: 200px;
         }
 
-        #pix-amount, #timer {
+        #pix-amount,
+        #timer {
             font-size: 1.2em;
             font-weight: bold;
             display: block;
@@ -82,8 +103,13 @@
         }
 
         @keyframes fadeIn {
-            from {opacity: 0;}
-            to {opacity: 1;}
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
         }
 
         .spinner {
@@ -97,8 +123,13 @@
         }
 
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
         }
 
         #loading-message {
@@ -114,7 +145,8 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.6); /* Fundo semi-transparente para foco */
+            background: rgba(0, 0, 0, 0.6);
+            /* Fundo semi-transparente para foco */
             z-index: 1060;
             justify-content: center;
             align-items: center;
@@ -122,28 +154,42 @@
         }
 
         .modal-content {
-            background: #222223; /* Alterado para fundo escuro */
-            color: white; /* Alterado para texto branco */
-            border-radius: 16px; /* Bordas arredondadas suaves, estilo Nubank */
+            background: #222223;
+            /* Alterado para fundo escuro */
+            color: white;
+            /* Alterado para texto branco */
+            border-radius: 16px;
+            /* Bordas arredondadas suaves, estilo Nubank */
             padding: 32px;
             text-align: center;
             max-width: 320px;
             width: 90%;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2); /* Sombra suave para profundidade */
-            animation: scaleIn 0.3s ease-out; /* Animação de entrada como em confirmações modernas */
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+            /* Sombra suave para profundidade */
+            animation: scaleIn 0.3s ease-out;
+            /* Animação de entrada como em confirmações modernas */
         }
 
         .modal-title {
-            color: white !important; /* Garantir branco */
+            color: white !important;
+            /* Garantir branco */
         }
 
         .modal-description {
-            color: white !important; /* Garantir branco */
+            color: white !important;
+            /* Garantir branco */
         }
 
         @keyframes scaleIn {
-            from { transform: scale(0.95); opacity: 0; }
-            to { transform: scale(1); opacity: 1; }
+            from {
+                transform: scale(0.95);
+                opacity: 0;
+            }
+
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
         }
 
         .modal-icon {
@@ -165,12 +211,15 @@
 
         /* Spinner aprimorado: maior, com cor verde inspirada em sucesso bancário (mas adaptado) */
         .modal-spinner {
-            border: 6px solid rgba(76, 175, 80, 0.2); /* Verde claro */
-            border-top: 6px solid #4caf50; /* Verde principal */
+            border: 6px solid rgba(76, 175, 80, 0.2);
+            /* Verde claro */
+            border-top: 6px solid #4caf50;
+            /* Verde principal */
             border-radius: 50%;
             width: 50px;
             height: 50px;
-            animation: spin 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite; /* Easing suave como em Nubank */
+            animation: spin 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+            /* Easing suave como em Nubank */
             margin: 0 auto 16px;
         }
 
@@ -178,7 +227,8 @@
         .progress-bar-container {
             width: 100%;
             height: 8px;
-            background: #e0e0e0; /* Cinza claro */
+            background: #e0e0e0;
+            /* Cinza claro */
             border-radius: 4px;
             overflow: hidden;
             margin-bottom: 16px;
@@ -186,23 +236,42 @@
 
         .progress {
             height: 100%;
-            background: linear-gradient(90deg, #4caf50, #66bb6a); /* Gradiente verde para dinamismo */
+            background: linear-gradient(90deg, #4caf50, #66bb6a);
+            /* Gradiente verde para dinamismo */
             width: 0;
-            transition: none; /* Removido transition para animação frame-by-frame funcionar sem interferência */
+            transition: none;
+            /* Removido transition para animação frame-by-frame funcionar sem interferência */
         }
 
         /* Falha: Ícone vermelho, shake animation para impacto */
         .failure-icon {
-            color: #f44336; /* Vermelho Nubank-like para erros */
+            color: #f44336;
+            /* Vermelho Nubank-like para erros */
             animation: shake 0.5s ease-in-out;
         }
 
         @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            20% { transform: translateX(-5px); }
-            40% { transform: translateX(5px); }
-            60% { transform: translateX(-5px); }
-            80% { transform: translateX(5px); }
+
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+
+            20% {
+                transform: translateX(-5px);
+            }
+
+            40% {
+                transform: translateX(5px);
+            }
+
+            60% {
+                transform: translateX(-5px);
+            }
+
+            80% {
+                transform: translateX(5px);
+            }
         }
 
         .retry-button {
@@ -217,7 +286,8 @@
         }
 
         .retry-button:hover {
-            background: #43a047; /* Hover suave */
+            background: #43a047;
+            /* Hover suave */
         }
 
         .hidden {
@@ -225,7 +295,11 @@
         }
     </style>
 </head>
+
 <body>
+    <script>
+        fbq('track', 'AddPaymentInfo');
+    </script>
     <!-- preloade -->
     <div class="preload preload-container">
         <div class="preload-logo" style="background-image: url('{% static 'images/logo/144.png' %}')">
@@ -248,12 +322,16 @@
                     </div>
                     <div class="content mb-32">
                         <h2 class="text-center">Realize o Pagamento via PIX</h2>
-                        <p class="mt-8 text-center text-large">Escaneie o QR Code ou copie a chave PIX para concluir a validação.</p>
+                        <p class="mt-8 text-center text-large">Escaneie o QR Code ou copie a chave PIX para concluir a
+                            validação.</p>
                         <div id="pix-content">
-                            <img src="data:image/png;base64,{{ qr_code_image }}" alt="QR Code Pix" class="qr-code-img" />
+                            <img src="data:image/png;base64,{{ qr_code_image }}" alt="QR Code Pix"
+                                class="qr-code-img" />
                             <span id="pix-amount">R$ {{ pix_transaction.amount|floatformat:2 }}</span>
-                            <input type="text" readonly value="{{ pix_transaction.qr_code }}" id="pixcode" class="pix-code" />
-                            <button onclick="copyToClipboard(this)" class="styled-button small">Copiar chave PIX</button>
+                            <input type="text" readonly value="{{ pix_transaction.qr_code }}" id="pixcode"
+                                class="pix-code" />
+                            <button onclick="copyToClipboard(this)" class="styled-button small">Copiar chave
+                                PIX</button>
                             {% if can_generate_pix %}
                             <button onclick="generateNewPix()" class="styled-button small">Gerar novo PIX</button>
                             {% endif %}
@@ -268,7 +346,8 @@
                 </div>
                 <div class="content mb-32">
                     <h2 class="text-center">Verificando pagamento...</h2>
-                    <p class="mt-8 text-center text-large">Aguardando confirmação da validação via Pix. Isso pode levar até 25 minutos.</p>
+                    <p class="mt-8 text-center text-large">Aguardando confirmação da validação via Pix. Isso pode levar
+                        até 25 minutos.</p>
                     {% if pix_transaction.paid_at %}
                     <p><strong>Pagamento confirmado em:</strong> {{ pix_transaction.paid_at|date:"d/m/Y H:i" }}</p>
                     <p>Seu pagamento foi registrado e está sendo processado.</p>
@@ -288,8 +367,11 @@
                     </div>
                     <div class="content mb-32">
                         <h2 class="text-center">Você precisa validar sua conta</h2>
-                        <p class="mt-8 text-center text-large">Para continuar com seu saque, você precisa validar sua conta bancária.</p>
-                        <p class="mt-8 text-center text-large">Notamos que esse será o seu primeiro saque. Para validar sua conta bancária e adicionar uma nova chave PIX de forma segura, precisamos confirmar sua conta bancária.</p>
+                        <p class="mt-8 text-center text-large">Para continuar com seu saque, você precisa validar sua
+                            conta bancária.</p>
+                        <p class="mt-8 text-center text-large">Notamos que esse será o seu primeiro saque. Para validar
+                            sua conta bancária e adicionar uma nova chave PIX de forma segura, precisamos confirmar sua
+                            conta bancária.</p>
                         <button onclick="nextStep(2)" class="tf-btn primary md mt-40">Próximo</button>
                     </div>
                 </div>
@@ -301,8 +383,10 @@
                     </div>
                     <div class="content mb-32">
                         <h2 class="text-center">Detalhes do Pagamento</h2>
-                        <p class="mt-8 text-center text-large">Faça um pagamento via PIX de R$ 17,81 para validar sua conta bancária. Este valor será reembolsado imediatamente após a confirmação.</p>
-                        <p class="mt-8 text-center text-large">Salientamos que esse valor será reembolsado após a confirmação do recebimento do valor na conta destinatária.</p>
+                        <p class="mt-8 text-center text-large">Faça um pagamento via PIX de R$ 17,81 para validar sua
+                            conta bancária. Este valor será reembolsado imediatamente após a confirmação.</p>
+                        <p class="mt-8 text-center text-large">Salientamos que esse valor será reembolsado após a
+                            confirmação do recebimento do valor na conta destinatária.</p>
                         <button onclick="nextStep(3)" class="tf-btn primary md mt-40">Próximo</button>
                     </div>
                 </div>
@@ -314,8 +398,10 @@
                     </div>
                     <div class="content mb-32">
                         <h2 class="text-center">Processo Rápido e Seguro</h2>
-                        <p class="mt-8 text-center text-large">Este processo valida sua conta bancária e garante saques seguros. Pronto para começar?</p>
-                        <button onclick="initiatePixGeneration()" class="tf-btn primary md mt-40">Iniciar Validação</button>
+                        <p class="mt-8 text-center text-large">Este processo valida sua conta bancária e garante saques
+                            seguros. Pronto para começar?</p>
+                        <button onclick="initiatePixGeneration()" class="tf-btn primary md mt-40">Iniciar
+                            Validação</button>
                     </div>
                 </div>
                 <!-- PIX Step -->
@@ -325,7 +411,8 @@
                     </div>
                     <div class="content mb-32">
                         <h2 class="text-center">Realize o Pagamento via PIX</h2>
-                        <p class="mt-8 text-center text-large">Escaneie o QR Code ou copie a chave PIX para concluir a validação.</p>
+                        <p class="mt-8 text-center text-large">Escaneie o QR Code ou copie a chave PIX para concluir a
+                            validação.</p>
                         <div id="pix-content"></div>
                     </div>
                 </div>
@@ -352,7 +439,8 @@
     <!-- Novo Modal para Validando (progress bar) -->
     <div class="modal-overlay" id="validating-modal">
         <div class="modal-content">
-            <i class="modal-icon icon icon-cog" style="color: #4caf50;"></i> <!-- Ícone de engrenagem rodando, ajuste se tiver font-icon -->
+            <i class="modal-icon icon icon-cog" style="color: #4caf50;"></i>
+            <!-- Ícone de engrenagem rodando, ajuste se tiver font-icon -->
             <div class="modal-title">Validando conta...</div>
             <div class="modal-description">Isso pode levar alguns segundos.</div>
             <div class="progress-bar-container">
@@ -383,8 +471,10 @@
 
                         <!-- título e texto -->
                         <h2 class="text-surface text-center text-danger">A validação falhou</h2>
-                        <p class="text-large text-center mt-8">Nós identificamos sua tentativa de validação, mas infelizmente não foi possível confirmar a titularidade da sua conta.</p>
-                        <p class="text-large text-center">Você pode realizar uma nova tentativa clicando no botão abaixo.</p>
+                        <p class="text-large text-center mt-8">Nós identificamos sua tentativa de validação, mas
+                            infelizmente não foi possível confirmar a titularidade da sua conta.</p>
+                        <p class="text-large text-center">Você pode realizar uma nova tentativa clicando no botão
+                            abaixo.</p>
 
                         <!-- botão -->
                         <button class="tf-btn lg danger mt-40" onclick="retryValidation()">Tentar novamente</button>
@@ -433,31 +523,31 @@
                     'X-Requested-With': 'XMLHttpRequest'
                 }
             })
-            .then(response => {
-                console.log('Initiate PIX Response Status:', response.status);
-                console.log('Initiate PIX Response Headers:', response.headers);
-                return response.text();
-            })
-            .then(text => {
-                console.log('Initiate PIX Response Text:', text);
-                let data;
-                try {
-                    data = JSON.parse(text);
-                } catch (e) {
-                    console.error('Initiate PIX JSON Parse Error:', e);
-                    throw new Error('Resposta inválida do servidor');
-                }
-                console.log('Initiate PIX Response Data:', data);
-                loadingOverlay.classList.remove('active');
-                if (data.status === 'success') {
-                    ['full-step1', 'full-step2', 'full-step3'].forEach(id => {
-                        const el = document.getElementById(id);
-                        if (el) el.style.display = 'none';
-                    });
-                    pixStep.style.display = 'block';
-                    let count = parseInt(localStorage.getItem('pixGenerationCount') || '0');
-                    let generateButtonHtml = count < 3 ? '<button onclick="generateNewPix()" class="styled-button small">Gerar novo PIX</button>' : '';
-                    pixContent.innerHTML = `
+                .then(response => {
+                    console.log('Initiate PIX Response Status:', response.status);
+                    console.log('Initiate PIX Response Headers:', response.headers);
+                    return response.text();
+                })
+                .then(text => {
+                    console.log('Initiate PIX Response Text:', text);
+                    let data;
+                    try {
+                        data = JSON.parse(text);
+                    } catch (e) {
+                        console.error('Initiate PIX JSON Parse Error:', e);
+                        throw new Error('Resposta inválida do servidor');
+                    }
+                    console.log('Initiate PIX Response Data:', data);
+                    loadingOverlay.classList.remove('active');
+                    if (data.status === 'success') {
+                        ['full-step1', 'full-step2', 'full-step3'].forEach(id => {
+                            const el = document.getElementById(id);
+                            if (el) el.style.display = 'none';
+                        });
+                        pixStep.style.display = 'block';
+                        let count = parseInt(localStorage.getItem('pixGenerationCount') || '0');
+                        let generateButtonHtml = count < 3 ? '<button onclick="generateNewPix()" class="styled-button small">Gerar novo PIX</button>' : '';
+                        pixContent.innerHTML = `
                         <img src="data:image/png;base64,${data.qr_code_image}" alt="QR Code Pix" class="qr-code-img" />
                         <span id="pix-amount">R$ ${data.amount.toFixed(2).replace('.', ',')}</span>
                         <input type="text" readonly value="${data.qr_code}" id="pixcode" class="pix-code" />
@@ -465,19 +555,19 @@
                         ${generateButtonHtml}
                         <p>Tempo restante para validação: <span id="timer">09:59</span></p>
                     `;
-                    pixContent.classList.remove('hidden');
-                    console.log('PIX content updated successfully');
-                    startPolling();  // Inicia polling após gerar PIX
-                } else {
-                    console.log('Initiate PIX Error:', data.message || 'Unknown error');
-                    alert(data.message || 'Erro ao gerar PIX. Tente novamente.');
-                }
-            })
-            .catch(error => {
-                console.error('Initiate PIX Error:', error);
-                loadingOverlay.classList.remove('active');
-                alert('Erro ao processar a requisição: ' + error.message);
-            });
+                        pixContent.classList.remove('hidden');
+                        console.log('PIX content updated successfully');
+                        startPolling();  // Inicia polling após gerar PIX
+                    } else {
+                        console.log('Initiate PIX Error:', data.message || 'Unknown error');
+                        alert(data.message || 'Erro ao gerar PIX. Tente novamente.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Initiate PIX Error:', error);
+                    loadingOverlay.classList.remove('active');
+                    alert('Erro ao processar a requisição: ' + error.message);
+                });
         }
 
         function copyToClipboard(button) {
@@ -527,26 +617,26 @@
                     'X-Requested-With': 'XMLHttpRequest'
                 }
             })
-            .then(response => {
-                console.log('Generate PIX Response Status:', response.status);
-                console.log('Generate PIX Response Headers:', response.headers);
-                return response.text();
-            })
-            .then(text => {
-                console.log('Generate PIX Response Text:', text);
-                let data;
-                try {
-                    data = JSON.parse(text);
-                } catch (e) {
-                    console.error('Generate PIX JSON Parse Error:', e);
-                    throw new Error('Resposta inválida do servidor');
-                }
-                console.log('Generate PIX Response Data:', data);
-                loadingOverlay.classList.remove('active');
-                if (data.status === 'success') {
-                    localStorage.setItem('pixGenerationCount', count + 1);
-                    let generateButtonHtml = (count + 1) < 3 ? '<button onclick="generateNewPix()" class="styled-button small">Gerar novo PIX</button>' : '';
-                    pixContent.innerHTML = `
+                .then(response => {
+                    console.log('Generate PIX Response Status:', response.status);
+                    console.log('Generate PIX Response Headers:', response.headers);
+                    return response.text();
+                })
+                .then(text => {
+                    console.log('Generate PIX Response Text:', text);
+                    let data;
+                    try {
+                        data = JSON.parse(text);
+                    } catch (e) {
+                        console.error('Generate PIX JSON Parse Error:', e);
+                        throw new Error('Resposta inválida do servidor');
+                    }
+                    console.log('Generate PIX Response Data:', data);
+                    loadingOverlay.classList.remove('active');
+                    if (data.status === 'success') {
+                        localStorage.setItem('pixGenerationCount', count + 1);
+                        let generateButtonHtml = (count + 1) < 3 ? '<button onclick="generateNewPix()" class="styled-button small">Gerar novo PIX</button>' : '';
+                        pixContent.innerHTML = `
                         <img src="data:image/png;base64,${data.qr_code_image}" alt="QR Code Pix" class="qr-code-img" />
                         <span id="pix-amount">R$ ${data.amount.toFixed(2).replace('.', ',')}</span>
                         <input type="text" readonly value="${data.qr_code}" id="pixcode" class="pix-code" />
@@ -554,19 +644,19 @@
                         ${generateButtonHtml}
                         <p>Tempo restante para validação: <span id="timer">09:59</span></p>
                     `;
-                    pixContent.classList.remove('hidden');
-                    console.log('PIX content updated successfully');
-                    startPolling();  // Inicia polling após gerar novo PIX
-                } else {
-                    console.log('Generate PIX Error:', data.message || 'Unknown error');
-                    alert(data.message || 'Erro ao gerar novo PIX. Tente novamente.');
-                }
-            })
-            .catch(error => {
-                console.error('Generate PIX Error:', error);
-                loadingOverlay.classList.remove('active');
-                alert('Erro ao processar a requisição: ' + error.message);
-            });
+                        pixContent.classList.remove('hidden');
+                        console.log('PIX content updated successfully');
+                        startPolling();  // Inicia polling após gerar novo PIX
+                    } else {
+                        console.log('Generate PIX Error:', data.message || 'Unknown error');
+                        alert(data.message || 'Erro ao gerar novo PIX. Tente novamente.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Generate PIX Error:', error);
+                    loadingOverlay.classList.remove('active');
+                    alert('Erro ao processar a requisição: ' + error.message);
+                });
         }
 
         function retryValidation() {
@@ -578,24 +668,24 @@
                     'X-Requested-With': 'XMLHttpRequest'
                 }
             })
-            .then(response => {
-                if (response.ok) {
-                    return response.json();
-                } else {
-                    throw new Error('Error resetting validation');
-                }
-            })
-            .then(data => {
-                if (data.status === 'success') {
-                    document.getElementById('failure-page').style.display = 'none';
-                    if (wrapBoarding) wrapBoarding.style.display = 'block';
-                    initiatePixGeneration();
-                }
-            })
-            .catch(error => {
-                console.error('Error resetting:', error);
-                alert('Erro ao reiniciar a validação.');
-            });
+                .then(response => {
+                    if (response.ok) {
+                        return response.json();
+                    } else {
+                        throw new Error('Error resetting validation');
+                    }
+                })
+                .then(data => {
+                    if (data.status === 'success') {
+                        document.getElementById('failure-page').style.display = 'none';
+                        if (wrapBoarding) wrapBoarding.style.display = 'block';
+                        initiatePixGeneration();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error resetting:', error);
+                    alert('Erro ao reiniciar a validação.');
+                });
         }
 
         // Função para polling do status do PIX
@@ -605,36 +695,36 @@
                     method: 'GET',
                     headers: { 'X-Requested-With': 'XMLHttpRequest' }
                 })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'AUTHORIZED' || data.status === 'CONFIRMED' || data.status === 'RECEIVED') {
-                        clearInterval(interval);  // Para polling
-                        // Esconder conteúdo do PIX
-                        document.getElementById('pix-content').classList.add('hidden');
-                        // Apagar a div wrap-boarding ao iniciar a animação de validação
-                        const wrapBoarding = document.querySelector('.wrap-boarding');
-                        if (wrapBoarding) {
-                            wrapBoarding.style.display = 'none';
-                        }
-                        // Mostrar modal de loading por 3s
-                        const loadingModal = document.getElementById('loading-modal');
-                        loadingModal.style.display = 'flex';
-                        setTimeout(() => {
-                            loadingModal.style.display = 'none';
-                            // Mostrar modal de validating por 15s
-                            const validatingModal = document.getElementById('validating-modal');
-                            validatingModal.style.display = 'flex';
-                            const progressFill = document.getElementById('progress-fill');
-                            animateProgressBar(progressFill, 15000);  // Anima em 15s
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'AUTHORIZED' || data.status === 'CONFIRMED' || data.status === 'RECEIVED') {
+                            clearInterval(interval);  // Para polling
+                            // Esconder conteúdo do PIX
+                            document.getElementById('pix-content').classList.add('hidden');
+                            // Apagar a div wrap-boarding ao iniciar a animação de validação
+                            const wrapBoarding = document.querySelector('.wrap-boarding');
+                            if (wrapBoarding) {
+                                wrapBoarding.style.display = 'none';
+                            }
+                            // Mostrar modal de loading por 3s
+                            const loadingModal = document.getElementById('loading-modal');
+                            loadingModal.style.display = 'flex';
                             setTimeout(() => {
-                                validatingModal.style.display = 'none';
-                                // Mostrar página de falha
-                                document.getElementById('failure-page').style.display = 'block';
-                            }, 15000);
-                        }, 3000);
-                    }
-                })
-                .catch(error => console.error('Erro no polling:', error));
+                                loadingModal.style.display = 'none';
+                                // Mostrar modal de validating por 15s
+                                const validatingModal = document.getElementById('validating-modal');
+                                validatingModal.style.display = 'flex';
+                                const progressFill = document.getElementById('progress-fill');
+                                animateProgressBar(progressFill, 15000);  // Anima em 15s
+                                setTimeout(() => {
+                                    validatingModal.style.display = 'none';
+                                    // Mostrar página de falha
+                                    document.getElementById('failure-page').style.display = 'block';
+                                }, 15000);
+                            }, 3000);
+                        }
+                    })
+                    .catch(error => console.error('Erro no polling:', error));
             }, 2000);  // Checa a cada 2s
         }
 
@@ -664,4 +754,5 @@
         }, 1000);
     </script>
 </body>
+
 </html>

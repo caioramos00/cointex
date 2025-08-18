@@ -156,3 +156,5 @@ DATE_FORMAT = 'd/m/Y'
 DATE_INPUT_FORMATS = ['%d/%m/%Y', '%Y-%m-%d']
 
 AUTHENTICATION_BACKENDS = ['accounts.backends.EmailBackend']
+
+CAPI_TOKEN = os.getenv('CAPI_TOKEN')

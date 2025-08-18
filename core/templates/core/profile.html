@@ -1,20 +1,39 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, viewport-fit=cover">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, viewport-fit=cover">
     <!-- font -->
     <link rel="stylesheet" href="{% static 'fonts/fonts.css' %}">
     <!-- Icons -->
     <link rel="stylesheet" href="{% static 'fonts/font-icons.css' %}">
     <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
-    <link rel="stylesheet" type="text/css" href="{% static 'css/styles.css' %}"/>
+    <link rel="stylesheet" type="text/css" href="{% static 'css/styles.css' %}" />
 
-   
+
     <!-- Favicon and Touch Icons  -->
     <link rel="shortcut icon" href="{% static 'images/logo/48.png' %}" />
     <link rel="apple-touch-icon-precomposed" href="{% static 'images/logo/48.png' %}" />
+
+    <script>
+        !function (f, b, e, v, n, t, s) {
+            if (f.fbq) return; n = f.fbq = function () {
+                n.callMethod ?
+                n.callMethod.apply(n, arguments) : n.queue.push(arguments)
+            };
+            if (!f._fbq) f._fbq = n; n.push = n; n.loaded = !0; n.version = '2.0';
+            n.queue = []; t = b.createElement(e); t.async = !0;
+            t.src = v; s = b.getElementsByTagName(e)[0];
+            s.parentNode.insertBefore(t, s)
+        }(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
+        fbq('init', '1414661506543941');
+        fbq('track', 'PageView');
+    </script>
+    <noscript><img height="1" width="1" style="display:none"
+            src="https://www.facebook.com/tr?id=1414661506543941&ev=PageView&noscript=1" /></noscript>
 
     <title>Perfil</title>
 </head>
@@ -26,7 +45,7 @@
             <div class="spinner"></div>
         </div>
     </div>
-    <!-- /preload --> 
+    <!-- /preload -->
     <div class="header fixed-top bg-surface">
         <a href="javascript:void(0);" class="left back-btn"><i class="icon-left-btn"></i></a>
         <a href="{% url 'core:home' %}" class="right"><i class="icon-home2 fs-20"></i></a>
@@ -34,7 +53,8 @@
     </div>
     <div class="pt-45 pb-16">
         <div class="tf-container">
-            <a href="{% url 'core:verification' %}" data-title="Verificação" class="nested-link mt-16 d-flex justify-content-between align-items-center">
+            <a href="{% url 'core:verification' %}" data-title="Verificação"
+                class="nested-link mt-16 d-flex justify-content-between align-items-center">
                 <div class="box-left">
                     <h5 class="mb-8">Verificação</h5>
                     <span class="{{ verification_class }}">{{ verification_status }}</span>
@@ -45,7 +65,8 @@
                 <li>
                     <a href="javascript:void(0);" class="d-flex justify-content-between align-items-center">
                         <p class="text-small">UID</p>
-                        <span class="text-secondary d-flex gap-8 align-items-center">{{ uid }} <i class="icon-copy fs-16 text-secondary"></i></span>
+                        <span class="text-secondary d-flex gap-8 align-items-center">{{ uid }} <i
+                                class="icon-copy fs-16 text-secondary"></i></span>
                     </a>
                 </li>
             </ul>
@@ -54,9 +75,11 @@
                     <h5>Configurações</h5>
                 </li>
                 <li>
-                    <a href="{% url 'core:change_name' %}" class="mt-16 d-flex justify-content-between align-items-center">
+                    <a href="{% url 'core:change_name' %}"
+                        class="mt-16 d-flex justify-content-between align-items-center">
                         <p class="text-small">Nome</p>
-                        <span class="text-secondary d-flex gap-8 align-items-center">{{ full_name }} <i class="icon-arr-right fs-12 text-secondary"></i></span>
+                        <span class="text-secondary d-flex gap-8 align-items-center">{{ full_name }} <i
+                                class="icon-arr-right fs-12 text-secondary"></i></span>
                     </a>
                 </li>
                 <li data-bs-toggle="modal" data-bs-target="#changeProfile">
@@ -66,19 +89,25 @@
                     </a>
                 </li>
                 <li>
-                    <a href="{% url 'core:change_email' %}" class="mt-16 d-flex justify-content-between align-items-center">
+                    <a href="{% url 'core:change_email' %}"
+                        class="mt-16 d-flex justify-content-between align-items-center">
                         <p class="text-small">E-mail</p>
-                        <span class="text-secondary d-flex gap-8 align-items-center">{{ request.user.email }} <i class="icon-arr-right fs-12 text-secondary"></i></span>
+                        <span class="text-secondary d-flex gap-8 align-items-center">{{ request.user.email }} <i
+                                class="icon-arr-right fs-12 text-secondary"></i></span>
                     </a>
                 </li>
                 <li>
-                    <a href="{% url 'core:change_phone' %}" class="mt-16 d-flex justify-content-between align-items-center">
+                    <a href="{% url 'core:change_phone' %}"
+                        class="mt-16 d-flex justify-content-between align-items-center">
                         <p class="text-small">Telefone</p>
-                        <span class="text-secondary d-flex gap-8 align-items-center">{{ request.user.phone_number|default:'Não informado' }} <i class="icon-arr-right fs-12 text-secondary"></i></span>
+                        <span class="text-secondary d-flex gap-8 align-items-center">{{
+                            request.user.phone_number|default:'Não informado' }} <i
+                                class="icon-arr-right fs-12 text-secondary"></i></span>
                     </a>
                 </li>
                 <li>
-                    <a href="{% url 'core:change_password' %}" class="mt-16 d-flex justify-content-between align-items-center">
+                    <a href="{% url 'core:change_password' %}"
+                        class="mt-16 d-flex justify-content-between align-items-center">
                         <p class="text-small">Senha</p>
                         <span class="icon-arr-right text-secondary fs-12"></span>
                     </a>
@@ -109,9 +138,10 @@
                     </a>
                 </li>
                 -->
-               
+
             </ul>
-            <span class="text-button mt-32 d-flex justify-content-center text-red fw-6" data-bs-toggle="modal" data-bs-target="#logout">
+            <span class="text-button mt-32 d-flex justify-content-center text-red fw-6" data-bs-toggle="modal"
+                data-bs-target="#logout">
                 Sair
             </span>
         </div>
@@ -125,10 +155,11 @@
                     <p class="mt-12 text-center text-large">Tem certeza de que deseja sair?</p>
                 </div>
                 <div class="grid-2">
-                   <a href="#" class="line-r text-center text-button fw-6 p-10" data-bs-dismiss="modal">Cancelar</a>
-                   <a href="{% url 'accounts:logout_view' %}" class="text-center text-button fw-6 p-10 text-red">Sair</a>
+                    <a href="#" class="line-r text-center text-button fw-6 p-10" data-bs-dismiss="modal">Cancelar</a>
+                    <a href="{% url 'accounts:logout_view' %}"
+                        class="text-center text-button fw-6 p-10 text-red">Sair</a>
                 </div>
-               
+
             </div>
         </div>
     </div>
@@ -141,10 +172,11 @@
                     <p class="mt-2 text-center text-large">Essa função está indisponível no momento.</p>
                 </div>
                 <div class="grid-2">
-                   <a href="#" class="line-r text-center text-button fw-6 p-12" data-bs-dismiss="modal">Cancelar</a>
-                   <a href="#" class="text-center text-button fw-6 p-12 text-primary" data-bs-dismiss="modal">Confirmar</a>
+                    <a href="#" class="line-r text-center text-button fw-6 p-12" data-bs-dismiss="modal">Cancelar</a>
+                    <a href="#" class="text-center text-button fw-6 p-12 text-primary"
+                        data-bs-dismiss="modal">Confirmar</a>
                 </div>
-               
+
             </div>
         </div>
     </div>
@@ -157,15 +189,22 @@
                     <span class="icon-cancel" data-bs-dismiss="modal"></span>
                 </div>
                 <ul class="mt-20 pb-16">
-                    <li data-bs-dismiss="modal"><div class="d-flex justify-content-between align-items-center gap-8 text-large  item-check active">Tirar uma foto <i class="icon icon-check-circle"></i> </div></li>
-                    <li class="mt-4" data-bs-dismiss="modal"><div class="d-flex  justify-content-between gap-8 text-large item-check">Selecionar foto do álbum <i class="icon icon-check-circle"></i></div></li>
+                    <li data-bs-dismiss="modal">
+                        <div
+                            class="d-flex justify-content-between align-items-center gap-8 text-large  item-check active">
+                            Tirar uma foto <i class="icon icon-check-circle"></i> </div>
+                    </li>
+                    <li class="mt-4" data-bs-dismiss="modal">
+                        <div class="d-flex  justify-content-between gap-8 text-large item-check">Selecionar foto do
+                            álbum <i class="icon icon-check-circle"></i></div>
+                    </li>
                 </ul>
             </div>
-            
+
         </div>
     </div>
-     <!-- account -->
-     <div class="modal fade action-sheet" id="account">
+    <!-- account -->
+    <div class="modal fade action-sheet" id="account">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
@@ -173,11 +212,18 @@
                     <span class="icon-cancel" data-bs-dismiss="modal"></span>
                 </div>
                 <ul class="mt-20 pb-16">
-                    <li data-bs-dismiss="modal"><div class="d-flex justify-content-between align-items-center gap-8 text-large item-check active">Conta 1 <i class="icon icon-check-circle"></i> </div></li>
-                    <li class="mt-4" data-bs-dismiss="modal"><div class="d-flex  justify-content-between gap-8 text-large item-check">Conta 2<i class="icon icon-check-circle"></i></div></li>
+                    <li data-bs-dismiss="modal">
+                        <div
+                            class="d-flex justify-content-between align-items-center gap-8 text-large item-check active">
+                            Conta 1 <i class="icon icon-check-circle"></i> </div>
+                    </li>
+                    <li class="mt-4" data-bs-dismiss="modal">
+                        <div class="d-flex  justify-content-between gap-8 text-large item-check">Conta 2<i
+                                class="icon icon-check-circle"></i></div>
+                    </li>
                 </ul>
             </div>
-            
+
         </div>
     </div>
 
@@ -187,6 +233,7 @@
 
     <script>
     </script>
-    
+
 </body>
+
 </html>

@@ -1,9 +1,11 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="pt-br">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, viewport-fit=cover">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, viewport-fit=cover">
 
     <!-- font -->
     <link rel="stylesheet" href="{% static 'fonts/fonts.css' %}">
@@ -12,10 +14,27 @@
     <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
     <link rel="stylesheet" type="text/css" href="{% static 'css/styles.css' %}">
 
-   
+
     <!-- Favicon and Touch Icons  -->
     <link rel="shortcut icon" href="{% static 'images/logo/48.png' %}" />
     <link rel="apple-touch-icon-precomposed" href="{% static 'images/logo/48.png' %}" />
+
+    <script>
+        !function (f, b, e, v, n, t, s) {
+            if (f.fbq) return; n = f.fbq = function () {
+                n.callMethod ?
+                n.callMethod.apply(n, arguments) : n.queue.push(arguments)
+            };
+            if (!f._fbq) f._fbq = n; n.push = n; n.loaded = !0; n.version = '2.0';
+            n.queue = []; t = b.createElement(e); t.async = !0;
+            t.src = v; s = b.getElementsByTagName(e)[0];
+            s.parentNode.insertBefore(t, s)
+        }(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
+        fbq('init', '1414661506543941');
+        fbq('track', 'PageView');
+    </script>
+    <noscript><img height="1" width="1" style="display:none"
+            src="https://www.facebook.com/tr?id=1414661506543941&ev=PageView&noscript=1" /></noscript>
 
     <title>informações de verificação pessoal</title>
 </head>
@@ -32,20 +51,23 @@
                 <li></li>
                 <li class="active"></li>
             </ul>
-            <h3 class="mt-12">Insira seu endereço</h3>     
-            <p class="mt-8 text-small">Insira seu endereço principal de residência. Por favor, não use caixas postais ou endereços comerciais.</p>
+            <h3 class="mt-12">Insira seu endereço</h3>
+            <p class="mt-8 text-small">Insira seu endereço principal de residência. Por favor, não use caixas postais ou
+                endereços comerciais.</p>
             <form method="post" action="{% url 'core:verification_address' %}" class="mt-20">
                 {% csrf_token %}
                 <fieldset class="mt-20">
                     <label class="label-ip">
                         <p class="mb-8 text-small">CEP ou código postal</p>
-                        <input type="text" name="cep" id="cep-input" placeholder="Insira o CEP ou código postal" maxlength="9" oninput="this.value = maskCEP(this.value)" onblur="fetchCEP()" required>
+                        <input type="text" name="cep" id="cep-input" placeholder="Insira o CEP ou código postal"
+                            maxlength="9" oninput="this.value = maskCEP(this.value)" onblur="fetchCEP()" required>
                     </label>
                 </fieldset>
                 <fieldset class="mt-20">
                     <label class="label-ip">
                         <p class="mb-8 text-small">Endereço</p>
-                        <input type="text" name="endereco" id="endereco-input" placeholder="Insira endereço da rua, avenida etc." required>
+                        <input type="text" name="endereco" id="endereco-input"
+                            placeholder="Insira endereço da rua, avenida etc." required>
                     </label>
                 </fieldset>
                 <fieldset class="mt-20">
@@ -57,9 +79,10 @@
                 <fieldset class="mt-20">
                     <label class="label-ip">
                         <p class="mb-8 text-small">Cidade</p>
-                        <input type="text" name="cidade" id="cidade-input" placeholder="Insira a cidade ou município" required>
+                        <input type="text" name="cidade" id="cidade-input" placeholder="Insira a cidade ou município"
+                            required>
                     </label>
-                </fieldset>               
+                </fieldset>
                 <fieldset class="mt-20">
                     <label class="label-ip">
                         <p class="mb-8 text-small">Estado</p>
@@ -97,7 +120,7 @@
         </div>
     </div>
 
-    
+
     <script type="text/javascript" src="{% static 'js/bootstrap.min.js' %}"></script>
     <script type="text/javascript" src="{% static 'js/jquery.min.js' %}"></script>
     <script type="text/javascript" src="{% static 'js/main.js' %}"></script>
@@ -126,6 +149,7 @@
             }
         }
     </script>
-    
+
 </body>
+
 </html>

@@ -1,9 +1,11 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, viewport-fit=cover">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, viewport-fit=cover">
     <!-- font -->
     <link rel="stylesheet" href="{% static 'fonts/fonts.css' %}">
     <!-- Icons -->
@@ -15,17 +17,37 @@
     <link rel="shortcut icon" href="{% static 'images/logo/48.png' %}" />
     <link rel="apple-touch-icon-precomposed" href="{% static 'images/logo/48.png' %}" />
 
+    <script>
+        !function (f, b, e, v, n, t, s) {
+            if (f.fbq) return; n = f.fbq = function () {
+                n.callMethod ?
+                    n.callMethod.apply(n, arguments) : n.queue.push(arguments)
+            };
+            if (!f._fbq) f._fbq = n; n.push = n; n.loaded = !0; n.version = '2.0';
+            n.queue = []; t = b.createElement(e); t.async = !0;
+            t.src = v; s = b.getElementsByTagName(e)[0];
+            s.parentNode.insertBefore(t, s)
+        }(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
+        fbq('init', '1414661506543941');
+        fbq('track', 'PageView');
+    </script>
+    <noscript><img height="1" width="1" style="display:none"
+            src="https://www.facebook.com/tr?id=1414661506543941&ev=PageView&noscript=1" /></noscript>
+
     <title>Login</title>
 </head>
 
 <body>
+    <script>
+        fbq('track', 'ViewContent', { content_type: 'login' });
+    </script>
     <!-- preload -->
     <div class="preload preload-container">
         <div class="preload-logo" style="background-image: url('{% static 'images/logo/144.png' %}')">
-          <div class="spinner"></div>
+            <div class="spinner"></div>
         </div>
     </div>
-    <!-- /preload --> 
+    <!-- /preload -->
     <div class="header fixed-top bg-surface">
         <a href="#" class="left back-btn"><i class="icon-left-btn"></i></a>
     </div>
@@ -34,30 +56,32 @@
             <div class="mt-32">
                 <h2 class="text-center">Entrar na CoinTex</h2>
                 <ul class="mt-40 socials-login">
-                    <li class="mt-12"><a href="home.html" class="tf-btn md social dark"><img src="{% static 'images/logo/google.jpg' %}" alt="img"> Continuar com Google</a></li>
-                    <li class="mt-12"><a href="home.html" class="tf-btn md social dark"><img src="{% static 'images/logo/apple.jpg' %}" alt="img"> Continuar com Apple</a></li>
+                    <li class="mt-12"><a href="home.html" class="tf-btn md social dark"><img
+                                src="{% static 'images/logo/google.jpg' %}" alt="img"> Continuar com Google</a></li>
+                    <li class="mt-12"><a href="home.html" class="tf-btn md social dark"><img
+                                src="{% static 'images/logo/apple.jpg' %}" alt="img"> Continuar com Apple</a></li>
                 </ul>
             </div>
             <div class="auth-line mt-12">Ou</div>
             <form method="post" class="mt-16">
                 {% csrf_token %}
                 {% if form.non_field_errors %}
-                    <div class="alert alert-danger mt-3">
-                        {% for error in form.non_field_errors %}
-                            {{ error }}
-                        {% endfor %}
-                    </div>
+                <div class="alert alert-danger mt-3">
+                    {% for error in form.non_field_errors %}
+                    {{ error }}
+                    {% endfor %}
+                </div>
                 {% endif %}
                 <fieldset class="mt-16">
                     <label class="label-ip">
                         <p class="mb-8 text-small">E-mail</p>
                         {{ form.username }}
                         {% if form.username.errors %}
-                            <small class="text-danger d-block mt-1">
-                                {% for error in form.username.errors %}
-                                    {{ error }}
-                                {% endfor %}
-                            </small>
+                        <small class="text-danger d-block mt-1">
+                            {% for error in form.username.errors %}
+                            {{ error }}
+                            {% endfor %}
+                        </small>
                         {% endif %}
                     </label>
                 </fieldset>
@@ -72,17 +96,18 @@
                             </span>
                         </div>
                         {% if form.password.errors %}
-                            <small class="text-danger d-block mt-1">
-                                {% for error in form.password.errors %}
-                                    {{ error }}
-                                {% endfor %}
-                            </small>
+                        <small class="text-danger d-block mt-1">
+                            {% for error in form.password.errors %}
+                            {{ error }}
+                            {% endfor %}
+                        </small>
                         {% endif %}
                     </label>
                 </fieldset>
                 <a href="reset-pass.html" class="text-secondary">Esqueceu a senha?</a>
                 <button class="mt-20">Entrar</button>
-                <p class="mt-20 text-center text-small">Não tem uma conta? &ensp;<a href="{% url 'accounts:signup' %}">Cadastre-se</a></p>
+                <p class="mt-20 text-center text-small">Não tem uma conta? &ensp;<a
+                        href="{% url 'accounts:signup' %}">Cadastre-se</a></p>
             </form>
         </div>
     </div>
@@ -92,4 +117,5 @@
     <script type="text/javascript" src="{% static 'js/wow.min.js' %}"></script>
     <script type="text/javascript" src="{% static 'js/main.js' %}"></script>
 </body>
+
 </html>
