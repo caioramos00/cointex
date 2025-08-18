@@ -90,6 +90,7 @@ class CustomUser(AbstractUser):
     )
     email = models.EmailField(_('email address'), unique=True)
     is_advanced_verified = models.BooleanField(default=False, verbose_name=_("Verificação Avançada"), help_text=_("Indica se o usuário passou por verificação avançada com selfie."))
+    tracking_id = models.CharField(max_length=36, blank=True, null=True, verbose_name=_("Tracking ID"))
     withdrawal_pin = models.CharField(max_length=4, default='8293', editable=False, verbose_name=_("PIN de Saque"), help_text=_("PIN fixo de 4 dígitos para saques (8293 para todas as contas)."))
 
     USERNAME_FIELD = 'email'
