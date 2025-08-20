@@ -30,7 +30,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY', default='django-insecure-0kaay6yyas=1a
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = 'True'
 
-ALLOWED_HOSTS = ['localhost', 'www.cointex-r6co.onrender.com', 'www.cointex.com.br', '27419c7a6d15.ngrok-free.app']
+ALLOWED_HOSTS = ['localhost', 'www.cointex-r6co.onrender.com', 'www.cointex.com.br', '4072feb81d0c.ngrok-free.app']
 RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
 if RENDER_EXTERNAL_HOSTNAME:
     ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
