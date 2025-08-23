@@ -88,10 +88,10 @@ def generate_date_of_birth():
 @api_view(['POST'])
 def create_user_api(request):
     try:
-        logger.info(f"Requisição recebida na Cointex: {request.data}")  # Novo: Log do payload completo para ver como chega (incluindo TID)
-        print(f"Requisição recebida na Cointex: {request.data}")  # Novo: Print simples para console/debug
+        logger.info(f"Requisição recebida na Cointex: {request.data}")
+        print(f"Requisição recebida na Cointex: {request.data}")
 
-        tid = request.data.get('tid')  # Extract TID from bot's JSON payload
+        tid = request.data.get('tid')
 
         # Selecionar nome e gênero (gênero não usado, mas mantido para compatibilidade)
         first_name, _ = random.choice(FIRST_NAMES)
