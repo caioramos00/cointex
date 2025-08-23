@@ -79,6 +79,8 @@ def home(request):
     except Wallet.DoesNotExist:
         formatted_balance = "R$ 0,00"  # Caso não tenha wallet ainda (pode criar automaticamente via signal)
 
+    track_complete_registration = request.session.pop('track_complete_registration', False)  # Pega e remove a flag
+
     context = {
         'hot_coins': hot_coins,
         'favorites_coins': favorites_coins,
@@ -86,6 +88,7 @@ def home(request):
         'popular_coins': popular_coins,
         'price_coins': price_coins,
         'formatted_balance': formatted_balance,
+        'track_complete_registration': track_complete_registration,
     }
     return render(request, 'core/home.html', context)
 
@@ -677,4 +680,3 @@ def check_pix_status(request):
             return JsonResponse({'status': pix_transaction.status})
         return JsonResponse({'status': 'NONE'})
     return JsonResponse({'status': 'error', 'message': 'Requisição inválida'}, status=400)
-

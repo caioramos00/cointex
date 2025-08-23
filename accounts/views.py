@@ -12,6 +12,11 @@ class CustomLoginView(LoginView):
     template_name = 'accounts/sign-in.html'
     redirect_authenticated_user = True
 
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        self.request.session['track_complete_registration'] = True  # Flag para disparar o evento na home após login
+        return response
+
     def get_success_url(self):
         return reverse_lazy('core:home')
 
