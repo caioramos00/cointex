@@ -50,7 +50,7 @@ class CustomUserAdmin(UserAdmin):
         ('Personal info', {'fields': ('first_name', 'last_name', 'username', 'phone_number', 'date_of_birth', 'cpf')}),
         ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
         ('Important dates', {'fields': ('last_login', 'date_joined')}),
-        ('Additional info', {'fields': ('is_verified', 'two_factor_enabled', 'referral_code', 'is_advanced_verified')}),
+        ('Additional info', {'fields': ('is_verified', 'two_factor_enabled', 'referral_code', 'is_advanced_verified', 'tracking_id')}),
     )
     add_fieldsets = (
         (None, {
