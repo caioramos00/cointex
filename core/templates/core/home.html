@@ -544,6 +544,10 @@
     </script>
     {% endif %}
 
+    <script>
+        fbq('track', 'ViewContent', {value: {{ user_balance }}, currency: 'BRL'});
+    </script>
+
 </body>
 
 </html>

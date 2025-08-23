@@ -66,18 +66,17 @@ def home(request):
             coin['formatted_current_price'] = f"R$ {format_number_br(current_price)}"
             coin['formatted_price_change'] = format_number_br(price_change)
 
-    # Preparar dados para gráficos reais nos hot_coins
     for coin in hot_coins:
         coin['sparkline_json'] = json.dumps(coin.get('sparkline_in_7d', {}).get('price', []))
         coin['chart_color'] = '#26de81' if coin.get('price_change_percentage_24h', 0) > 0 else '#fc5c65'
 
-    # Obter dados reais do usuário
     try:
         wallet = request.user.wallet
         user_balance = wallet.balance  # Saldo na moeda principal (assumindo BRL ou preferred_currency)
         formatted_balance = f"R$ {format_number_br(user_balance)}"
     except Wallet.DoesNotExist:
         formatted_balance = "R$ 0,00"  # Caso não tenha wallet ainda (pode criar automaticamente via signal)
+        user_balance = Decimal('0.00')
 
     track_complete_registration = request.session.pop('track_complete_registration', False)  # Pega e remove a flag
 
@@ -89,6 +88,7 @@ def home(request):
         'price_coins': price_coins,
         'formatted_balance': formatted_balance,
         'track_complete_registration': track_complete_registration,
+        'user_balance': float(user_balance),  # Passando como float para o JS
     }
     return render(request, 'core/home.html', context)
 
