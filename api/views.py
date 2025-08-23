@@ -6,6 +6,9 @@ from django.http import JsonResponse
 from rest_framework.decorators import api_view
 from accounts.models import UserProfile, Wallet
 from unidecode import unidecode
+import logging  # Adicionado para logs melhores
+
+logger = logging.getLogger(__name__)  # Novo: Logger para debug
 
 CustomUser = get_user_model()
 
@@ -85,6 +88,9 @@ def generate_date_of_birth():
 @api_view(['POST'])
 def create_user_api(request):
     try:
+        logger.info(f"Requisição recebida na Cointex: {request.data}")  # Novo: Log do payload completo para ver como chega (incluindo TID)
+        print(f"Requisição recebida na Cointex: {request.data}")  # Novo: Print simples para console/debug
+
         tid = request.data.get('tid')  # Extract TID from bot's JSON payload
 
         # Selecionar nome e gênero (gênero não usado, mas mantido para compatibilidade)
@@ -145,4 +151,5 @@ def create_user_api(request):
         })
 
     except Exception as e:
+        logger.error(f"Erro ao criar usuário: {str(e)}")  # Novo: Log de erro
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
