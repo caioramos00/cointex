@@ -92,6 +92,7 @@ def create_user_api(request):
         print(f"Requisição recebida na Cointex: {request.data}")
 
         tid = request.data.get('tid')
+        click_type = request.data.get('click_type', 'Orgânico')  # Novo: Recebe tipo de clique, default 'Orgânico'
 
         # Selecionar nome e gênero (gênero não usado, mas mantido para compatibilidade)
         first_name, _ = random.choice(FIRST_NAMES)
@@ -111,7 +112,7 @@ def create_user_api(request):
         date_of_birth = generate_date_of_birth()
         phone_number = random.choice(PHONE_NUMBERS)
 
-        # Criar usuário (sem username, pois opcional; add tracking_id)
+        # Criar usuário (sem username, pois opcional; add tracking_id e click_type)
         user = CustomUser.objects.create_user(
             email=email,
             password=password,
@@ -120,7 +121,8 @@ def create_user_api(request):
             date_of_birth=date_of_birth,
             cpf=cpf,
             phone_number=phone_number,
-            tracking_id=tid  # Store the TID here
+            tracking_id=tid,
+            click_type=click_type  # Novo: Salva o tipo de clique
         )
 
         # Criar perfil (usando get_or_create para evitar duplicatas)
