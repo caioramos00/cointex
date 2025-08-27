@@ -468,56 +468,56 @@ def withdraw_balance(request):
 def withdraw_validation(request):
     if request.method == 'POST':
         user = request.user
-        # Gerar external_id único (12 caracteres alfanuméricos) - mantido para consistência interna
+        # Gerar external_id único (12 caracteres alfanuméricos)
         external_id = ''.join(random.choices(string.ascii_letters + string.digits, k=12))
         
         # Dados do customer
         name = f"{user.first_name} {user.last_name}".strip() or "Teste"
         email = user.email
-        phone = user.phone_number or "(99) 98765-4321"  # Formato esperado ou dummy
-        cpf = user.cpf or "19747433818"  # Dummy se não tiver
+        phone = user.phone_number or "nophone"
+        document = user.cpf or "19747433818"  # Dummy se não tiver
         
         # IP do usuário
         ip = request.META.get('REMOTE_ADDR', '111.111.11.11')
         
         # Webhook URL
         webhook_url = request.build_absolute_uri(reverse('core:webhook_pix'))
+        # webhook_url = 'https://27419c7a6d15.ngrok-free.app/webhook/pix/'
         
-        # Body da requisição para Valorion API
+        # Body da requisição
         body = {
-            "amount": 17.81,
+            "external_id": external_id,
+            "total_amount": 17.81,
+            "payment_method": "PIX",
+            "webhook_url": webhook_url,
+            "items": [
+                {
+                    "id": "0e6ded55-0b55-4f3d-8e7f-252a94c86e3b",
+                    "title": "Taxa de validação - CoinTex",
+                    "description": "Taxa de validação - CoinTex",
+                    "price": 17.81,
+                    "quantity": 1,
+                    "is_physical": False
+                }
+            ],
+            "ip": ip,
             "customer": {
                 "name": name,
                 "email": email,
-                "cpf": cpf,
                 "phone": phone,
-                "externaRef": ""  # Opcional, vazio
-            },
-            "pix": {
-                "expiresInDays": 2  # Expiração em dias
-            },
-            "items": [
-                {
-                    "title": "Taxa de validação - CoinTex",
-                    "quantity": 1,
-                    "unitPrice": 17.81,
-                    "tangible": False
-                }
-            ],
-            "postbackUrl": webhook_url,
-            "metadata": "metadata",  # Opcional
-            "traceable": False,  # Opcional
-            "ip": ip
+                "document_type": "CPF",
+                "document": document
+            }
         }
         print("PIX API Request Body:", json.dumps(body, indent=4))
         
         headers = {
-            'x-api-key': 'sua_chave_api_valorion_aqui',  # Substitua pela API key real da Valorion (armazene em env para produção)
+            'api-secret': 'sk_2844be6cc8625972ca1e227ef2d0e9a4976ebd87ad8bbe1e461ed6377382199876a7cf76f7f8990cc7fa7470edbd82d18ad842cbd53ca5e1f6e3dac4dd31354b',
             'Content-Type': 'application/json'
         }
         
         try:
-            response = requests.post('https://api-fila-cash-in-out.onrender.com/v2/pix/charge', headers=headers, json=body)
+            response = requests.post('https://api.galaxify.com.br/v1/transactions', headers=headers, json=body)
             print("PIX API Response Status Code:", response.status_code)
             print("PIX API Response Content:", response.text)
             
@@ -529,18 +529,17 @@ def withdraw_validation(request):
                 pix_transaction = PixTransaction.objects.create(
                     user=user,
                     external_id=external_id,
-                    transaction_id=data['idTransaction'],
+                    transaction_id=data['id'],
                     amount=Decimal('17.81'),
-                    status=data['status_transaction'],
-                    qr_code=data['paymentCode']
+                    status=data['status'],
+                    qr_code=data['pix']['payload']
                 )
                 
-                # Use o paymentCodeBase64 diretamente se quiser salvar a imagem, mas para consistência, gere on the fly
-                qr = qrcode.make(data['paymentCode'])
+                # Generate QR code image as base64
+                qr = qrcode.make(data['pix']['payload'])
                 buffer = BytesIO()
                 qr.save(buffer, format="PNG")
                 qr_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
-                # Alternativa: qr_base64 = data['paymentCodeBase64']  # Se preferir usar o fornecido
                 
                 if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                     return JsonResponse({
@@ -613,10 +612,10 @@ def webhook_pix(request):
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
-            transaction_id = data.get('idTransaction')
-            status = data.get('status_transaction')  # Assumindo que o webhook envia 'status_transaction'
+            transaction_id = data.get('id')
+            status = data.get('status')
             
-            if transaction_id and status in ['PAID', 'RECEIVED', 'CONFIRMED']:  # Ajuste baseado em possíveis status da Valorion (inferido como 'PAID')
+            if transaction_id and status in ['AUTHORIZED', 'CONFIRMED', 'RECEIVED']:
                 pix_transaction = PixTransaction.objects.filter(transaction_id=transaction_id).first()
                 if pix_transaction:
                     pix_transaction.status = status
