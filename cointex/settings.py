@@ -31,7 +31,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY', default='django-insecure-0kaay6yyas=1a
 DEBUG = 'True'
 
 # ALLOWED_HOSTS = ['localhost', 'www.cointex.cash']
-ALLOWED_HOSTS = [h.strip() for h in os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if h.strip()]
+ALLOWED_HOSTS = [h.strip() for h in os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1", "www.cointex.cash").split(",") if h.strip()]
 
 
 SECURE_SSL_REDIRECT = True
