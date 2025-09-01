@@ -788,16 +788,25 @@
         showGenerateButton();
     });
 </script>
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
 <script>
   function renderQR(targetId, payload) {
     const el = document.getElementById(targetId);
     if (!el || !payload) return;
+
+    // limpa qualquer conteúdo anterior
     el.innerHTML = '';
-    QRCode.toCanvas(payload, { width: 220 }, (err, canvas) => {
-      if (!err) el.appendChild(canvas);
+
+    // qrcodejs instancia direto no container:
+    // corrige conflitos: QRCode (classe) vem da lib qrcodejs
+    new QRCode(el, {
+      text: payload,
+      width: 220,
+      height: 220,
+      correctLevel: QRCode.CorrectLevel.M
     });
   }
+
   document.addEventListener('DOMContentLoaded', function () {
     const existingPix = "{{ pix_transaction.qr_code|default:'' }}";
     if (existingPix) renderQR('qrcode', existingPix);
