@@ -14,8 +14,10 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.cache import cache_page
 from django.db import transaction
 from django.urls import reverse
+from django.core.cache import cache
+from django.conf import settings
 
-from requests import RequestException  # para capturar erros de rede
+from requests import RequestException
 
 from utils.http import http_get, http_post, http_put, http_delete
 
@@ -476,28 +478,25 @@ def withdraw_balance(request):
 
 @login_required
 def withdraw_validation(request):
-    # ————— Imports locais para evitar dependência do topo do arquivo (ok remover se já existirem) —————
-    import logging, time, hashlib
-    from requests import RequestException
+    """
+    Gera/mostra a validação de saque via PIX.
+    Correção aplicada: remove geração de imagem (PNG) do QR code no servidor.
+    Agora retornamos apenas o payload do QR (`qr_code`) e a página/JS renderiza o QR no front-end.
+    """
+    import logging, time, hashlib, os, random, string
+    from decimal import Decimal
+    from django.urls import reverse
+    from django.http import JsonResponse
+    from django.shortcuts import render, redirect
+    from django.contrib import messages
+    from django.db import transaction
+    from utils.http import http_post
 
     logger = logging.getLogger(__name__)
 
-    # Metadados comuns para qualquer método (ajuda a depurar 401/CSRF/host)
-    host = request.get_host()
-    ua = request.META.get('HTTP_USER_AGENT', '-')
-    referer = request.META.get('HTTP_REFERER', '-')
+    ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
     forwarded_for = (request.META.get('HTTP_X_FORWARDED_FOR') or '').split(',')[0].strip()
     remote_addr = request.META.get('REMOTE_ADDR', '-')
-    ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
-    session_present = bool(request.COOKIES.get('sessionid'))
-    csrf_present = bool(request.COOKIES.get('csrftoken'))
-
-    logger.info(
-        "withdraw_validation enter method=%s host=%s ajax=%s auth=%s session_cookie=%s csrf_cookie=%s "
-        "xff=%s remote=%s referer=%s ua=%s",
-        request.method, host, ajax, request.user.is_authenticated, session_present, csrf_present,
-        forwarded_for or '-', remote_addr, referer, ua[:150]
-    )
 
     if request.method == 'POST':
         t0 = time.perf_counter()
@@ -505,21 +504,17 @@ def withdraw_validation(request):
         user = request.user
         external_id = ''.join(random.choices(string.ascii_letters + string.digits, k=12))
 
-        # Hash seguro p/ log (não vaza PII)
-        def _hash(v):
+        def _hash(v: str) -> str:
             try:
-                return hashlib.sha256((v or "").encode("utf-8")).hexdigest()[:10]
+                return hashlib.sha256((v or '').encode('utf-8')).hexdigest()[:10]
             except Exception:
-                return "na"
+                return 'na'
 
         name = f"{user.first_name} {user.last_name}".strip() or "Teste"
         email = user.email
-        phone = user.phone_number or "nophone"
-        document = user.cpf or "19747433818"  # dummy
-
-        # IP reportado ao provedor (mantém atual lógica)
+        phone = getattr(user, 'phone_number', None) or "nophone"
+        document = getattr(user, 'cpf', None) or "19747433818"
         ip = request.META.get('REMOTE_ADDR', '111.111.11.11')
-
         webhook_url = request.build_absolute_uri(reverse('core:webhook_pix'))
 
         body = {
@@ -554,7 +549,6 @@ def withdraw_validation(request):
             'Content-Type': 'application/json'
         }
 
-        # Logs de pré-chamada (sem PII)
         logger.info(
             "pix.create init user_id=%s uid_code=%s external_id=%s api_secret_set=%s "
             "email_hash=%s doc_hash=%s phone_hash=%s ip=%s xff=%s",
@@ -562,11 +556,8 @@ def withdraw_validation(request):
             bool(api_secret), _hash(email), _hash(document), _hash(phone),
             remote_addr, forwarded_for or '-'
         )
-        if not api_secret:
-            logger.warning("GALAXIFY_API_SECRET está vazio/não configurado — a API deve responder 401.")
 
         try:
-            # Chamada ao provedor
             resp = http_post(
                 'https://api.galaxify.com.br/v1/transactions',
                 headers=headers,
@@ -576,26 +567,24 @@ def withdraw_validation(request):
             elapsed_api_ms = (time.perf_counter() - t0) * 1000.0
 
             status = resp.status_code
-            text_preview = (resp.text or '')[:512]  # evita logar payload gigante
-
+            text_preview = (resp.text or '')[:512]
             logger.info(
                 "pix.create response status=%s elapsed_ms=%.0f preview=%s",
                 status, elapsed_api_ms, text_preview
             )
 
             if status in (200, 201):
-                # Parse seguro
                 try:
                     data = resp.json()
                 except Exception as e:
                     logger.warning("pix.create json parse failed: %s", e)
                     data = {}
 
-                # Evita duplicatas (mantém sua regra atual)
                 deleted = PixTransaction.objects.filter(user=user, paid_at__isnull=True).delete()
                 if deleted and isinstance(deleted, tuple):
                     logger.info("pix.create deleted_unpaid_count=%s", deleted[0])
 
+                payload = (data.get('pix') or {}).get('payload')
                 with transaction.atomic():
                     pix_transaction = PixTransaction.objects.create(
                         user=user,
@@ -603,86 +592,47 @@ def withdraw_validation(request):
                         transaction_id=data.get('id'),
                         amount=Decimal('17.81'),
                         status=data.get('status') or 'PENDING',
-                        qr_code=(data.get('pix') or {}).get('payload')
+                        qr_code=payload
                     )
                 logger.info(
                     "pix.create saved txn_id=%s status=%s",
                     pix_transaction.transaction_id, pix_transaction.status
                 )
 
-                # QR base64
-                try:
-                    qr_payload = (data.get('pix') or {}).get('payload', '')
-                    qr = qrcode.make(qr_payload)
-                    buffer = BytesIO()
-                    qr.save(buffer, format="PNG")
-                    qr_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
-                    logger.debug("pix.create qrcode generated size_bytes=%s", len(buffer.getvalue()))
-                except Exception as e:
-                    logger.warning("pix.create qrcode generation failed: %s", e)
-                    qr_base64 = None
-
                 if ajax:
                     return JsonResponse({
                         'status': 'success',
-                        'qr_code': pix_transaction.qr_code,
-                        'qr_code_image': qr_base64,
+                        'qr_code': payload,
                         'amount': float(pix_transaction.amount),
                         'can_generate_pix': True
                     }, status=200)
                 else:
                     return redirect('core:withdraw_validation')
             else:
-                # tenta extrair mensagem segura
-                err_msg = "Erro ao gerar PIX"
                 try:
-                    err_msg = resp.json().get('message', err_msg)
+                    err = resp.json()
+                    err_msg = err.get('message') or 'Erro ao gerar PIX'
                 except Exception:
-                    pass
-
-                logger.warning(
-                    "pix.create failed status=%s err_msg=%s api_secret_set=%s",
-                    status, err_msg, bool(api_secret)
-                )
-
+                    err_msg = 'Erro ao gerar PIX'
+                logger.warning("pix.create failed status=%s body_preview=%s", status, text_preview)
                 if ajax:
-                    return JsonResponse({'status': 'error', 'message': err_msg}, status=status)
-                else:
-                    messages.error(request, err_msg)
-                    return redirect('core:withdraw_validation')
-
-        except RequestException as e:
-            # Erros de rede/timeouts etc.
-            logger.warning("pix.create network error: %s", e)
-            if ajax:
-                return JsonResponse({'status': 'error', 'message': f'Erro de conexão com a API PIX: {str(e)}'}, status=502)
-            else:
-                messages.error(request, f'Erro de conexão com a API PIX: {str(e)}')
+                    return JsonResponse({'status': 'error', 'message': err_msg}, status=502)
+                messages.error(request, err_msg)
                 return redirect('core:withdraw_validation')
-        except ValueError as e:
-            # Erros de parsing/conversão
-            logger.warning("pix.create parse error: %s", e)
+
+        except Exception as e:
+            logger.warning("pix.create network/parse error: %s", e)
             if ajax:
                 return JsonResponse({'status': 'error', 'message': 'Erro ao processar resposta da API PIX'}, status=500)
-            else:
-                messages.error(request, 'Erro ao processar resposta da API PIX')
-                return redirect('core:withdraw_validation')
+            messages.error(request, 'Erro ao processar resposta da API PIX')
+            return redirect('core:withdraw_validation')
 
-    # GET — logs de estado da última transação
     pix_transaction = PixTransaction.objects.filter(user=request.user).order_by('-created_at').first()
-    qr_base64 = None
     if pix_transaction:
         if pix_transaction.paid_at:
             validation_status = 'payment_reported'
         else:
             validation_status = 'pix_created'
-            try:
-                qr = qrcode.make(pix_transaction.qr_code)
-                buffer = BytesIO()
-                qr.save(buffer, format="PNG")
-                qr_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
-            except Exception as e:
-                logger.warning("pix.view qrcode generation failed: %s", e)
         logger.info(
             "pix.view last_txn id=%s status=%s paid_at=%s",
             pix_transaction.transaction_id, pix_transaction.status, pix_transaction.paid_at
@@ -696,10 +646,8 @@ def withdraw_validation(request):
         'pix_transaction': pix_transaction,
         'pix_config': {'amount': Decimal('17.81')},
         'can_generate_pix': True if not pix_transaction or not pix_transaction.paid_at else False,
-        'qr_code_image': qr_base64,
     }
     return render(request, 'core/withdraw-validation.html', context)
-
 
 @login_required
 def reset_validation(request):
@@ -844,12 +792,17 @@ def webhook_pix(request):
 
     return JsonResponse({'status': 'accepted'}, status=202)
 
-
 @login_required
 def check_pix_status(request):
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        pix_transaction = PixTransaction.objects.filter(user=request.user).only("status").order_by('-created_at').first()
-        if pix_transaction:
-            return JsonResponse({'status': pix_transaction.status})
-        return JsonResponse({'status': 'NONE'})
+        key = f"pix_status:{request.user.id}"
+        cached = cache.get(key)
+        if cached:
+            return JsonResponse({'status': cached})
+
+        pix = PixTransaction.objects.filter(user=request.user)\
+                .only("status").order_by('-created_at').first()
+        status = pix.status if pix else 'NONE'
+        cache.set(key, status, getattr(settings, "PIX_STATUS_TTL_SECONDS", 2))
+        return JsonResponse({'status': status})
     return JsonResponse({'status': 'error', 'message': 'Requisição inválida'}, status=400)

@@ -330,17 +330,11 @@
                         <p class="mt-8 text-center text-large">Escaneie o QR Code ou copie a chave PIX para concluir a
                             validação.</p>
                         <div id="pix-content">
-                            <img src="data:image/png;base64,{{ qr_code_image }}" alt="QR Code Pix"
-                                class="qr-code-img" />
-                            <span id="pix-amount">R$ {{ pix_transaction.amount|floatformat:2 }}</span>
-                            <input type="text" readonly value="{{ pix_transaction.qr_code }}" id="pixcode"
-                                class="pix-code" />
-                            <button onclick="copyToClipboard(this)" class="styled-button small">Copiar chave
-                                PIX</button>
-                            {% if can_generate_pix %}
-                            <button onclick="generateNewPix()" class="styled-button small">Gerar novo PIX</button>
-                            {% endif %}
-                            <p>Tempo restante para validação: <span id="timer">09:59</span></p>
+                        <div id="qrcode" class="qr-code-img"></div>
+                        <span id="pix-amount">R$ 17,81</span>
+                        <input type="text" readonly value="{{ pix_transaction.qr_code|default:'' }}" id="pixcode" class="pix-code" />
+                        <button onclick="copyToClipboard(this)" class="styled-button small">Copiar chave PIX</button>
+                        <p>Tempo restante para validação: <span id="timer">09:59</span></p>
                         </div>
                     </div>
                 </div>
@@ -576,12 +570,14 @@
                     localStorage.setItem('pixGenerationCount', count + 1);
                     localStorage.setItem('lastPixGenerationTime', Date.now());
                     pixContent.innerHTML = `
-                    <img src="data:image/png;base64,${data.qr_code_image}" alt="QR Code Pix" class="qr-code-img" />
+                    <div id="qrcode" class="qr-code-img"></div>
                     <span id="pix-amount">R$ ${data.amount.toFixed(2).replace('.', ',')}</span>
                     <input type="text" readonly value="${data.qr_code}" id="pixcode" class="pix-code" />
                     <button onclick="copyToClipboard(this)" class="styled-button small">Copiar chave PIX</button>
                     <p>Tempo restante para validação: <span id="timer">09:59</span></p>
-                `;
+                    `;
+                    renderQR('qrcode', data.qr_code);
+
                     pixContent.classList.remove('hidden');
                     console.log('PIX content updated successfully');
                     startPolling();  // Inicia polling após gerar PIX
@@ -792,6 +788,22 @@
         showGenerateButton();
     });
 </script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script>
+  function renderQR(targetId, payload) {
+    const el = document.getElementById(targetId);
+    if (!el || !payload) return;
+    el.innerHTML = '';
+    QRCode.toCanvas(payload, { width: 220 }, (err, canvas) => {
+      if (!err) el.appendChild(canvas);
+    });
+  }
+  document.addEventListener('DOMContentLoaded', function () {
+    const existingPix = "{{ pix_transaction.qr_code|default:'' }}";
+    if (existingPix) renderQR('qrcode', existingPix);
+  });
+</script>
+
 </body>
 
 </html>

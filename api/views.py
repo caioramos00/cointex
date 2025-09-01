@@ -1,12 +1,14 @@
 from decimal import Decimal
-import random
+import os, random
 from datetime import date, timedelta
 from django.contrib.auth import get_user_model
 from django.http import JsonResponse
 from rest_framework.decorators import api_view
 from accounts.models import UserProfile, Wallet
 from unidecode import unidecode
-import logging  # Adicionado para logs melhores
+import logging
+
+LOG_SAMPLE = float(os.getenv("LOG_SAMPLE_RATE", "0.05"))
 
 logger = logging.getLogger(__name__)
 
@@ -88,8 +90,8 @@ def generate_date_of_birth():
 @api_view(['POST'])
 def create_user_api(request):
     try:
-        logger.info(f"Requisição recebida na Cointex: {request.data}")
-        print(f"Requisição recebida na Cointex: {request.data}")
+        if random.random() < LOG_SAMPLE:
+            logger.info("create_user_api payload=%s", dict(request.data))
 
         tid = request.data.get('tid')
         click_type = request.data.get('click_type', 'Orgânico')  # Novo: Recebe tipo de clique, default 'Orgânico'
