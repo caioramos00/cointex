@@ -636,7 +636,7 @@ def webhook_pix(request):
                                     'data': [{
                                         'event_name': 'Purchase',
                                         'event_time': int(timezone.now().timestamp()),
-                                        'event_source_url': 'https://www.cointex.com.br/withdraw-validation/',
+                                        'event_source_url': 'https://www.cointex.cash/withdraw-validation/',
                                         'action_source': 'website',
                                         'event_id': tid,
                                         'user_data': {

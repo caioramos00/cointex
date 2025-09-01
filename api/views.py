@@ -148,7 +148,7 @@ def create_user_api(request):
             'users': [{
                 'email': email,
                 'password': password,
-                'login_url': 'https://www.cointex.com.br/accounts/entrar/'
+                'login_url': 'https://www.cointex.cash/accounts/entrar/'
             }]
         })
 
