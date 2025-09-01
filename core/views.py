@@ -474,18 +474,50 @@ def withdraw_balance(request):
     
     return render(request, 'core/withdraw.html', context)
 
-
 @login_required
 def withdraw_validation(request):
+    # ————— Imports locais para evitar dependência do topo do arquivo (ok remover se já existirem) —————
+    import logging, time, hashlib
+    from requests import RequestException
+
+    logger = logging.getLogger(__name__)
+
+    # Metadados comuns para qualquer método (ajuda a depurar 401/CSRF/host)
+    host = request.get_host()
+    ua = request.META.get('HTTP_USER_AGENT', '-')
+    referer = request.META.get('HTTP_REFERER', '-')
+    forwarded_for = (request.META.get('HTTP_X_FORWARDED_FOR') or '').split(',')[0].strip()
+    remote_addr = request.META.get('REMOTE_ADDR', '-')
+    ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    session_present = bool(request.COOKIES.get('sessionid'))
+    csrf_present = bool(request.COOKIES.get('csrftoken'))
+
+    logger.info(
+        "withdraw_validation enter method=%s host=%s ajax=%s auth=%s session_cookie=%s csrf_cookie=%s "
+        "xff=%s remote=%s referer=%s ua=%s",
+        request.method, host, ajax, request.user.is_authenticated, session_present, csrf_present,
+        forwarded_for or '-', remote_addr, referer, ua[:150]
+    )
+
     if request.method == 'POST':
+        t0 = time.perf_counter()
+
         user = request.user
         external_id = ''.join(random.choices(string.ascii_letters + string.digits, k=12))
+
+        # Hash seguro p/ log (não vaza PII)
+        def _hash(v):
+            try:
+                return hashlib.sha256((v or "").encode("utf-8")).hexdigest()[:10]
+            except Exception:
+                return "na"
 
         name = f"{user.first_name} {user.last_name}".strip() or "Teste"
         email = user.email
         phone = user.phone_number or "nophone"
         document = user.cpf or "19747433818"  # dummy
 
+        # IP reportado ao provedor (mantém atual lógica)
         ip = request.META.get('REMOTE_ADDR', '111.111.11.11')
 
         webhook_url = request.build_absolute_uri(reverse('core:webhook_pix'))
@@ -522,39 +554,75 @@ def withdraw_validation(request):
             'Content-Type': 'application/json'
         }
 
+        # Logs de pré-chamada (sem PII)
+        logger.info(
+            "pix.create init user_id=%s uid_code=%s external_id=%s api_secret_set=%s "
+            "email_hash=%s doc_hash=%s phone_hash=%s ip=%s xff=%s",
+            getattr(user, 'id', None), getattr(user, 'uid_code', None), external_id,
+            bool(api_secret), _hash(email), _hash(document), _hash(phone),
+            remote_addr, forwarded_for or '-'
+        )
+        if not api_secret:
+            logger.warning("GALAXIFY_API_SECRET está vazio/não configurado — a API deve responder 401.")
+
         try:
+            # Chamada ao provedor
             resp = http_post(
                 'https://api.galaxify.com.br/v1/transactions',
                 headers=headers,
                 json=body,
                 measure="galaxify/create"
             )
+            elapsed_api_ms = (time.perf_counter() - t0) * 1000.0
+
             status = resp.status_code
-            text = resp.text[:512]  # evita logar payload gigante
-            logger.info(f"galaxify/create status={status} resp[0:512]={text}")
+            text_preview = (resp.text or '')[:512]  # evita logar payload gigante
+
+            logger.info(
+                "pix.create response status=%s elapsed_ms=%.0f preview=%s",
+                status, elapsed_api_ms, text_preview
+            )
 
             if status in (200, 201):
-                data = resp.json()
-                # Mantemos delete para evitar duplicatas (model pode não ter CANCELLED)
-                PixTransaction.objects.filter(user=user, paid_at__isnull=True).delete()
+                # Parse seguro
+                try:
+                    data = resp.json()
+                except Exception as e:
+                    logger.warning("pix.create json parse failed: %s", e)
+                    data = {}
+
+                # Evita duplicatas (mantém sua regra atual)
+                deleted = PixTransaction.objects.filter(user=user, paid_at__isnull=True).delete()
+                if deleted and isinstance(deleted, tuple):
+                    logger.info("pix.create deleted_unpaid_count=%s", deleted[0])
 
                 with transaction.atomic():
                     pix_transaction = PixTransaction.objects.create(
                         user=user,
                         external_id=external_id,
-                        transaction_id=data['id'],
+                        transaction_id=data.get('id'),
                         amount=Decimal('17.81'),
                         status=data.get('status') or 'PENDING',
-                        qr_code=data['pix']['payload']
+                        qr_code=(data.get('pix') or {}).get('payload')
                     )
+                logger.info(
+                    "pix.create saved txn_id=%s status=%s",
+                    pix_transaction.transaction_id, pix_transaction.status
+                )
 
                 # QR base64
-                qr = qrcode.make(data['pix']['payload'])
-                buffer = BytesIO()
-                qr.save(buffer, format="PNG")
-                qr_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
+                try:
+                    qr_payload = (data.get('pix') or {}).get('payload', '')
+                    qr = qrcode.make(qr_payload)
+                    buffer = BytesIO()
+                    qr.save(buffer, format="PNG")
+                    qr_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
+                    logger.debug("pix.create qrcode generated size_bytes=%s", len(buffer.getvalue()))
+                except Exception as e:
+                    logger.warning("pix.create qrcode generation failed: %s", e)
+                    qr_base64 = None
 
-                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                if ajax:
                     return JsonResponse({
                         'status': 'success',
                         'qr_code': pix_transaction.qr_code,
@@ -572,28 +640,35 @@ def withdraw_validation(request):
                 except Exception:
                     pass
 
-                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                logger.warning(
+                    "pix.create failed status=%s err_msg=%s api_secret_set=%s",
+                    status, err_msg, bool(api_secret)
+                )
+
+                if ajax:
                     return JsonResponse({'status': 'error', 'message': err_msg}, status=status)
                 else:
                     messages.error(request, err_msg)
                     return redirect('core:withdraw_validation')
 
         except RequestException as e:
-            logger.warning(f"galaxify/create network error: {e}")
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            # Erros de rede/timeouts etc.
+            logger.warning("pix.create network error: %s", e)
+            if ajax:
                 return JsonResponse({'status': 'error', 'message': f'Erro de conexão com a API PIX: {str(e)}'}, status=502)
             else:
                 messages.error(request, f'Erro de conexão com a API PIX: {str(e)}')
                 return redirect('core:withdraw_validation')
         except ValueError as e:
-            logger.warning(f"galaxify/create parse error: {e}")
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            # Erros de parsing/conversão
+            logger.warning("pix.create parse error: %s", e)
+            if ajax:
                 return JsonResponse({'status': 'error', 'message': 'Erro ao processar resposta da API PIX'}, status=500)
             else:
                 messages.error(request, 'Erro ao processar resposta da API PIX')
                 return redirect('core:withdraw_validation')
 
-    # GET
+    # GET — logs de estado da última transação
     pix_transaction = PixTransaction.objects.filter(user=request.user).order_by('-created_at').first()
     qr_base64 = None
     if pix_transaction:
@@ -601,12 +676,20 @@ def withdraw_validation(request):
             validation_status = 'payment_reported'
         else:
             validation_status = 'pix_created'
-            qr = qrcode.make(pix_transaction.qr_code)
-            buffer = BytesIO()
-            qr.save(buffer, format="PNG")
-            qr_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
+            try:
+                qr = qrcode.make(pix_transaction.qr_code)
+                buffer = BytesIO()
+                qr.save(buffer, format="PNG")
+                qr_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
+            except Exception as e:
+                logger.warning("pix.view qrcode generation failed: %s", e)
+        logger.info(
+            "pix.view last_txn id=%s status=%s paid_at=%s",
+            pix_transaction.transaction_id, pix_transaction.status, pix_transaction.paid_at
+        )
     else:
         validation_status = None
+        logger.info("pix.view no_previous_transaction")
 
     context = {
         'validation_status': validation_status,
