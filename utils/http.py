@@ -35,7 +35,7 @@ def _session():
 
 DEFAULT_TIMEOUT = (
     float(os.getenv("HTTP_CONNECT_TIMEOUT", "5")),   # connect
-    float(os.getenv("HTTP_READ_TIMEOUT", "10")),     # read
+    float(os.getenv("HTTP_READ_TIMEOUT", "30")),     # read
 )
 
 def _request(method, url, **kwargs):
