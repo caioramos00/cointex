@@ -89,12 +89,13 @@ WSGI_APPLICATION = 'cointex.wsgi.application'
 DATABASES = {
     'default': dj_database_url.config(
         default=os.getenv('DATABASE_URL'),  # Sem fallback hardcoded; use .env local ou Render env
-        conn_max_age=60,  # Reduzido para 1 min para conexões mais frescas
+        conn_max_age=300,  # Reduzido para 1 min para conexões mais frescas
         conn_health_checks=True  # Ativa verificações para evitar conexões stale
     )
 }
 
-# Opcional: Forçar SSL (já incluso na URL do Render, mas garante)
+CONN_MAX_AGE = int(os.getenv("DB_CONN_MAX_AGE", "300"))  # 5 min
+DATABASES["default"]["CONN_MAX_AGE"] = CONN_MAX_AGE
 DATABASES['default']['OPTIONS'] = {'sslmode': 'require'}
 
 
