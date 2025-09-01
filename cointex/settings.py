@@ -30,7 +30,26 @@ SECRET_KEY = os.environ.get('SECRET_KEY', default='django-insecure-0kaay6yyas=1a
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = 'True'
 
-ALLOWED_HOSTS = ['localhost', 'www.cointex.cash']
+# ALLOWED_HOSTS = ['localhost', 'www.cointex.cash']
+ALLOWED_HOSTS = [
+    'localhost', 'cointex.cash', 'www.cointex.cash',
+    os.getenv("RENDER_EXTERNAL_HOSTNAME", "")
+]
+
+SECURE_SSL_REDIRECT = True
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SAMESITE = "Lax"  # padrão seguro
+
+SESSION_COOKIE_DOMAIN = ".cointex.cash"
+CSRF_COOKIE_DOMAIN = ".cointex.cash"
+
+CSRF_TRUSTED_ORIGINS = [
+    "localhost",
+    "https://cointex.cash",
+    "https://www.cointex.cash",
+]
+
 RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
 if RENDER_EXTERNAL_HOSTNAME:
     ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
