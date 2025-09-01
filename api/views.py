@@ -8,7 +8,7 @@ from accounts.models import UserProfile, Wallet
 from unidecode import unidecode
 import logging  # Adicionado para logs melhores
 
-logger = logging.getLogger(__name__)  # Novo: Logger para debug
+logger = logging.getLogger(__name__)
 
 CustomUser = get_user_model()
 
