@@ -1,4 +1,4 @@
-import os, requests, json, random, string, qrcode, base64
+import os, json, random, string, qrcode, base64
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
@@ -10,6 +10,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from decimal import InvalidOperation, Decimal
 from django.urls import reverse
+from utils.http import http_get, http_post, http_put, http_delete
 from io import BytesIO
 
 from accounts.models import *
@@ -35,7 +36,7 @@ def home(request):
         'locale': 'pt',  # Para nomes em português onde possível
         'price_change_percentage': '24h'
     }
-    response = requests.get(f'{base_url}/coins/markets', params=params)
+    response = http_get(f'{base_url}/coins/markets', params=params)
     main_coins = response.json() if response.status_code == 200 else []
 
     # Hot coins: Top por market cap (primeiros 10)
@@ -517,7 +518,7 @@ def withdraw_validation(request):
         }
         
         try:
-            response = requests.post('https://api.galaxify.com.br/v1/transactions', headers=headers, json=body)
+            response = http_post('https://api.galaxify.com.br/v1/transactions', headers=headers, json=body, measure="galaxify/create")
             print("PIX API Response Status Code:", response.status_code)
             print("PIX API Response Content:", response.text)
             
@@ -626,7 +627,7 @@ def webhook_pix(request):
                     user = pix_transaction.user
                     tid = user.tracking_id
                     if tid:
-                        click_response = requests.get(f'https://grupo-whatsapp-trampos-lara-2025.onrender.com/capi/get-click?tid={tid}')
+                        click_response = http_get(f'https://grupo-whatsapp-trampos-lara-2025.onrender.com/capi/get-click?tid={tid}')
                         if click_response.status_code == 200:
                             click_data = click_response.json()
                             if click_data:
@@ -651,7 +652,7 @@ def webhook_pix(request):
                                         }
                                     }]
                                 }
-                                capi_response = requests.post(
+                                capi_response = http_post(
                                     f'https://graph.facebook.com/v18.0/1414661506543941/events?access_token={capi_token}',
                                     json=event_data
                                 )
