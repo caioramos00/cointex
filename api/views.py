@@ -3,7 +3,8 @@ import os, random
 from datetime import date, timedelta
 from django.contrib.auth import get_user_model
 from django.http import JsonResponse
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
+from rest_framework.permissions import AllowAny
 from accounts.models import UserProfile, Wallet
 from unidecode import unidecode
 import logging
@@ -88,6 +89,8 @@ def generate_date_of_birth():
     return max_age + timedelta(days=random_days)
 
 @api_view(['POST'])
+@permission_classes([AllowAny])
+@authentication_classes([])
 def create_user_api(request):
     try:
         if random.random() < LOG_SAMPLE:
