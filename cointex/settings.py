@@ -138,12 +138,32 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-CACHES = {
-    "default": {
-        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-        "LOCATION": "cointex-cache",
+# Cache (Redis em produção; LocMem fallback)
+REDIS_URL = os.getenv("REDIS_URL")
+if REDIS_URL:
+    CACHES = {
+        "default": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": REDIS_URL,
+            "OPTIONS": {"CLIENT_CLASS": "django_redis.client.DefaultClient"},
+            "KEY_PREFIX": "cointex",
+        }
     }
-}
+    # Sessão em cache (elimina SELECT em django_session por request)
+    SESSION_ENGINE = "django.contrib.sessions.backends.cache"
+    SESSION_CACHE_ALIAS = "default"
+else:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "cointex-cache",
+        }
+    }
+
+# TTLs de cache (ajustáveis por ENV)
+PIX_STATUS_TTL_SECONDS = int(os.getenv("PIX_STATUS_TTL", "2"))
+WALLET_CACHE_TTL_SECONDS = int(os.getenv("WALLET_CACHE_TTL", "60"))
+LOG_SAMPLE_RATE = float(os.getenv("LOG_SAMPLE_RATE", "0.05"))
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
