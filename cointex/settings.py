@@ -146,26 +146,19 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 # Cache (Redis em produção; LocMem fallback)
-REDIS_URL = os.getenv("REDIS_URL")
-if REDIS_URL:
-    CACHES = {
-        "default": {
-            "BACKEND": "django_redis.cache.RedisCache",
-            "LOCATION": REDIS_URL,
-            "OPTIONS": {"CLIENT_CLASS": "django_redis.client.DefaultClient"},
-            "KEY_PREFIX": "cointex",
-        }
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": os.getenv("REDIS_URL"),  # ex: redis://:pwd@host:6379/0
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            "CONNECTION_POOL_KWARGS": {"max_connections": 80},
+            "COMPRESSOR": "django_redis.compressors.zlib.ZlibCompressor",
+            "IGNORE_EXCEPTIONS": True,  # não derruba app se o Redis oscilar
+        },
+        "TIMEOUT": 60,  # default de cache; views/keys podem sobrescrever
     }
-    # Sessão em cache (elimina SELECT em django_session por request)
-    SESSION_ENGINE = "django.contrib.sessions.backends.cache"
-    SESSION_CACHE_ALIAS = "default"
-else:
-    CACHES = {
-        "default": {
-            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-            "LOCATION": "cointex-cache",
-        }
-    }
+}
 
 # TTLs de cache (ajustáveis por ENV)
 PIX_STATUS_TTL_SECONDS = int(os.getenv("PIX_STATUS_TTL", "2"))

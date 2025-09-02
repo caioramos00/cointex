@@ -1,4 +1,4 @@
-import os, json, random, string, qrcode, base64, hmac, hashlib, logging, threading
+import os, json, random, string, qrcode, base64, hmac, hashlib, logging, threading, time
 from io import BytesIO
 from decimal import InvalidOperation, Decimal
 
@@ -20,6 +20,7 @@ from django.conf import settings
 from requests import RequestException
 
 from utils.http import http_get, http_post, http_put, http_delete
+from utils.pix_cache import get_cached_pix, set_cached_pix, with_user_pix_lock
 
 from accounts.models import *
 from .forms import *
@@ -30,13 +31,22 @@ logger = logging.getLogger(__name__)
 def format_number_br(value):
     return f"{value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
-
 @cache_page(30)  # cache leve para achatar picos (30s)
 @login_required
 def home(request):
+    # === imports locais p/ autocontenção (não bagunçam o módulo) ===
+    import json, threading, logging
+    from decimal import Decimal
+    from django.shortcuts import render
+    from django_redis import get_redis_connection
+    from requests.exceptions import RequestException
+
+    logger = logging.getLogger(__name__)
+
+    # === parâmetros originais ===
     base_url = 'https://api.coingecko.com/api/v3'
     vs_currency = 'brl'
-    per_page_large = 250  # buscar grande 1x para evitar múltiplos fetches
+    per_page_large = 250
     per_page = 10
 
     params = {
@@ -49,40 +59,121 @@ def home(request):
         'price_change_percentage': '24h'
     }
 
+    # === Redis keys ===
+    r = None
     try:
-        response = http_get(f'{base_url}/coins/markets', params=params, measure="coingecko/markets")
-        main_coins = response.json() if response.status_code == 200 else []
-    except RequestException as e:
-        logger.warning(f"coingecko fetch failed: {e}")
-        main_coins = []
+        r = get_redis_connection("default")
+    except Exception as e:
+        logger.warning(f"redis unavailable, will fallback to direct http: {e}")
 
-    # Hot coins: Top por market cap (primeiros 10)
+    KEY_FRESH = "cg:markets:v1:fresh"
+    KEY_STALE = "cg:markets:v1:stale"
+    KEY_LOCK  = "lock:cg:markets:v1"
+
+    def _refresh_coingecko_async():
+        """Atualiza cache em background com lock (single-flight)."""
+        def _job():
+            lock = None
+            try:
+                lock = r.lock(KEY_LOCK, timeout=10) if r else None
+                if lock and not lock.acquire(blocking=False):
+                    return
+                resp = http_get(
+                    f'{base_url}/coins/markets',
+                    params=params,
+                    measure="coingecko/markets",
+                    timeout=(2, 3)  # curto pra não travar worker
+                )
+                data = resp.json() if resp and resp.status_code == 200 else []
+                payload = json.dumps(data)
+                if r:
+                    # fresh curto e stale maior (fallback)
+                    r.setex(KEY_FRESH, 60, payload)   # 1 min
+                    r.setex(KEY_STALE, 300, payload)  # 5 min
+            except Exception as e:
+                logger.warning(f"coingecko async refresh failed: {e}")
+            finally:
+                try:
+                    if lock and lock.locked():
+                        lock.release()
+                except Exception:
+                    pass
+
+        threading.Thread(target=_job, daemon=True).start()
+
+    # === leitura do cache (fresh -> stale -> http rápido) ===
+    main_coins = []
+    try:
+        if r:
+            raw = r.get(KEY_FRESH)
+            if raw:
+                main_coins = json.loads(raw)
+            else:
+                _refresh_coingecko_async()  # dispara BG sem bloquear
+                raw_stale = r.get(KEY_STALE)
+                if raw_stale:
+                    main_coins = json.loads(raw_stale)
+                else:
+                    # último recurso: http rápido (não 30s + retries!)
+                    try:
+                        response = http_get(
+                            f'{base_url}/coins/markets',
+                            params=params,
+                            measure="coingecko/markets",
+                            timeout=(2, 3)
+                        )
+                        main_coins = response.json() if response.status_code == 200 else []
+                        if main_coins:
+                            r.setex(KEY_STALE, 300, json.dumps(main_coins))
+                    except RequestException as e:
+                        logger.warning(f"coingecko quick fetch failed: {e}")
+                        main_coins = []
+        else:
+            # sem Redis: http curto
+            try:
+                response = http_get(
+                    f'{base_url}/coins/markets',
+                    params=params,
+                    measure="coingecko/markets",
+                    timeout=(2, 3)
+                )
+                main_coins = response.json() if response.status_code == 200 else []
+            except RequestException as e:
+                logger.warning(f"coingecko fetch failed (no redis): {e}")
+                main_coins = []
+    except Exception as e:
+        logger.warning(f"redis/cache path failed, fallback http: {e}")
+        try:
+            response = http_get(
+                f'{base_url}/coins/markets',
+                params=params,
+                measure="coingecko/markets",
+                timeout=(2, 3)
+            )
+            main_coins = response.json() if response.status_code == 200 else []
+        except RequestException as e2:
+            logger.warning(f"coingecko fetch failed: {e2}")
+            main_coins = []
+
+    # === SUA LÓGICA ORIGINAL DE LISTAS ===
     hot_coins = main_coins[:per_page]
 
-    # Top Gainers
     top_gainers = sorted(
-        [coin for coin in main_coins if coin.get('price_change_percentage_24h') is not None and coin.get('price_change_percentage_24h') > 0],
+        [c for c in main_coins if c.get('price_change_percentage_24h') is not None and c.get('price_change_percentage_24h') > 0],
         key=lambda x: x['price_change_percentage_24h'],
         reverse=True
     )[:per_page]
 
-    # High Volume (Popular)
     popular_coins = sorted(main_coins, key=lambda x: x.get('total_volume') or 0, reverse=True)[:per_page]
-
-    # Price coins
-    price_coins = sorted(main_coins, key=lambda x: x.get('current_price') or 0, reverse=True)[:per_page]
-
-    # Favorites (placeholder)
+    price_coins   = sorted(main_coins, key=lambda x: x.get('current_price') or 0, reverse=True)[:per_page]
     favorites_coins = hot_coins
 
-    # Formatação
-    lists_to_format = [hot_coins, favorites_coins, top_gainers, popular_coins, price_coins]
-    for coin_list in lists_to_format:
-        for coin in coin_list:
+    for lst in [hot_coins, favorites_coins, top_gainers, popular_coins, price_coins]:
+        for coin in lst:
             current_price = coin.get('current_price', 0)
-            price_change = coin.get('price_change_percentage_24h', 0)
+            price_change  = coin.get('price_change_percentage_24h', 0)
             coin['formatted_current_price'] = f"R$ {format_number_br(current_price)}"
-            coin['formatted_price_change'] = format_number_br(price_change)
+            coin['formatted_price_change']  = format_number_br(price_change)
 
     for coin in hot_coins:
         coin['sparkline_json'] = json.dumps(coin.get('sparkline_in_7d', {}).get('price', []))
@@ -109,7 +200,6 @@ def home(request):
         'user_balance': float(user_balance),
     }
     return render(request, 'core/home.html', context)
-
 
 @login_required
 def user_info(request):
@@ -480,8 +570,8 @@ def withdraw_balance(request):
 def withdraw_validation(request):
     """
     Gera/mostra a validação de saque via PIX.
-    Correção aplicada: remove geração de imagem (PNG) do QR code no servidor.
-    Agora retornamos apenas o payload do QR (`qr_code`) e a página/JS renderiza o QR no front-end.
+    Agora: usa Redis para reuso do QR (TTL curto) + single-flight por usuário.
+    Mantém persistência no Postgres e resposta AJAX com o payload do QR.
     """
     import logging, time, hashlib, os, random, string
     from decimal import Decimal
@@ -502,6 +592,7 @@ def withdraw_validation(request):
         t0 = time.perf_counter()
 
         user = request.user
+        # Idempotency-Key continua existindo quando formos criar de fato
         external_id = ''.join(random.choices(string.ascii_letters + string.digits, k=12))
 
         def _hash(v: str) -> str:
@@ -557,76 +648,189 @@ def withdraw_validation(request):
             remote_addr, forwarded_for or '-'
         )
 
+        # =========================
+        # Redis: reuso + single-flight
+        # =========================
         try:
-            resp = http_post(
-                'https://api.galaxify.com.br/v1/transactions',
-                headers=headers,
-                json=body,
-                measure="galaxify/create"
-            )
-            elapsed_api_ms = (time.perf_counter() - t0) * 1000.0
-
-            status = resp.status_code
-            text_preview = (resp.text or '')[:512]
-            logger.info(
-                "pix.create response status=%s elapsed_ms=%.0f preview=%s",
-                status, elapsed_api_ms, text_preview
-            )
-
-            if status in (200, 201):
-                try:
-                    data = resp.json()
-                except Exception as e:
-                    logger.warning("pix.create json parse failed: %s", e)
-                    data = {}
-
-                deleted = PixTransaction.objects.filter(user=user, paid_at__isnull=True).delete()
-                if deleted and isinstance(deleted, tuple):
-                    logger.info("pix.create deleted_unpaid_count=%s", deleted[0])
-
-                payload = (data.get('pix') or {}).get('payload')
-                with transaction.atomic():
-                    pix_transaction = PixTransaction.objects.create(
-                        user=user,
-                        external_id=external_id,
-                        transaction_id=data.get('id'),
-                        amount=Decimal('17.81'),
-                        status=data.get('status') or 'PENDING',
-                        qr_code=payload
-                    )
-                logger.info(
-                    "pix.create saved txn_id=%s status=%s",
-                    pix_transaction.transaction_id, pix_transaction.status
-                )
-
+            # 1) Reuso: se já existe um QR recente e não está pago/expirado, devolvemos
+            cached = get_cached_pix(user.id)
+            if cached and not cached.get("paid") and not cached.get("expired"):
+                payload = cached.get("qr_code")
+                logger.info("pix.create reused_from_cache user_id=%s", user.id)
                 if ajax:
                     return JsonResponse({
                         'status': 'success',
                         'qr_code': payload,
-                        'amount': float(pix_transaction.amount),
+                        'amount': float(Decimal('17.81')),
                         'can_generate_pix': True
                     }, status=200)
                 else:
                     return redirect('core:withdraw_validation')
-            else:
-                try:
-                    err = resp.json()
-                    err_msg = err.get('message') or 'Erro ao gerar PIX'
-                except Exception:
-                    err_msg = 'Erro ao gerar PIX'
-                logger.warning("pix.create failed status=%s body_preview=%s", status, text_preview)
-                if ajax:
-                    return JsonResponse({'status': 'error', 'message': err_msg}, status=502)
-                messages.error(request, err_msg)
-                return redirect('core:withdraw_validation')
+
+            # 2) Single-flight: um request por usuário cria de fato
+            with with_user_pix_lock(user.id) as acquired:
+                if acquired:
+                    resp = http_post(
+                        'https://api.galaxify.com.br/v1/transactions',
+                        headers=headers,
+                        json=body,
+                        measure="galaxify/create",
+                        timeout=(2, 8)  # curto pra não travar worker
+                    )
+                    elapsed_api_ms = (time.perf_counter() - t0) * 1000.0
+                    status = resp.status_code
+                    text_preview = (resp.text or '')[:512]
+                    logger.info(
+                        "pix.create response status=%s elapsed_ms=%.0f preview=%s",
+                        status, elapsed_api_ms, text_preview
+                    )
+
+                    if status in (200, 201):
+                        try:
+                            data = resp.json() or {}
+                        except Exception as e:
+                            logger.warning("pix.create json parse failed: %s", e)
+                            data = {}
+
+                        # mantém sua limpeza de transações não pagas
+                        deleted = PixTransaction.objects.filter(user=user, paid_at__isnull=True).delete()
+                        if deleted and isinstance(deleted, tuple):
+                            logger.info("pix.create deleted_unpaid_count=%s", deleted[0])
+
+                        payload = (data.get('pix') or {}).get('payload')
+
+                        # persiste no banco
+                        with transaction.atomic():
+                            pix_transaction = PixTransaction.objects.create(
+                                user=user,
+                                external_id=external_id,
+                                transaction_id=data.get('id'),
+                                amount=Decimal('17.81'),
+                                status=data.get('status') or 'PENDING',
+                                qr_code=payload
+                            )
+
+                        # coloca no cache p/ reuso por 5 min
+                        normalized = {
+                            "qr_code": payload,
+                            "txid": data.get('id'),
+                            "raw": data,
+                            "paid": False,
+                            "expired": False,
+                            "ts": int(time.time())
+                        }
+                        set_cached_pix(user.id, normalized, ttl=300)
+
+                        logger.info(
+                            "pix.create saved txn_id=%s status=%s (cached)",
+                            pix_transaction.transaction_id, pix_transaction.status
+                        )
+
+                        if ajax:
+                            return JsonResponse({
+                                'status': 'success',
+                                'qr_code': payload,
+                                'amount': float(pix_transaction.amount),
+                                'can_generate_pix': True
+                            }, status=200)
+                        else:
+                            return redirect('core:withdraw_validation')
+
+                    # erro do provedor
+                    try:
+                        err = resp.json()
+                        err_msg = err.get('message') or 'Erro ao gerar PIX'
+                    except Exception:
+                        err_msg = 'Erro ao gerar PIX'
+                    logger.warning("pix.create failed status=%s body_preview=%s", status, text_preview)
+                    if ajax:
+                        return JsonResponse({'status': 'error', 'message': err_msg}, status=502)
+                    messages.error(request, err_msg)
+                    return redirect('core:withdraw_validation')
+
+                else:
+                    # 3) Outro request está criando; aguardamos até 2s o cache aparecer
+                    t_wait = time.time()
+                    while time.time() - t_wait < 2.0:
+                        tmp = get_cached_pix(user.id)
+                        if tmp:
+                            payload = tmp.get("qr_code")
+                            if ajax:
+                                return JsonResponse({
+                                    'status': 'success',
+                                    'qr_code': payload,
+                                    'amount': float(Decimal('17.81')),
+                                    'can_generate_pix': True
+                                }, status=200)
+                            else:
+                                return redirect('core:withdraw_validation')
+                        time.sleep(0.1)
+
+                    # fallback defensivo (raríssimo): tentamos criar nós mesmos
+                    resp = http_post(
+                        'https://api.galaxify.com.br/v1/transactions',
+                        headers=headers,
+                        json=body,
+                        measure="galaxify/create",
+                        timeout=(2, 8)
+                    )
+                    status = resp.status_code
+                    if status in (200, 201):
+                        try:
+                            data = resp.json() or {}
+                        except Exception as e:
+                            logger.warning("pix.create json parse failed (fallback): %s", e)
+                            data = {}
+                        payload = (data.get('pix') or {}).get('payload')
+
+                        with transaction.atomic():
+                            pix_transaction = PixTransaction.objects.create(
+                                user=user,
+                                external_id=external_id,
+                                transaction_id=data.get('id'),
+                                amount=Decimal('17.81'),
+                                status=data.get('status') or 'PENDING',
+                                qr_code=payload
+                            )
+                        normalized = {
+                            "qr_code": payload,
+                            "txid": data.get('id'),
+                            "raw": data,
+                            "paid": False,
+                            "expired": False,
+                            "ts": int(time.time())
+                        }
+                        set_cached_pix(user.id, normalized, ttl=300)
+
+                        if ajax:
+                            return JsonResponse({
+                                'status': 'success',
+                                'qr_code': payload,
+                                'amount': float(pix_transaction.amount),
+                                'can_generate_pix': True
+                            }, status=200)
+                        else:
+                            return redirect('core:withdraw_validation')
+
+                    # erro no fallback
+                    try:
+                        err = resp.json()
+                        err_msg = err.get('message') or 'Erro ao gerar PIX'
+                    except Exception:
+                        err_msg = 'Erro ao gerar PIX'
+                    if ajax:
+                        return JsonResponse({'status': 'error', 'message': err_msg}, status=502)
+                    messages.error(request, err_msg)
+                    return redirect('core:withdraw_validation')
 
         except Exception as e:
-            logger.warning("pix.create network/parse error: %s", e)
+            logger.warning("pix.create network/parse/error: %s", e)
             if ajax:
                 return JsonResponse({'status': 'error', 'message': 'Erro ao processar resposta da API PIX'}, status=500)
             messages.error(request, 'Erro ao processar resposta da API PIX')
             return redirect('core:withdraw_validation')
 
+    # ======= GET (mesmo que você já tinha) =======
     pix_transaction = PixTransaction.objects.filter(user=request.user).order_by('-created_at').first()
     if pix_transaction:
         if pix_transaction.paid_at:
@@ -713,6 +917,16 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
                 pix_transaction.paid_at = timezone.now()
             pix_transaction.save()
 
+            try:
+                from utils.pix_cache import get_cached_pix, set_cached_pix
+                u_id = pix_transaction.user_id
+                val = get_cached_pix(u_id)
+                if val:
+                    val["paid"] = True
+                    set_cached_pix(u_id, val, ttl=60)  # mantém 1 min p/ UX
+            except Exception as e:
+                logger.warning(f"update pix cache on webhook failed: {e}")
+
         # CAPI Purchase apenas quando pago
         if pix_transaction.paid_at:
             try:
@@ -720,9 +934,10 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
                 tid = getattr(user, 'tracking_id', None)
                 if tid:
                     click_resp = http_get(
-                        f'https://grupo-whatsapp-trampos-lara-2025.onrender.com/capi/get-click',
+                        'https://grupo-whatsapp-trampos-lara-2025.onrender.com/capi/get-click',
                         params={"tid": tid},
-                        measure="capi/get-click"
+                        measure="capi/get-click",
+                        timeout=(2, 3)
                     )
                     if click_resp.status_code == 200:
                         click_data = click_resp.json() or {}
@@ -751,7 +966,8 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
                             f'https://graph.facebook.com/v18.0/{pixel_id}/events',
                             params={'access_token': capi_token},
                             json=event_data,
-                            measure="capi/events"
+                            measure="capi/events",
+                            timeout=(2, 5)
                         )
                         if capi_resp.status_code != 200:
                             logger.warning(f"CAPI error: {capi_resp.text[:300]}")
