@@ -215,28 +215,29 @@ AUTHENTICATION_BACKENDS = ['accounts.backends.EmailBackend']
 
 CAPI_TOKEN = os.getenv('CAPI_TOKEN')
 
-LOG_LEVEL = os.getenv("LOG_LEVEL", "WARNING")  # root em WARNING para silenciar
-TIMING_LEVEL = os.getenv("TIMING_LEVEL", "INFO")  # só o nosso logger fica em INFO
+LOG_LEVEL = os.getenv("LOG_LEVEL", "ERROR")          # raiz em ERROR (silêncio)
+TIMING_LEVEL = os.getenv("TIMING_LEVEL", "INFO")     # só timing em INFO
 
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {
+        "json": {"format": "%(message)s"},          # nosso timing já imprime JSON pronto
         "default": {"format": "%(asctime)s %(levelname)s %(name)s: %(message)s"},
     },
     "handlers": {
         "console": {"class": "logging.StreamHandler", "formatter": "default"},
+        "console_json": {"class": "logging.StreamHandler", "formatter": "json"},
     },
     "root": {"handlers": ["console"], "level": LOG_LEVEL},
     "loggers": {
-        # Deixa o Django e libs mais silenciosos
-        "django": {"handlers": ["console"], "level": "WARNING", "propagate": False},
-        "django.server": {"handlers": ["console"], "level": "WARNING", "propagate": False},
-        "whitenoise": {"handlers": ["console"], "level": "WARNING", "propagate": False},
-        "gunicorn.error": {"handlers": ["console"], "level": "WARNING", "propagate": False},
-        "gunicorn.access": {"handlers": ["console"], "level": "ERROR", "propagate": False},  # por garantia
+        "django": {"handlers": ["console"], "level": "ERROR", "propagate": False},
+        "django.server": {"handlers": ["console"], "level": "ERROR", "propagate": False},
+        "whitenoise": {"handlers": ["console"], "level": "ERROR", "propagate": False},
+        "gunicorn.error": {"handlers": ["console"], "level": "ERROR", "propagate": False},
+        "gunicorn.access": {"handlers": ["console"], "level": "ERROR", "propagate": False},
 
-        # 🔎 Nosso middleware em INFO (vai aparecer)
-        "core.middleware": {"handlers": ["console"], "level": TIMING_LEVEL, "propagate": False},
+        # 🔎 Nosso middleware: manda JSON puro para facilitar filtro
+        "core.middleware": {"handlers": ["console_json"], "level": TIMING_LEVEL, "propagate": False},
     },
 }
