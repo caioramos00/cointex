@@ -17,6 +17,8 @@ logger = logging.getLogger(__name__)
 class TimingMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
+        self.threshold_ms = int(os.getenv("TIMING_THRESHOLD_MS", "200"))
+        logger.info("TimingMiddleware enabled threshold_ms=%d", self.threshold_ms)
     def __call__(self, request):
         t0 = time.perf_counter()
         response = self.get_response(request)

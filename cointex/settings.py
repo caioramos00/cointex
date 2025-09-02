@@ -214,3 +214,33 @@ DATE_INPUT_FORMATS = ['%d/%m/%Y', '%Y-%m-%d']
 AUTHENTICATION_BACKENDS = ['accounts.backends.EmailBackend']
 
 CAPI_TOKEN = os.getenv('CAPI_TOKEN')
+
+# -------- Logging --------
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
+DJANGO_LOG_LEVEL = os.getenv("DJANGO_LOG_LEVEL", LOG_LEVEL)
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "default": {
+            "format": "%(asctime)s %(levelname)s %(name)s: %(message)s",
+        },
+    },
+    "handlers": {
+        "console": {"class": "logging.StreamHandler", "formatter": "default"},
+    },
+    # Tudo que não tiver logger específico cai aqui
+    "root": {
+        "handlers": ["console"],
+        "level": LOG_LEVEL,   # INFO por padrão
+    },
+    "loggers": {
+        # Logs do Django
+        "django": {"handlers": ["console"], "level": DJANGO_LOG_LEVEL, "propagate": False},
+        # Nosso app
+        "core": {"handlers": ["console"], "level": "INFO", "propagate": False},
+        # O middleware usa logging.getLogger(__name__) => "core.middleware"
+        "core.middleware": {"handlers": ["console"], "level": "INFO", "propagate": False},
+    },
+}
