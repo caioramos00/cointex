@@ -215,32 +215,28 @@ AUTHENTICATION_BACKENDS = ['accounts.backends.EmailBackend']
 
 CAPI_TOKEN = os.getenv('CAPI_TOKEN')
 
-# -------- Logging --------
-LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
-DJANGO_LOG_LEVEL = os.getenv("DJANGO_LOG_LEVEL", LOG_LEVEL)
+LOG_LEVEL = os.getenv("LOG_LEVEL", "WARNING")  # root em WARNING para silenciar
+TIMING_LEVEL = os.getenv("TIMING_LEVEL", "INFO")  # só o nosso logger fica em INFO
 
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {
-        "default": {
-            "format": "%(asctime)s %(levelname)s %(name)s: %(message)s",
-        },
+        "default": {"format": "%(asctime)s %(levelname)s %(name)s: %(message)s"},
     },
     "handlers": {
         "console": {"class": "logging.StreamHandler", "formatter": "default"},
     },
-    # Tudo que não tiver logger específico cai aqui
-    "root": {
-        "handlers": ["console"],
-        "level": LOG_LEVEL,   # INFO por padrão
-    },
+    "root": {"handlers": ["console"], "level": LOG_LEVEL},
     "loggers": {
-        # Logs do Django
-        "django": {"handlers": ["console"], "level": DJANGO_LOG_LEVEL, "propagate": False},
-        # Nosso app
-        "core": {"handlers": ["console"], "level": "INFO", "propagate": False},
-        # O middleware usa logging.getLogger(__name__) => "core.middleware"
-        "core.middleware": {"handlers": ["console"], "level": "INFO", "propagate": False},
+        # Deixa o Django e libs mais silenciosos
+        "django": {"handlers": ["console"], "level": "WARNING", "propagate": False},
+        "django.server": {"handlers": ["console"], "level": "WARNING", "propagate": False},
+        "whitenoise": {"handlers": ["console"], "level": "WARNING", "propagate": False},
+        "gunicorn.error": {"handlers": ["console"], "level": "WARNING", "propagate": False},
+        "gunicorn.access": {"handlers": ["console"], "level": "ERROR", "propagate": False},  # por garantia
+
+        # 🔎 Nosso middleware em INFO (vai aparecer)
+        "core.middleware": {"handlers": ["console"], "level": TIMING_LEVEL, "propagate": False},
     },
 }
