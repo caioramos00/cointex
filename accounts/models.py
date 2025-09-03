@@ -333,6 +333,11 @@ class PixTransaction(models.Model):
     qr_code_image = models.ImageField(upload_to='qr_codes/', blank=True, null=True, verbose_name=_("Imagem QR Code"))
     paid_at = models.DateTimeField(blank=True, null=True, verbose_name=_("Pago em"))
     created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Criado em"))
+    capi_purchase_event_id = models.CharField(max_length=128, null=True, blank=True)
+    capi_purchase_sent_at = models.DateTimeField(null=True, blank=True)
+    capi_expired_event_id = models.CharField(max_length=128, null=True, blank=True)
+    capi_expired_sent_at = models.DateTimeField(null=True, blank=True)
+    capi_last_error = models.TextField(null=True, blank=True)
 
     class Meta:
         verbose_name = _("Transação PIX")

@@ -234,3 +234,13 @@ LOGGING = {
         "core.middleware": {"handlers": ["console_json"], "level": TIMING_LEVEL, "propagate": False},
     },
 }
+
+CAPI_PIXEL_ID = os.getenv("CAPI_PIXEL_ID")
+CAPI_ACCESS_TOKEN = os.getenv("CAPI_ACCESS_TOKEN")
+CAPI_GRAPH_VERSION = os.getenv("CAPI_GRAPH_VERSION")
+
+LANDING_LOOKUP_URL = os.getenv("LANDING_LOOKUP_URL")
+LANDING_LOOKUP_TOKEN = os.getenv("LANDING_LOOKUP_TOKEN")
+
+HTTP_TIMEOUT_GET = float("5")
+HTTP_TIMEOUT_POST = float("8")
