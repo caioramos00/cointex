@@ -229,9 +229,9 @@ LOGGING = {
         "whitenoise": {"handlers": ["console"], "level": "ERROR", "propagate": False},
         "gunicorn.error": {"handlers": ["console"], "level": "ERROR", "propagate": False},
         "gunicorn.access": {"handlers": ["console"], "level": "ERROR", "propagate": False},
-
-        # 🔎 Nosso middleware: manda JSON puro para facilitar filtro
         "core.middleware": {"handlers": ["console_json"], "level": TIMING_LEVEL, "propagate": False},
+        "core.views": {"handlers": ["console"], "level": "INFO", "propagate": False},
+        "perf": {"handlers": ["console"], "level": "INFO", "propagate": False},
     },
 }
 
