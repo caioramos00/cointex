@@ -1,7 +1,6 @@
-import os, json, random, string, qrcode, base64, hmac, hashlib, logging, threading, time
-from io import BytesIO
+import os, json, hmac, hashlib, logging, threading
 from decimal import InvalidOperation, Decimal
-
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
@@ -17,12 +16,10 @@ from django.urls import reverse
 from django.core.cache import cache
 from django.conf import settings
 
-from requests import RequestException
-
 from utils.http import http_get, http_post, http_put, http_delete
 from utils.pix_cache import get_cached_pix, set_cached_pix, with_user_pix_lock
-
 from accounts.models import *
+from .capi import lookup_click, build_user_data, send_capi_event, event_id_for
 from .forms import *
 
 logger = logging.getLogger(__name__)
@@ -31,7 +28,7 @@ logger = logging.getLogger(__name__)
 def format_number_br(value):
     return f"{value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
-@cache_page(30)  # cache leve para achatar picos (30s)
+@cache_page(30)
 @login_required
 def home(request):
     # === imports locais p/ autocontenção (não bagunçam o módulo) ===
@@ -880,110 +877,267 @@ def _validate_webhook_signature(raw_body: bytes, header_signature: str) -> bool:
         logger.warning(f"webhook signature validation failed: {e}")
         return False
 
-
 def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
     """
     Processa webhook de forma assíncrona (evita travar request).
     - Idempotência por transaction_id
     - Transições de status somente forward
-    - Dispara CAPI Purchase quando confirmado
+    - Dispara CAPI:
+        • Purchase quando pago (AUTHORIZED/RECEIVED/CONFIRMED)
+        • PaymentExpired quando expira
+    - Logs específicos para CAPI (lookup, send, resp, skip, err)
     """
+    from django.conf import settings
+    import os, json
+    from django.db import transaction as dj_tx
+    from django.utils import timezone
+    from utils.http import http_get, http_post
+
     try:
         transaction_id = data.get('id')
-        status = data.get('status')
+        status = (data.get('status') or '').upper().strip()
 
-        if not transaction_id or status not in ['AUTHORIZED', 'CONFIRMED', 'RECEIVED']:
+        if not transaction_id or status not in ['AUTHORIZED', 'CONFIRMED', 'RECEIVED', 'EXPIRED']:
             logger.info(f"webhook ignored: id/status inválidos id={transaction_id} status={status}")
             return
 
-        pix_transaction = PixTransaction.objects.filter(transaction_id=transaction_id).first()
+        pix_transaction = PixTransaction.objects.filter(transaction_id=transaction_id).select_related('user').first()
         if not pix_transaction:
             logger.info(f"webhook unknown transaction: {transaction_id}")
             return
 
-        # transições forward-only
-        ORDER = {"PENDING": 0, "AUTHORIZED": 1, "RECEIVED": 2, "CONFIRMED": 3}
-        old = ORDER.get(pix_transaction.status, 0)
+        ORDER = {"PENDING": 0, "AUTHORIZED": 1, "RECEIVED": 2, "CONFIRMED": 3, "EXPIRED": 4}
+        old = ORDER.get((pix_transaction.status or '').upper(), 0)
         new = ORDER.get(status, 0)
         if new < old:
             logger.info(f"webhook ignored regress status: {pix_transaction.status} -> {status}")
             return
 
-        # update atomically
-        with transaction.atomic():
+        with dj_tx.atomic():
             pix_transaction.status = status
-            # paga apenas quando final
-            if status in ('CONFIRMED', 'RECEIVED') and not pix_transaction.paid_at:
+            if status in ('AUTHORIZED', 'CONFIRMED', 'RECEIVED') and not pix_transaction.paid_at:
                 pix_transaction.paid_at = timezone.now()
-            pix_transaction.save()
+            pix_transaction.save(update_fields=['status', 'paid_at'] if pix_transaction.paid_at else ['status'])
 
             try:
                 from utils.pix_cache import get_cached_pix, set_cached_pix
                 u_id = pix_transaction.user_id
                 val = get_cached_pix(u_id)
                 if val:
-                    val["paid"] = True
-                    set_cached_pix(u_id, val, ttl=60)  # mantém 1 min p/ UX
+                    if status in ('AUTHORIZED', 'CONFIRMED', 'RECEIVED'):
+                        val["paid"] = True
+                    elif status == 'EXPIRED':
+                        val["expired"] = True
+                    set_cached_pix(u_id, val, ttl=60)
             except Exception as e:
                 logger.warning(f"update pix cache on webhook failed: {e}")
 
-        # CAPI Purchase apenas quando pago
-        if pix_transaction.paid_at:
-            try:
-                user = pix_transaction.user
-                tid = getattr(user, 'tracking_id', None)
-                if tid:
-                    click_resp = http_get(
-                        'https://grupo-whatsapp-trampos-lara-2025.onrender.com/capi/get-click',
-                        params={"tid": tid},
-                        measure="capi/get-click",
-                        timeout=(2, 3)
-                    )
-                    if click_resp.status_code == 200:
-                        click_data = click_resp.json() or {}
-                        capi_token = os.getenv('CAPI_TOKEN', '')
-                        pixel_id = os.getenv('FB_PIXEL_ID', '1414661506543941')
-                        event_data = {
-                            'data': [{
-                                'event_name': 'Purchase',
-                                'event_time': int(timezone.now().timestamp()),
-                                'event_source_url': 'https://www.cointex.cash/withdraw-validation/',
-                                'action_source': 'website',
-                                'event_id': tid,
-                                'user_data': {
-                                    'fbp': click_data.get('fbp'),
-                                    'fbc': click_data.get('fbc'),
-                                    'client_user_agent': click_data.get('last_front_ua') or client_ua,
-                                    'client_ip_address': client_ip
-                                },
-                                'custom_data': {
-                                    'value': float(pix_transaction.amount),
-                                    'currency': 'BRL'
-                                }
-                            }]
-                        }
-                        capi_resp = http_post(
-                            f'https://graph.facebook.com/v18.0/{pixel_id}/events',
-                            params={'access_token': capi_token},
-                            json=event_data,
-                            measure="capi/events",
-                            timeout=(2, 5)
-                        )
-                        if capi_resp.status_code != 200:
-                            logger.warning(f"CAPI error: {capi_resp.text[:300]}")
-            except Exception as e:
-                logger.warning(f"CAPI dispatch failed: {e}")
+        def _settings(name, default=""):
+            return getattr(settings, name, os.getenv(name, default))
 
-        # notificação
+        PIXEL_ID      = _settings('CAPI_PIXEL_ID', _settings('FB_PIXEL_ID', ''))
+        CAPI_TOKEN    = _settings('CAPI_ACCESS_TOKEN', _settings('CAPI_TOKEN', ''))
+        GRAPH_VERSION = _settings('CAPI_GRAPH_VERSION', 'v18.0')
+        TEST_CODE     = _settings('CAPI_TEST_EVENT_CODE', '')
+        GRAPH_URL     = f"https://graph.facebook.com/{GRAPH_VERSION}/{PIXEL_ID}/events"
+
+        LOOKUP_URL    = _settings('LANDING_LOOKUP_URL', 'https://grupo-whatsapp-trampos-lara-2025.onrender.com/capi/lookup')
+        LOOKUP_TOKEN  = _settings('LANDING_LOOKUP_TOKEN', '')
+
+        def event_id_for(kind: str, txid: str) -> str:
+            return f"{kind}_{txid}"
+
+        def _trunc(x: str, n: int = 400) -> str:
+            x = (x or "")
+            return x if len(x) <= n else x[:n] + "...(trunc)"
+
+        def fetch_click_data(tracking_id: str) -> dict:
+            """
+            Busca dados do clique na Landing:
+              - PG-first (/capi/lookup) com header X-Lookup-Token
+              - fallback para /capi/get-click?tid=...
+            Retorna dict com fbp, fbc, client_ip_address, client_user_agent, page_url, event_time...
+            """
+            if not tracking_id:
+                logger.info("[CAPI-LOOKUP] skip: empty tracking_id")
+                return {}
+
+            try:
+                r = http_get(
+                    LOOKUP_URL,
+                    headers={"X-Lookup-Token": LOOKUP_TOKEN} if LOOKUP_TOKEN else None,
+                    params={"tid": tracking_id},
+                    timeout=(2, 5),
+                    measure="landing/lookup"
+                )
+                sc = getattr(r, "status_code", 0)
+                if sc == 200:
+                    js = r.json() or {}
+                    data = js.get("data") or {}
+                    logger.info(f"[CAPI-LOOKUP] source=pg tid={tracking_id} ok=1 keys={list(data.keys())}")
+                    if data:
+                        return data
+                else:
+                    logger.warning(f"[CAPI-LOOKUP] source=pg tid={tracking_id} status={sc} body={_trunc(getattr(r,'text',''))}")
+            except Exception as e:
+                logger.warning(f"[CAPI-LOOKUP] source=pg tid={tracking_id} error={e}")
+
+            try:
+                r = http_get(
+                    'https://grupo-whatsapp-trampos-lara-2025.onrender.com/capi/get-click',
+                    params={"tid": tracking_id},
+                    timeout=(2, 5),
+                    measure="capi/get-click"
+                )
+                sc = getattr(r, "status_code", 0)
+                if sc == 200:
+                    js = r.json() or {}
+                    data = js.get("data") or js
+                    logger.info(f"[CAPI-LOOKUP] source=legacy tid={tracking_id} ok=1 keys={list((data or {}).keys())}")
+                    return data or {}
+                else:
+                    logger.warning(f"[CAPI-LOOKUP] source=legacy tid={tracking_id} status={sc} body={_trunc(getattr(r,'text',''))}")
+            except Exception as e:
+                logger.warning(f"[CAPI-LOOKUP] source=legacy tid={tracking_id} error={e}")
+
+            logger.warning(f"[CAPI-LOOKUP] miss tid={tracking_id}")
+            return {}
+
+        def build_user_data(click: dict) -> dict:
+            """Monta user_data para CAPI (fbp/fbc/IP/UA) com fallbacks do request."""
+            fbp = click.get('fbp') or click.get('data', {}).get('fbp')
+            fbc = click.get('fbc') or click.get('data', {}).get('fbc')
+            ip  = click.get('client_ip_address') or click.get('ip') or client_ip
+            ua  = click.get('client_user_agent') or click.get('ua') or client_ua
+
+            ud = {"client_ip_address": ip, "client_user_agent": ua}
+            if fbp: ud["fbp"] = fbp
+            if fbc: ud["fbc"] = fbc
+            return ud
+
+        def send_capi(event_name: str, event_id: str, event_time: int, user_data: dict, custom_data: dict):
+            """Envia 1 evento para a CAPI e retorna dict com ok/status/text."""
+            if not PIXEL_ID or not CAPI_TOKEN:
+                msg = "missing pixel/token"
+                logger.warning(f"[CAPI-ERR] {event_name} txid={txid} reason={msg}")
+                return {"ok": False, "status": 0, "text": msg}
+
+            payload = {
+                "data": [{
+                    "event_name": event_name,
+                    "event_time": int(event_time),
+                    "event_source_url": "https://www.cointex.cash/withdraw-validation/",
+                    "action_source": "website",
+                    "event_id": event_id,
+                    "user_data": user_data,
+                    "custom_data": custom_data or {}
+                }]
+            }
+            if TEST_CODE:
+                payload["test_event_code"] = TEST_CODE
+
+            logger.info(f"[CAPI-SEND] event={event_name} txid={txid} eid={event_id} amount={custom_data.get('value')} fbp={bool(user_data.get('fbp'))} fbc={bool(user_data.get('fbc'))}")
+
+            resp = http_post(
+                GRAPH_URL,
+                params={"access_token": CAPI_TOKEN},
+                json=payload,
+                timeout=(2, 8),
+                measure="capi/events"
+            )
+            status = getattr(resp, "status_code", 0)
+            text   = _trunc(getattr(resp, "text", ""))
+            logger.info(f"[CAPI-RESP] event={event_name} txid={txid} status={status} body={text}")
+            return {"ok": status == 200, "status": status, "text": text}
+
+        user = pix_transaction.user
+        tracking_id = getattr(user, 'tracking_id', '') or ''
+        click_data  = fetch_click_data(tracking_id) if tracking_id else {}
+
+        txid   = pix_transaction.transaction_id or f"pix:{getattr(pix_transaction,'external_id', '') or pix_transaction.id}"
+        amount = float(pix_transaction.amount or 0)
+
+        if pix_transaction.paid_at and status in ('AUTHORIZED', 'RECEIVED', 'CONFIRMED'):
+            eid   = event_id_for('purchase', txid)
+            etime = int((pix_transaction.paid_at or timezone.now()).timestamp())
+            ud    = build_user_data(click_data)
+            cd    = {"value": amount, "currency": "BRL"}
+
+            should_send = True
+            try:
+                if pix_transaction.capi_purchase_sent_at:
+                    should_send = False
+            except Exception:
+                pass
+
+            if should_send:
+                resp = send_capi("Purchase", eid, etime, ud, cd)
+                try:
+                    if resp.get("ok"):
+                        if hasattr(pix_transaction, "capi_purchase_event_id"):
+                            pix_transaction.capi_purchase_event_id = eid
+                        if hasattr(pix_transaction, "capi_purchase_sent_at"):
+                            pix_transaction.capi_purchase_sent_at = timezone.now()
+                        if hasattr(pix_transaction, "capi_last_error"):
+                            pix_transaction.capi_last_error = None
+                        pix_transaction.save(update_fields=[f for f in [
+                            "capi_purchase_event_id", "capi_purchase_sent_at", "capi_last_error"
+                        ] if hasattr(pix_transaction, f)])
+                    else:
+                        if hasattr(pix_transaction, "capi_last_error"):
+                            pix_transaction.capi_last_error = f"purchase capi fail: {resp}"
+                            pix_transaction.save(update_fields=["capi_last_error"])
+                except Exception as e:
+                    logger.warning(f"[CAPI-ERR] purchase bookkeeping failed txid={txid} err={e}")
+            else:
+                logger.info(f"[CAPI-SKIP] event=Purchase txid={txid} reason=idempotent")
+
+        if status == 'EXPIRED':
+            eid   = event_id_for('expire', txid)
+            etime = int(timezone.now().timestamp())
+            ud    = build_user_data(click_data)
+            cd    = {"value": amount, "currency": "BRL", "transaction_id": txid}
+
+            should_send = True
+            try:
+                if pix_transaction.capi_expired_sent_at:
+                    should_send = False
+            except Exception:
+                pass
+
+            if should_send:
+                resp = send_capi("PaymentExpired", eid, etime, ud, cd)
+                try:
+                    if resp.get("ok"):
+                        if hasattr(pix_transaction, "capi_expired_event_id"):
+                            pix_transaction.capi_expired_event_id = eid
+                        if hasattr(pix_transaction, "capi_expired_sent_at"):
+                            pix_transaction.capi_expired_sent_at = timezone.now()
+                        if hasattr(pix_transaction, "capi_last_error"):
+                            pix_transaction.capi_last_error = None
+                        pix_transaction.save(update_fields=[f for f in [
+                            "capi_expired_event_id", "capi_expired_sent_at", "capi_last_error"
+                        ] if hasattr(pix_transaction, f)])
+                    else:
+                        if hasattr(pix_transaction, "capi_last_error"):
+                            pix_transaction.capi_last_error = f"expired capi fail: {resp}"
+                            pix_transaction.save(update_fields=["capi_last_error"])
+                except Exception as e:
+                    logger.warning(f"[CAPI-ERR] expired bookkeeping failed txid={txid} err={e}")
+            else:
+                logger.info(f"[CAPI-SKIP] event=PaymentExpired txid={txid} reason=idempotent")
+
         Notification.objects.create(
             user=pix_transaction.user,
-            title="Pagamento Recebido" if pix_transaction.paid_at else "Pagamento Autorizado",
-            message="Seu pagamento foi confirmado com sucesso." if pix_transaction.paid_at else "Seu pagamento foi autorizado e está sendo processado."
+            title="Pagamento Recebido" if pix_transaction.paid_at else ("Pagamento Expirado" if status == "EXPIRED" else "Pagamento Autorizado"),
+            message=(
+                "Seu pagamento foi confirmado com sucesso." if pix_transaction.paid_at else
+                ("Seu QR Code expirou sem pagamento." if status == "EXPIRED" else "Seu pagamento foi autorizado e está sendo processado.")
+            )
         )
 
     except Exception as e:
         logger.exception(f"webhook processing error: {e}")
-
 
 @csrf_exempt
 def webhook_pix(request):
