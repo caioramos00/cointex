@@ -1,89 +1,89 @@
-import requests, os
-import re, hashlib, time
-from typing import Optional, Dict, Any
+import logging, requests, time, hashlib
+from typing import Optional
 from django.conf import settings
-from django.utils import timezone
-from utils.http import http_get, http_post
 
-GRAPH_URL = f"https://graph.facebook.com/{getattr(settings,'CAPI_GRAPH_VERSION','v18.0')}/{getattr(settings,'CAPI_PIXEL_ID','')}/events"
+logger = logging.getLogger(__name__)
 
-def _sha256(x: str) -> str:
-    x = (x or "").strip().lower()
-    return hashlib.sha256(x.encode("utf-8")).hexdigest() if x else ""
+LOOKUP_URL  = getattr(settings, "LANDING_LOOKUP_URL", "").rstrip("/")
+LOOKUP_TOKEN = getattr(settings, "LANDING_LOOKUP_TOKEN", "")
+LEGACY_GETCLICK_URL = "https://grupo-whatsapp-trampos-lara-2025.onrender.com/capi/get-click"
 
-def _norm_phone(x: str) -> str:
-    return re.sub(r"\D+", "", x or "")
+def _trunc(s: str, n: int = 350) -> str:
+    s = s or ""
+    return s[:n] + ("…" if len(s) > n else "")
 
-def lookup_click(tracking_id: str, click_type: str | None = None) -> dict | None:
+def lookup_click(tracking_id: str, click_type: Optional[str] = None) -> dict:
+    """
+    Busca dados do clique na Landing, resolvendo LP x CTWA.
+    - LP:   /capi/lookup?tid=...
+    - CTWA: /capi/lookup?ctwa_clid=...
+    Fallbacks:
+      - CTWA: tenta /capi/lookup?tid=... se necessário
+      - LP:   opcional /capi/get-click?tid=... (LEGACY_GETCLICK_URL)
+    Retorna o dict 'data' que o /capi/lookup já normaliza (fbc/fbp/ip/ua/event_time/etc).
+    """
+    if not tracking_id:
+        logger.info("[CAPI-LOOKUP] skip: empty tracking_id")
+        return {}
 
-    base = os.environ.get("LANDING_LOOKUP_URL").rstrip("/")
-    token = os.environ.get("LANDING_LOOKUP_TOKEN", "")
-    headers = {"X-Lookup-Token": token} if token else {}
+    if not LOOKUP_URL:
+        logger.warning("[CAPI-LOOKUP] skip: LANDING_LOOKUP_URL not set")
+        return {}
 
-    if (click_type or "").upper() == "CTWA":
-        params = {"ctwa_clid": tracking_id}
-    else:
-        params = {"tid": tracking_id}
+    headers = {"X-Lookup-Token": LOOKUP_TOKEN} if LOOKUP_TOKEN else {}
+    is_ctwa = (str(click_type or "").upper() == "CTWA")
 
-    r = requests.get(f"{base}/capi/lookup", params=params, headers=headers, timeout=8)
-    if r.ok:
-        return r.json()
+    # Heurística auxiliar: CTWA costuma vir longo e começar com 'Af'
+    if not is_ctwa:
+        tid_str = str(tracking_id)
+        if tid_str.startswith("Af") and len(tid_str) >= 60:
+            is_ctwa = True
 
-    if (click_type or "").upper() != "CTWA":
-        r2 = requests.get(f"{base}/capi/get-click", params={"tid": tracking_id}, timeout=5)
-        if r2.ok:
-            return r2.json()
+    def call_lookup(params: dict, tag: str) -> dict:
+        try:
+            r = requests.get(f"{LOOKUP_URL}/capi/lookup", headers=headers, params=params, timeout=(3, 7))
+            sc = r.status_code
+            if sc == 200:
+                js = r.json() or {}
+                data = js.get("data", js) or {}
+                logger.info(f"[CAPI-LOOKUP] source=pg {tag} ok=1 keys={list(data.keys())}")
+                return data
+            else:
+                logger.warning(f"[CAPI-LOOKUP] source=pg {tag} status={sc} body={_trunc(getattr(r,'text',''))}")
+        except Exception as e:
+            logger.warning(f"[CAPI-LOOKUP] source=pg {tag} error={e}")
+        return {}
 
-    return None
+    if is_ctwa:
+        # 1) CTWA pelo ctwa_clid
+        data = call_lookup({"ctwa_clid": tracking_id}, tag=f"ctwa_clid={tracking_id}")
+        if data:
+            return data
+        # 2) Fallback: algumas instalações salvaram CTWA como tid
+        data = call_lookup({"tid": tracking_id}, tag=f"tid={tracking_id}(ctwa-fallback)")
+        if data:
+            return data
+        logger.warning(f"[CAPI-LOOKUP] miss ctwa_clid/tid={tracking_id}")
+        return {}
 
+    # Landing Page
+    data = call_lookup({"tid": tracking_id}, tag=f"tid={tracking_id}")
+    if data:
+        return data
 
-def build_user_data(click: Dict[str,Any], fallback_ip: str, fallback_ua: str, user=None) -> Dict[str,Any]:
-    ud = {
-        "fbp": click.get("fbp") or click.get("data",{}).get("fbp"),
-        "fbc": click.get("fbc") or click.get("data",{}).get("fbc"),
-        "client_ip_address": click.get("client_ip_address") or click.get("ip") or fallback_ip,
-        "client_user_agent": click.get("client_user_agent") or click.get("ua") or fallback_ua,
-    }
-    if user:
-        if getattr(user, "email", None):
-            ud["em"] = _sha256(user.email)
-        phone = getattr(user, "phone_number", "") or getattr(user, "phone", "")
-        if phone:
-            ud["ph"] = _sha256(_norm_phone(phone))
-        ext = getattr(user, "id", None)
-        if ext is not None:
-            ud["external_id"] = _sha256(str(ext))
-    else:
-        for k in ("em","ph","external_id"):
-            v = click.get(k)
-            if v:
-                ud[k] = _sha256(v if k!="ph" else _norm_phone(v))
-    return {k:v for k,v in ud.items() if v}
+    # Fallback legado (opcional)
+    if LEGACY_GETCLICK_URL:
+        try:
+            r = requests.get(LEGACY_GETCLICK_URL, params={"tid": tracking_id}, timeout=(2, 5))
+            if r.status_code == 200:
+                js = r.json() or {}
+                data = js.get("data", js) or {}
+                logger.info(f"[CAPI-LOOKUP] source=legacy tid={tracking_id} ok=1 keys={list(data.keys())}")
+                return data
+            else:
+                logger.warning(f"[CAPI-LOOKUP] source=legacy tid={tracking_id} status={r.status_code} body={_trunc(r.text)}")
+        except Exception as e:
+            logger.warning(f"[CAPI-LOOKUP] source=legacy tid={tracking_id} error={e}")
 
-def send_capi_event(*, event_name: str, event_id: str, event_time: int,
-                    event_source_url: str, action_source: str,
-                    user_data: Dict[str,Any], custom_data: Dict[str,Any]) -> Dict[str,Any]:
-    token = getattr(settings, "CAPI_ACCESS_TOKEN", "")
-    pixel = getattr(settings, "CAPI_PIXEL_ID", "")
-    if not token or not pixel:
-        return {"ok": False, "error": "missing_token_or_pixel"}
-
-    payload = {
-        "data": [{
-            "event_name": event_name,
-            "event_time": int(event_time),
-            "event_source_url": event_source_url,
-            "action_source": action_source,
-            "event_id": event_id,
-            "user_data": user_data,
-            "custom_data": custom_data or {}
-        }]
-    }
-    r = http_post(GRAPH_URL, params={"access_token": token}, json=payload,
-                  timeout=(2, getattr(settings,'HTTP_TIMEOUT_POST',8)), measure="capi/events")
-    out = {"status": getattr(r, "status_code", 0), "text": getattr(r, "text", "")[:400]}
-    out["ok"] = (out["status"] == 200)
-    return out
-
-def event_id_for(kind: str, txid: str) -> str:
-    return f"{kind}_{txid}"
+    logger.warning(f"[CAPI-LOOKUP] miss tid={tracking_id}")
+    return {}

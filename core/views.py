@@ -19,7 +19,7 @@ from django.conf import settings
 from utils.http import http_get, http_post, http_put, http_delete
 from utils.pix_cache import get_cached_pix, set_cached_pix, with_user_pix_lock
 from accounts.models import *
-from .capi import lookup_click, build_user_data, send_capi_event, event_id_for
+from .capi import lookup_click
 from .forms import *
 
 logger = logging.getLogger(__name__)
@@ -1052,7 +1052,9 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
 
         user = pix_transaction.user
         tracking_id = getattr(user, 'tracking_id', '') or ''
-        click_data  = fetch_click_data(tracking_id) if tracking_id else {}
+        click_type = getattr(user, 'click_type', '') or ''
+        
+        click_data = lookup_click(tracking_id, click_type) if tracking_id else {}
 
         txid   = pix_transaction.transaction_id or f"pix:{getattr(pix_transaction,'external_id', '') or pix_transaction.id}"
         amount = float(pix_transaction.amount or 0)
