@@ -1054,7 +1054,17 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
         tracking_id = getattr(user, 'tracking_id', '') or ''
         click_type = getattr(user, 'click_type', '') or ''
         
+        logger.info("[CAPI-LOOKUP] call kind=%s id=%s", (click_type or 'UNKNOWN'), tracking_id)
+        
         click_data = lookup_click(tracking_id, click_type) if tracking_id else {}
+        
+        keys = list(click_data.keys()) if isinstance(click_data, dict) else []
+        logger.info(
+            "[CAPI-LOOKUP] result ok=%s keys=%s has_fbp=%s has_fbc=%s",
+            bool(click_data), len(keys),
+            int(bool(click_data.get('fbp'))) if isinstance(click_data, dict) else 0,
+            int(bool(click_data.get('fbc'))) if isinstance(click_data, dict) else 0
+)
 
         txid   = pix_transaction.transaction_id or f"pix:{getattr(pix_transaction,'external_id', '') or pix_transaction.id}"
         amount = float(pix_transaction.amount or 0)
