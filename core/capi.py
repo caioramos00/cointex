@@ -1,3 +1,4 @@
+import requests, os
 import re, hashlib, time
 from typing import Optional, Dict, Any
 from django.conf import settings
@@ -13,27 +14,28 @@ def _sha256(x: str) -> str:
 def _norm_phone(x: str) -> str:
     return re.sub(r"\D+", "", x or "")
 
-def lookup_click(tracking_id: Optional[str]=None, ctwa_clid: Optional[str]=None) -> Dict[str,Any]:
-    """Busca dados na Landing (PG-first com fallback), com token."""
-    url = getattr(settings, "LANDING_LOOKUP_URL", "")
-    token = getattr(settings, "LANDING_LOOKUP_TOKEN", "")
-    params = {}
-    if tracking_id:
-        params["tid"] = tracking_id
-    elif ctwa_clid:
-        params["ctwa_clid"] = ctwa_clid
-    else:
-        return {}
+def lookup_click(tracking_id: str, click_type: str | None = None) -> dict | None:
 
-    r = http_get(url, headers={"X-Lookup-Token": token}, params=params,
-                 timeout=(2, getattr(settings,'HTTP_TIMEOUT_GET',5)), measure="landing/lookup")
-    if getattr(r, "status_code", 0) == 200:
-        try:
-            js = r.json() or {}
-            return js.get("data") or {}
-        except Exception:
-            return {}
-    return {}
+    base = os.environ.get("LANDING_LOOKUP_URL").rstrip("/")
+    token = os.environ.get("LANDING_LOOKUP_TOKEN", "")
+    headers = {"X-Lookup-Token": token} if token else {}
+
+    if (click_type or "").upper() == "CTWA":
+        params = {"ctwa_clid": tracking_id}
+    else:
+        params = {"tid": tracking_id}
+
+    r = requests.get(f"{base}/capi/lookup", params=params, headers=headers, timeout=8)
+    if r.ok:
+        return r.json()
+
+    if (click_type or "").upper() != "CTWA":
+        r2 = requests.get(f"{base}/capi/get-click", params={"tid": tracking_id}, timeout=5)
+        if r2.ok:
+            return r2.json()
+
+    return None
+
 
 def build_user_data(click: Dict[str,Any], fallback_ip: str, fallback_ua: str, user=None) -> Dict[str,Any]:
     ud = {
