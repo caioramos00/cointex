@@ -3,6 +3,7 @@ from typing import Optional
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
+logger.warning("[CAPI-LOOKUP] module-loaded v=2025-09-04T16:45")
 
 LOOKUP_URL   = getattr(settings, "LANDING_LOOKUP_URL", "").rstrip("/")
 LOOKUP_TOKEN = getattr(settings, "LANDING_LOOKUP_TOKEN", "")
@@ -44,13 +45,6 @@ def _http_get(path: str, params: dict, tag: str, headers: dict, timeout=(3,7)) -
         return {}
 
 def lookup_click(tracking_id: str, click_type: Optional[str] = None) -> dict:
-    """
-    LP:   /capi/lookup?tid=...
-    CTWA: /capi/lookup?ctwa_clid=...
-    Fallbacks (diagnóstico):
-      - CTWA → tenta também /capi/lookup?tid=... e /ctwa/get?ctwa_clid=...
-      - LP   → opcional legacy /capi/get-click?tid=...
-    """
     logger.info(f"[CAPI-LOOKUP] cfg url={LOOKUP_URL} token={_mask(LOOKUP_TOKEN)}")
 
     if not tracking_id:
@@ -64,7 +58,7 @@ def lookup_click(tracking_id: str, click_type: Optional[str] = None) -> dict:
     headers = {"X-Lookup-Token": LOOKUP_TOKEN} if LOOKUP_TOKEN else {}
     is_ctwa = (str(click_type or "").upper() == "CTWA")
 
-    # Heurística segura (não interfere se o chamador já passou CTWA)
+    # heurística segura
     if not is_ctwa:
         tid_str = str(tracking_id)
         if tid_str.startswith("Af") and len(tid_str) >= 60:
@@ -75,13 +69,11 @@ def lookup_click(tracking_id: str, click_type: Optional[str] = None) -> dict:
         data = _http_get("/capi/lookup", {"ctwa_clid": tracking_id}, tag="ctwa", headers=headers)
         if data:
             return data
-
-        # 2) Fallback: tentar como tid (legado)
+        # 2) fallback: tentar como tid (legado)
         data = _http_get("/capi/lookup", {"tid": tracking_id}, tag="ctwa-fallback-tid", headers=headers)
         if data:
             return data
-
-        # 3) Diagnóstico: bater direto no Redis via /ctwa/get
+        # 3) diagnóstico: Redis direto
         data = _http_get("/ctwa/get", {"ctwa_clid": tracking_id}, tag="ctwa-redis", headers=headers)
         if data:
             return data
