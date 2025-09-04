@@ -62,18 +62,19 @@ def lookup_click(tracking_id: str, click_type: Optional[str] = None) -> dict:
     return {}
   if is_ctwa:
     # 1) CTWA pelo ctwa_clid
-    data = call_lookup("ctwa_clid", tracking_id)
+    data = call_lookup({"ctwa_clid": tracking_id}, "ctwa")
+
     if data:
       return data
     # 2) Fallback: alguns setups antigos podem ter salvo ctwa como tid
-    data = call_lookup("tid", tracking_id)
+    data = call_lookup({"tid": tracking_id}, "ctwa-fallback")
     if data:
       return data
     logger.warning(f"[CAPI-LOOKUP] miss kind=CTWA id={tracking_id} tried=ctwa_clid,tid")
     return {}
 
   # Landing Page (LP)
-  data = call_lookup("tid", tracking_id)
+  data = call_lookup({"tid": tracking_id}, "lp")
   if data:
     return data
 
