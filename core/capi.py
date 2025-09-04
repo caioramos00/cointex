@@ -21,6 +21,10 @@ def lookup_click(tracking_id: str, click_type: Optional[str] = None) -> dict:
     - CTWA: tenta /capi/lookup?tid=... se necessário
     - LP:   opcional /capi/get-click?tid=... (LEGACY_GETCLICK_URL)
   """
+  
+  mask = LOOKUP_TOKEN[:4] + "…" + LOOKUP_TOKEN[-4:] if LOOKUP_TOKEN else ""
+  logger.info(f"[CAPI-LOOKUP] cfg url={LOOKUP_URL} token={mask}")
+  
   if not tracking_id:
     logger.info("[CAPI-LOOKUP] start kind=UNKNOWN id=<empty> skip=1 reason=empty_tracking_id")
     return {}
@@ -41,32 +45,21 @@ def lookup_click(tracking_id: str, click_type: Optional[str] = None) -> dict:
   kind = "CTWA" if is_ctwa else "LP"
   logger.info(f"[CAPI-LOOKUP] start kind={kind} id={tracking_id} url={LOOKUP_URL}/capi/lookup")
 
-  def call_lookup(param_name: str, value: str) -> dict:
-    tag = f"{param_name}={value}"
+  def call_lookup(params: dict, tag: str) -> dict:
     try:
-      r = requests.get(
-        f"{LOOKUP_URL}/capi/lookup",
-        headers=headers,
-        params={param_name: value},
-        timeout=(3, 7)
-      )
-      sc = r.status_code
-      if sc == 200:
-        js = r.json() or {}
-        data = js.get("data", js) or {}
-        keys = list(data.keys())
-        has_fbp = bool(data.get("fbp"))
-        has_fbc = bool(data.get("fbc"))
-        logger.info(
-          f"[CAPI-LOOKUP] ok kind={kind} {tag} source=pg keys={len(keys)} has_fbp={int(has_fbp)} has_fbc={int(has_fbc)}"
-        )
-        return data
-      else:
-        logger.warning(f"[CAPI-LOOKUP] warn kind={kind} {tag} source=pg status={sc} body={_trunc(getattr(r,'text',''))}")
+        r = requests.get(f"{LOOKUP_URL}/capi/lookup", headers=headers, params=params, timeout=(3, 7))
+        sc = r.status_code
+        if sc == 200:
+            js = r.json() or {}
+            data = js.get("data", js) or {}
+            logger.info(f"[CAPI-LOOKUP] http=200 {tag} ok=1 keys={list(data.keys())}")
+            return data
+        else:
+            body = (r.text or "")[:300].replace("\n", " ")
+            logger.warning(f"[CAPI-LOOKUP] http={sc} {tag} body={body}")
     except Exception as e:
-      logger.warning(f"[CAPI-LOOKUP] error kind={kind} {tag} source=pg err={e}")
+        logger.warning(f"[CAPI-LOOKUP] http=ERR {tag} error={e}")
     return {}
-
   if is_ctwa:
     # 1) CTWA pelo ctwa_clid
     data = call_lookup("ctwa_clid", tracking_id)
