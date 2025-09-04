@@ -1052,12 +1052,19 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
 
         user = pix_transaction.user
         tracking_id = getattr(user, 'tracking_id', '') or ''
-        click_type = getattr(user, 'click_type', '') or ''
-        
+        click_type  = getattr(user, 'click_type', '') or ''
+
         logger.info("[CAPI-LOOKUP] call kind=%s id=%s", (click_type or 'UNKNOWN'), tracking_id)
-        
-        click_data = lookup_click(tracking_id, click_type) if tracking_id else {}
-        
+
+        # === PULAR CAPI PARA ORGÂNICO ===
+        ctype = (click_type or "").strip().upper()
+        skip_capi = ctype in ("ORGÂNICO", "ORGANICO", "ORGANIC")
+        if skip_capi:
+            logger.info("[CAPI-SKIP] reason=organic click_type=%s", click_type)
+            click_data = {}
+        else:
+            click_data = lookup_click(tracking_id, click_type) if tracking_id else {}
+
         keys = list(click_data.keys()) if isinstance(click_data, dict) else []
         logger.info(
             "[CAPI-LOOKUP] result ok=%s keys=%s has_fbp=%s has_fbc=%s",
@@ -1065,10 +1072,10 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
             int(bool(click_data.get('fbp'))) if isinstance(click_data, dict) else 0,
             int(bool(click_data.get('fbc'))) if isinstance(click_data, dict) else 0
         )
-        
+
         # === DIAGNÓSTICO CTWA QUANDO VEM VAZIO ===
         try:
-            if (click_type or "").upper() == "CTWA" and tracking_id and not click_data:
+            if (click_type or "").upper() == "CTWA" and tracking_id and not click_data and not skip_capi:
                 # Normaliza base do lookup
                 base_lookup = LOOKUP_URL
                 if base_lookup.endswith("/capi/lookup"):
@@ -1105,74 +1112,80 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
         amount = float(pix_transaction.amount or 0)
 
         if pix_transaction.paid_at and status in ('AUTHORIZED', 'RECEIVED', 'CONFIRMED'):
-            eid   = event_id_for('purchase', txid)
-            etime = int((pix_transaction.paid_at or timezone.now()).timestamp())
-            ud    = build_user_data(click_data)
-            cd    = {"value": amount, "currency": "BRL"}
+            if not skip_capi:
+                eid   = event_id_for('purchase', txid)
+                etime = int((pix_transaction.paid_at or timezone.now()).timestamp())
+                ud    = build_user_data(click_data)
+                cd    = {"value": amount, "currency": "BRL"}
 
-            should_send = True
-            try:
-                if pix_transaction.capi_purchase_sent_at:
-                    should_send = False
-            except Exception:
-                pass
-
-            if should_send:
-                resp = send_capi("Purchase", eid, etime, ud, cd)
+                should_send = True
                 try:
-                    if resp.get("ok"):
-                        if hasattr(pix_transaction, "capi_purchase_event_id"):
-                            pix_transaction.capi_purchase_event_id = eid
-                        if hasattr(pix_transaction, "capi_purchase_sent_at"):
-                            pix_transaction.capi_purchase_sent_at = timezone.now()
-                        if hasattr(pix_transaction, "capi_last_error"):
-                            pix_transaction.capi_last_error = None
-                        pix_transaction.save(update_fields=[f for f in [
-                            "capi_purchase_event_id", "capi_purchase_sent_at", "capi_last_error"
-                        ] if hasattr(pix_transaction, f)])
-                    else:
-                        if hasattr(pix_transaction, "capi_last_error"):
-                            pix_transaction.capi_last_error = f"purchase capi fail: {resp}"
-                            pix_transaction.save(update_fields=["capi_last_error"])
-                except Exception as e:
-                    logger.warning(f"[CAPI-ERR] purchase bookkeeping failed txid={txid} err={e}")
+                    if pix_transaction.capi_purchase_sent_at:
+                        should_send = False
+                except Exception:
+                    pass
+
+                if should_send:
+                    resp = send_capi("Purchase", eid, etime, ud, cd)
+                    try:
+                        if resp.get("ok"):
+                            if hasattr(pix_transaction, "capi_purchase_event_id"):
+                                pix_transaction.capi_purchase_event_id = eid
+                            if hasattr(pix_transaction, "capi_purchase_sent_at"):
+                                pix_transaction.capi_purchase_sent_at = timezone.now()
+                            if hasattr(pix_transaction, "capi_last_error"):
+                                pix_transaction.capi_last_error = None
+                            pix_transaction.save(update_fields=[f for f in [
+                                "capi_purchase_event_id", "capi_purchase_sent_at", "capi_last_error"
+                            ] if hasattr(pix_transaction, f)])
+                        else:
+                            if hasattr(pix_transaction, "capi_last_error"):
+                                pix_transaction.capi_last_error = f"purchase capi fail: {resp}"
+                                pix_transaction.save(update_fields=["capi_last_error"])
+                    except Exception as e:
+                        logger.warning(f"[CAPI-ERR] purchase bookkeeping failed txid={txid} err={e}")
+                else:
+                    logger.info(f"[CAPI-SKIP] event=Purchase txid={txid} reason=idempotent")
             else:
-                logger.info(f"[CAPI-SKIP] event=Purchase txid={txid} reason=idempotent")
+                logger.info("[CAPI-SKIP] event=Purchase txid=%s reason=organic", txid)
 
         if status == 'EXPIRED':
-            eid   = event_id_for('expire', txid)
-            etime = int(timezone.now().timestamp())
-            ud    = build_user_data(click_data)
-            cd    = {"value": amount, "currency": "BRL", "transaction_id": txid}
+            if not skip_capi:
+                eid   = event_id_for('expire', txid)
+                etime = int(timezone.now().timestamp())
+                ud    = build_user_data(click_data)
+                cd    = {"value": amount, "currency": "BRL", "transaction_id": txid}
 
-            should_send = True
-            try:
-                if pix_transaction.capi_expired_sent_at:
-                    should_send = False
-            except Exception:
-                pass
-
-            if should_send:
-                resp = send_capi("PaymentExpired", eid, etime, ud, cd)
+                should_send = True
                 try:
-                    if resp.get("ok"):
-                        if hasattr(pix_transaction, "capi_expired_event_id"):
-                            pix_transaction.capi_expired_event_id = eid
-                        if hasattr(pix_transaction, "capi_expired_sent_at"):
-                            pix_transaction.capi_expired_sent_at = timezone.now()
-                        if hasattr(pix_transaction, "capi_last_error"):
-                            pix_transaction.capi_last_error = None
-                        pix_transaction.save(update_fields=[f for f in [
-                            "capi_expired_event_id", "capi_expired_sent_at", "capi_last_error"
-                        ] if hasattr(pix_transaction, f)])
-                    else:
-                        if hasattr(pix_transaction, "capi_last_error"):
-                            pix_transaction.capi_last_error = f"expired capi fail: {resp}"
-                            pix_transaction.save(update_fields=["capi_last_error"])
-                except Exception as e:
-                    logger.warning(f"[CAPI-ERR] expired bookkeeping failed txid={txid} err={e}")
+                    if pix_transaction.capi_expired_sent_at:
+                        should_send = False
+                except Exception:
+                    pass
+
+                if should_send:
+                    resp = send_capi("PaymentExpired", eid, etime, ud, cd)
+                    try:
+                        if resp.get("ok"):
+                            if hasattr(pix_transaction, "capi_expired_event_id"):
+                                pix_transaction.capi_expired_event_id = eid
+                            if hasattr(pix_transaction, "capi_expired_sent_at"):
+                                pix_transaction.capi_expired_sent_at = timezone.now()
+                            if hasattr(pix_transaction, "capi_last_error"):
+                                pix_transaction.capi_last_error = None
+                            pix_transaction.save(update_fields=[f for f in [
+                                "capi_expired_event_id", "capi_expired_sent_at", "capi_last_error"
+                            ] if hasattr(pix_transaction, f)])
+                        else:
+                            if hasattr(pix_transaction, "capi_last_error"):
+                                pix_transaction.capi_last_error = f"expired capi fail: {resp}"
+                                pix_transaction.save(update_fields=["capi_last_error"])
+                    except Exception as e:
+                        logger.warning(f"[CAPI-ERR] expired bookkeeping failed txid={txid} err={e}")
+                else:
+                    logger.info(f"[CAPI-SKIP] event=PaymentExpired txid={txid} reason=idempotent")
             else:
-                logger.info(f"[CAPI-SKIP] event=PaymentExpired txid={txid} reason=idempotent")
+                logger.info("[CAPI-SKIP] event=PaymentExpired txid=%s reason=organic", txid)
 
         Notification.objects.create(
             user=pix_transaction.user,

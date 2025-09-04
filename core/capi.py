@@ -3,8 +3,6 @@ from typing import Optional
 from django.conf import settings
 
 logger = logging.getLogger("core.views")
-logger.warning("[CAPI-LOOKUP] module-loaded v=2025-09-04T16:45")
-logger.warning("[CAPI-LOOKUP] id(capi_module)=%s", id(logger))
 
 LOOKUP_URL   = getattr(settings, "LANDING_LOOKUP_URL", "").rstrip("/")
 LOOKUP_TOKEN = getattr(settings, "LANDING_LOOKUP_TOKEN", "")
