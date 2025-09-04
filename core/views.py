@@ -1064,7 +1064,42 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
             bool(click_data), len(keys),
             int(bool(click_data.get('fbp'))) if isinstance(click_data, dict) else 0,
             int(bool(click_data.get('fbc'))) if isinstance(click_data, dict) else 0
-)
+        )
+        
+        # === DIAGNÓSTICO CTWA QUANDO VEM VAZIO ===
+        try:
+            if (click_type or "").upper() == "CTWA" and tracking_id and not click_data:
+                # Normaliza base do lookup
+                base_lookup = LOOKUP_URL
+                if base_lookup.endswith("/capi/lookup"):
+                    base_lookup = base_lookup[: -len("/capi/lookup")]
+                # Bate direto no Redis da Landing
+                resp = http_get(
+                    f"{base_lookup}/ctwa/get",
+                    headers={"X-Lookup-Token": LOOKUP_TOKEN} if LOOKUP_TOKEN else None,
+                    params={"ctwa_clid": tracking_id},
+                    timeout=(2, 5),
+                    measure="landing/ctwa_get"
+                )
+                sc = getattr(resp, "status_code", 0)
+                body = (getattr(resp, "text", "") or "")[:400].replace("\n", " ")
+                logger.info("[CAPI-LOOKUP] diag ctwa-redis status=%s body=%s", sc, body)
+
+                # (opcional) tenta também o /debug/ctwa/:id se existir
+                try:
+                    resp2 = http_get(
+                        f"{base_lookup}/debug/ctwa/{tracking_id}",
+                        headers={"X-Lookup-Token": LOOKUP_TOKEN} if LOOKUP_TOKEN else None,
+                        timeout=(2, 5),
+                        measure="landing/ctwa_debug"
+                    )
+                    sc2 = getattr(resp2, "status_code", 0)
+                    body2 = (getattr(resp2, "text", "") or "")[:400].replace("\n", " ")
+                    logger.info("[CAPI-LOOKUP] diag ctwa-debug status=%s body=%s", sc2, body2)
+                except Exception as e2:
+                    logger.warning("[CAPI-LOOKUP] diag ctwa-debug error=%s", e2)
+        except Exception as e:
+            logger.warning("[CAPI-LOOKUP] diag ctwa error=%s", e)
 
         txid   = pix_transaction.transaction_id or f"pix:{getattr(pix_transaction,'external_id', '') or pix_transaction.id}"
         amount = float(pix_transaction.amount or 0)
