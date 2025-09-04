@@ -1,4 +1,4 @@
-import logging, requests, json
+import logging, requests
 from typing import Optional
 from django.conf import settings
 
@@ -12,13 +12,13 @@ def _trunc(s: str, n: int = 400) -> str:
     s = s or ""
     return s[:n] + ("…" if len(s) > n else "")
 
-def _mask_token(tok: str) -> str:
+def _mask(tok: str) -> str:
     return (tok[:4] + "…" + tok[-4:]) if tok else ""
 
 def _log_call(tag: str, path: str, params: dict, headers: dict):
     pshow = {k: (v if k not in ("ctwa_clid","tid") else f"{str(v)[:8]}…{str(v)[-8:]}") for k, v in (params or {}).items()}
-    hshow = {k: ( _mask_token(v) if k.lower()=="x-lookup-token" else v ) for k, v in (headers or {}).items()}
-    logger.info(f"[CAPI-LOOKUP] call tag={tag} url={LOOKUP_URL}{path} params={pshow} headers={hshow}")
+    hshow = {k: (_mask(v) if k.lower()=="x-lookup-token" else v) for k, v in (headers or {}).items()}
+    logger.info(f"[CAPI-LOOKUP] http:call tag={tag} url={LOOKUP_URL}{path} params={pshow} headers={hshow}")
 
 def _http_get(path: str, params: dict, tag: str, headers: dict, timeout=(3,7)) -> dict:
     try:
@@ -47,12 +47,11 @@ def lookup_click(tracking_id: str, click_type: Optional[str] = None) -> dict:
     """
     LP:   /capi/lookup?tid=...
     CTWA: /capi/lookup?ctwa_clid=...
-    Fallbacks:
-      - CTWA: tenta também /capi/lookup?tid=... e, por diagnóstico, /ctwa/get?ctwa_clid=...
-      - LP:   opcional legacy /capi/get-click?tid=...
+    Fallbacks (diagnóstico):
+      - CTWA → tenta também /capi/lookup?tid=... e /ctwa/get?ctwa_clid=...
+      - LP   → opcional legacy /capi/get-click?tid=...
     """
-    mask = _mask_token(LOOKUP_TOKEN)
-    logger.info(f"[CAPI-LOOKUP] cfg url={LOOKUP_URL} token={mask}")
+    logger.info(f"[CAPI-LOOKUP] cfg url={LOOKUP_URL} token={_mask(LOOKUP_TOKEN)}")
 
     if not tracking_id:
         logger.info("[CAPI-LOOKUP] start kind=UNKNOWN id=<empty> skip=1 reason=empty_tracking_id")
@@ -65,7 +64,7 @@ def lookup_click(tracking_id: str, click_type: Optional[str] = None) -> dict:
     headers = {"X-Lookup-Token": LOOKUP_TOKEN} if LOOKUP_TOKEN else {}
     is_ctwa = (str(click_type or "").upper() == "CTWA")
 
-    # Heurística auxiliar
+    # Heurística segura (não interfere se o chamador já passou CTWA)
     if not is_ctwa:
         tid_str = str(tracking_id)
         if tid_str.startswith("Af") and len(tid_str) >= 60:
@@ -82,7 +81,7 @@ def lookup_click(tracking_id: str, click_type: Optional[str] = None) -> dict:
         if data:
             return data
 
-        # 3) Diagnóstico: bater direto no /ctwa/get (Redis). Se 404/empty, veremos no log.
+        # 3) Diagnóstico: bater direto no Redis via /ctwa/get
         data = _http_get("/ctwa/get", {"ctwa_clid": tracking_id}, tag="ctwa-redis", headers=headers)
         if data:
             return data
