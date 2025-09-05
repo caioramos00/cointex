@@ -885,12 +885,13 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
     - Dispara CAPI:
         • Purchase quando pago (AUTHORIZED/RECEIVED/CONFIRMED)
         • PaymentExpired quando expira
-    - Logs específicos para CAPI (lookup, send, resp, skip, err)
+      (mas pula CAPI em cliques orgânicos ou sem tracking_id)
+    - Envia pedido para UTMify (independente de pular CAPI)
+    - Logs específicos para CAPI (lookup, send, resp, skip, err) + EMQ proxy
     - Normaliza + HASH (SHA256) campos exigidos pela Meta (em, ph, fn, ln, ct, st, zp, country, external_id).
       Observação: NÃO hashear client_user_agent, client_ip_address, fbp, fbc (regras da Meta).
     """
     import os, re, json, time, unicodedata, hashlib, logging
-    from datetime import datetime, timezone as dt_tz
     from django.conf import settings
     from django.db import transaction as dj_tx
     from django.utils import timezone
@@ -924,7 +925,6 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
     # --- Normalizadores Meta (pré-hash) ---
     def norm_email(em: str) -> str:
         em = (em or "").strip().lower()
-        # regra simples: manter apenas 1 '@' e sem espaços
         if "@" not in em or em.startswith("@") or em.endswith("@"):
             return ""
         return em
@@ -940,22 +940,17 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
         raw = digits_only(ph) or digits_only(wa_id)
         if not raw:
             return ""
-        # Se já começa com DDI (ex.: 55...), mantém. Caso contrário, adiciona BR (55) se o tamanho for típico nacional.
         if raw.startswith(default_country):
             norm = raw
         else:
-            # Tenta inferir: se tamanho 10-11 (BR), prefixa 55
             if 10 <= len(raw) <= 11:
                 norm = default_country + raw
             else:
-                # já tem DDI de outro país ou formato não-BR; mantém como está
                 norm = raw
-        # sanity: 7..15 dígitos é a faixa razoável para CAPI
         if not (7 <= len(norm) <= 15):
             return ""
         return norm
 
-    # Mapeamento básico de países → ISO2 (exemplos comuns; expandir se necessário)
     COUNTRY_MAP = {
         "brazil": "br", "brasil": "br", "br": "br",
         "united states": "us", "usa": "us", "us": "us",
@@ -967,13 +962,11 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
     def norm_country(c: str) -> str:
         if not c:
             return ""
-        s = strip_accents_lower(c)
-        s = s.strip()
+        s = strip_accents_lower(c).strip()
         if len(s) == 2 and s.isalpha():
             return s
         return COUNTRY_MAP.get(s, "")
 
-    # BR estados: nome → sigla
     BR_STATES = {
         "acre": "ac", "alagoas": "al", "amapa": "ap", "amapá": "ap", "amazonas": "am",
         "bahia": "ba", "ceara": "ce", "ceará": "ce", "distrito federal": "df",
@@ -1000,13 +993,11 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
 
     def norm_city(ct: str) -> str:
         s = strip_accents_lower(ct)
-        s = re.sub(r"[^a-z\s]", "", s)  # mantém letras e espaços
+        s = re.sub(r"[^a-z\s]", "", s)
         return collapse_spaces(s)
 
     def norm_zip(zp: str) -> str:
-        # CEP BR: dígitos apenas (geralmente 8)
-        z = digits_only(zp)
-        return z if z else ""
+        return digits_only(zp)
 
     def norm_name(n: str) -> str:
         s = strip_accents_lower(n)
@@ -1014,9 +1005,6 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
         return collapse_spaces(s)
 
     def hash_if_needed(value: str, normalizer) -> str:
-        """
-        Se já vier SHA256 (64 hex), mantém; caso contrário normaliza e hasheia.
-        """
         if not value:
             return ""
         if is_sha256_hex(value):
@@ -1045,16 +1033,14 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
             return ""
         m = FBC_RE.match(fbc.strip())
         if not m:
-            return fbc  # formato diferente; não tocar
+            return fbc
         ct_raw, fbclid = m.group(1), m.group(2)
-        # aceita segundos (10) ou ms (13)
         if len(ct_raw) == 13:
             ct_s = _safe_int(ct_raw) // 1000
         else:
             ct_s = _safe_int(ct_raw)
 
         now_s = now_ts()
-        # folga de 5min
         FUTURE_FUZZ = 300
         need_fix = False
 
@@ -1067,7 +1053,6 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
 
         base_ts = event_time_s or now_s
         if need_fix:
-            # reconstruir usando event_time (ms)
             fixed = f"fb.1.{base_ts * 1000}.{fbclid}"
             logger.info("[CAPI-LOOKUP] fbc_repaired=1 base_ts=%s old_ct=%s fbclid_len=%s",
                         base_ts, ct_raw, len(fbclid))
@@ -1077,14 +1062,13 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
     # EMQ (proxy): conta de campos úteis presentes
     def compute_emq(user_data: dict) -> str:
         """
-        Não é o EMQ oficial da Meta, mas um proxy simples para log/diagnóstico.
+        Proxy simples p/ diagnóstico. (Não é o EMQ oficial da Meta.)
         """
         hashed_keys = ["em", "ph", "fn", "ln", "ct", "st", "zp", "country", "external_id"]
         plain_keys  = ["client_ip_address", "client_user_agent", "fbc", "fbp"]
         present_h = sum(1 for k in hashed_keys if user_data.get(k))
         present_p = sum(1 for k in plain_keys  if user_data.get(k))
         total     = present_h + present_p
-        # score simples 0..10 com peso maior para hashed
         score = min(10, present_h * 2 + min(2, present_p))
         return f"score={score} fields_h={present_h} fields_p={present_p} total={total}"
 
@@ -1131,6 +1115,7 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
             except Exception as e:
                 logger.warning(f"update pix cache on webhook failed: {e}")
 
+        # ========= Config =========
         def _settings(name, default=""):
             return getattr(settings, name, os.getenv(name, default))
 
@@ -1140,8 +1125,11 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
         TEST_CODE     = _settings('CAPI_TEST_EVENT_CODE', '')
         GRAPH_URL     = f"https://graph.facebook.com/{GRAPH_VERSION}/{PIXEL_ID}/events"
 
-        LOOKUP_URL    = _settings('LANDING_LOOKUP_URL', 'https://grupo-whatsapp-trampos-lara-2025.onrender.com')
+        LOOKUP_URL    = _settings('LANDING_LOOKUP_URL', 'https://grupo-whatsapp-trampos-lara-2025.onrender.com').rstrip("/")
         LOOKUP_TOKEN  = _settings('LANDING_LOOKUP_TOKEN', '')
+
+        UTMIFY_API_TOKEN = _settings('UTMIFY_API_TOKEN', '')
+        UTMIFY_ENDPOINT  = _settings('UTMIFY_ENDPOINT', 'https://api.utmify.com.br/api-credentials/orders')
 
         def event_id_for(kind: str, txid: str) -> str:
             return f"{kind}_{txid}"
@@ -1150,13 +1138,22 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
             x = (x or "")
             return x if len(x) <= n else x[:n] + "...(trunc)"
 
-        # Busca click data (usa sua função centralizada)
+        # ========= Identificação do clique / decisão de pular CAPI =========
+        txid   = pix_transaction.transaction_id or f"pix:{getattr(pix_transaction,'external_id', '') or pix_transaction.id}"
+        amount = float(pix_transaction.amount or 0)
+        created_dt = getattr(pix_transaction, "created_at", None) or timezone.now()
+
         user = pix_transaction.user
         tracking_id = getattr(user, 'tracking_id', '') or ''
         click_type  = getattr(user, 'click_type', '') or ''
         logger.info("[CAPI-LOOKUP] call kind=%s id=%s", (click_type or 'UNKNOWN'), tracking_id)
 
-        # Importa do módulo local (você já tem lookup_click implementado)
+        ctype_norm = (click_type or '').strip().lower()
+        skip_capi = (not tracking_id) or ctype_norm.startswith(("org", "orgânico", "organico"))
+        if skip_capi:
+            logger.info("[CAPI-SKIP] event=all txid=%s reason=organic_click", txid)
+
+        # ========= Busca click data (usa função centralizada) =========
         from .capi import lookup_click
         click_data = lookup_click(tracking_id, click_type) if tracking_id else {}
 
@@ -1168,12 +1165,11 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
             int(bool(isinstance(click_data, dict) and click_data.get('fbc')))
         )
 
-        # Diagnóstico CTWA quando vazio (opcional, você já tinha)
+        # Diagnóstico CTWA quando vazio (opcional)
         try:
             if (click_type or "").upper() == "CTWA" and tracking_id and not click_data:
-                base_lookup = LOOKUP_URL.rstrip("/")
                 resp = http_get(
-                    f"{base_lookup}/ctwa/get",
+                    f"{LOOKUP_URL}/ctwa/get",
                     headers={"X-Lookup-Token": LOOKUP_TOKEN} if LOOKUP_TOKEN else None,
                     params={"ctwa_clid": tracking_id},
                     timeout=(2, 5),
@@ -1185,7 +1181,7 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
 
                 try:
                     resp2 = http_get(
-                        f"{base_lookup}/debug/ctwa/{tracking_id}",
+                        f"{LOOKUP_URL}/debug/ctwa/{tracking_id}",
                         headers={"X-Lookup-Token": LOOKUP_TOKEN} if LOOKUP_TOKEN else None,
                         timeout=(2, 5),
                         measure="landing/ctwa_debug"
@@ -1198,9 +1194,15 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
         except Exception as e:
             logger.warning("[CAPI-LOOKUP] diag ctwa error=%s", e)
 
-        # =========================
-        # Montagem do user_data (com hash obrigatório)
-        # =========================
+        # ========= Montagem action_source / source_url =========
+        if (click_type or "").upper() == "CTWA":
+            action_source = "chat"
+            event_source_url = click_data.get("source_url") or "https://www.cointex.cash/withdraw-validation/"
+        else:
+            action_source = "website"
+            event_source_url = click_data.get("page_url") or "https://www.cointex.cash/withdraw-validation/"
+
+        # ========= Montagem do user_data (com hash obrigatório) =========
         def build_user_data(click: dict, click_type: str, event_time_s: int) -> (dict, str):
             click = click or {}
             t = (click_type or "").upper()
@@ -1227,11 +1229,11 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
             em_norm = norm_email(click.get("em"))
             fn_norm = norm_name(click.get("fn"))
             ln_norm = norm_name(click.get("ln"))
-            xid_norm = collapse_spaces(str(click.get("external_id") or ""))  # livre; se vier PII, hash
+            xid_norm = collapse_spaces(str(click.get("external_id") or ""))
 
-            # Hash condicional (se já vier hash 64hex, mantém)
+            # Campos plain
             user_data = {
-                "client_ip_address": (ip or "")[:100],           # limite defensivo
+                "client_ip_address": (ip or "")[:100],
                 "client_user_agent": (ua or "")[:400],
             }
             if fbp: user_data["fbp"] = fbp
@@ -1260,12 +1262,9 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
             emq = compute_emq(user_data)
             return user_data, emq
 
-        # =========================
-        # Envio para CAPI
-        # =========================
+        # ========= Envio para CAPI =========
         def send_capi(event_name: str, event_id: str, event_time: int,
                       user_data: dict, custom_data: dict, action_source: str, event_source_url: str):
-            """Envia 1 evento para a CAPI e retorna dict com ok/status/text."""
             if not PIXEL_ID or not CAPI_TOKEN:
                 msg = "missing pixel/token"
                 logger.warning(f"[CAPI-ERR] {event_name} txid={txid} reason={msg}")
@@ -1304,98 +1303,202 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
             logger.info(f"[CAPI-RESP] event={event_name} txid={txid} status={status} body={text}")
             return {"ok": status == 200, "status": status, "text": text}
 
-        # =========================
-        # Construção do evento
-        # =========================
-        txid   = pix_transaction.transaction_id or f"pix:{getattr(pix_transaction,'external_id', '') or pix_transaction.id}"
-        amount = float(pix_transaction.amount or 0)
+        # ========= UTMify =========
+        def _iso8601(dt):
+            try:
+                if not dt.tzinfo:
+                    from django.utils import timezone as _tz
+                    dt = _tz.make_aware(dt, _tz.get_current_timezone())
+                return dt.isoformat()
+            except Exception:
+                return None
 
-        # event_time base (segundos)
-        paid_at_ts = int((pix_transaction.paid_at or timezone.now()).timestamp())
+        def send_utmify_order(*, status_str: str, txid: str, amount_brl: float,
+                              click_data: dict, created_at, approved_at=None,
+                              payment_method: str = "pix", is_test: bool = False):
+            if not UTMIFY_API_TOKEN:
+                logger.info("[UTMIFY-SKIP] reason=no_token txid=%s", txid)
+                return {"ok": False, "skipped": "no_token"}
 
-        # action_source & event_source_url por tipo
-        if (click_type or "").upper() == "CTWA":
-            action_source = "chat"
-            event_source_url = click_data.get("source_url") or "https://www.cointex.cash/withdraw-validation/"
-        else:
-            action_source = "website"
-            event_source_url = click_data.get("page_url") or "https://www.cointex.cash/withdraw-validation/"
+            utm = {}
+            try:
+                utm = (click_data or {}).get("utm") or {}
+            except Exception:
+                utm = {}
 
-        # Monta user_data com hash obrigatório
-        user_data, emq_log = build_user_data(click_data, click_type, paid_at_ts)
-        logger.info("[CAPI-EMQ] txid=%s %s", txid, emq_log)
+            customer = {
+                "name": (click_data or {}).get("name") or None,
+                "email": (click_data or {}).get("email") or None,
+                "phone": (click_data or {}).get("phone") or (click_data or {}).get("ph_raw") or None,
+                "country": (click_data or {}).get("country") or "BR",
+                "document": (click_data or {}).get("document") or None,
+            }
 
-        # Envio dos eventos
+            price_in_cents = int(round(float(amount_brl or 0) * 100))
+            products = [{
+                "id":       (click_data or {}).get("product_id") or "pix_validation",
+                "name":     (click_data or {}).get("product_name") or "Taxa de validação - CoinTex",
+                "planId":   (click_data or {}).get("plan_id") or None,
+                "planName": (click_data or {}).get("plan_name") or None,
+                "quantity": 1,
+                "priceInCents": price_in_cents,
+            }]
+
+            payload = {
+                "isTest": bool(is_test),
+                "status": status_str,                 # "approved" | "confirmed" | "expired"
+                "orderId": txid,
+                "customer": customer,
+                "platform": "Cointex",
+                "products": products,
+                "createdAt": _iso8601(created_at),
+                "commission": {
+                    "gatewayFeeInCents": 0,
+                    "totalPriceInCents": price_in_cents,
+                    "userCommissionInCents": 0
+                },
+                "refundedAt": None,
+                "approvedDate": _iso8601(approved_at) if approved_at else None,
+                "paymentMethod": payment_method,
+                "trackingParameters": {
+                    "sck": None,
+                    "src": (click_data or {}).get("network") or None,
+                    "utm_term":    utm.get("utm_term") or None,
+                    "utm_medium":  utm.get("utm_medium") or None,
+                    "utm_source":  utm.get("utm_source") or None,
+                    "utm_content": utm.get("utm_content") or None,
+                    "utm_campaign":utm.get("utm_campaign") or None,
+                }
+            }
+
+            headers = {"Content-Type": "application/json", "x-api-token": UTMIFY_API_TOKEN}
+
+            try:
+                resp = http_post(
+                    UTMIFY_ENDPOINT,
+                    headers=headers,
+                    json=payload,
+                    timeout=(3, 10),
+                    measure="utmify/orders"
+                )
+                status_code = getattr(resp, "status_code", 0)
+                body   = (getattr(resp, "text", "") or "")[:400].replace("\n", " ")
+                ok     = 200 <= status_code < 300
+                logger.info("[UTMIFY-RESP] txid=%s status=%s ok=%s body=%s", txid, status_code, int(ok), body)
+                return {"ok": ok, "status": status_code, "body": body}
+            except Exception as e:
+                logger.warning("[UTMIFY-ERR] txid=%s error=%s", txid, e)
+                return {"ok": False, "error": str(e)}
+
+        # ========= Construção do evento =========
+        base_event_ts = int((pix_transaction.paid_at or timezone.now()).timestamp())
+
+        # Monta user_data com hash (apenas se NÃO skipar CAPI)
+        user_data, emq_log = ({}, "score=0 fields_h=0 fields_p=0 total=0")
+        if not skip_capi:
+            user_data, emq_log = build_user_data(click_data, click_type, base_event_ts)
+            logger.info("[CAPI-EMQ] txid=%s %s", txid, emq_log)
+
+        # ====== PURCHASE (pago) ======
         if pix_transaction.paid_at and status in ('AUTHORIZED', 'RECEIVED', 'CONFIRMED'):
-            eid   = event_id_for('purchase', txid)
-            etime = paid_at_ts
-            cd    = {"value": amount, "currency": "BRL"}
+            # UTMify sempre (independe de pular CAPI)
+            send_utmify_order(
+                status_str="approved",
+                txid=txid,
+                amount_brl=amount,
+                click_data=click_data,
+                created_at=created_dt,
+                approved_at=pix_transaction.paid_at,
+                payment_method="pix",
+                is_test=False
+            )
 
-            should_send = True
-            try:
-                if pix_transaction.capi_purchase_sent_at:
-                    should_send = False
-            except Exception:
-                pass
+            # CAPI somente se não estiver skipado
+            if not skip_capi:
+                eid   = event_id_for('purchase', txid)
+                etime = base_event_ts
+                cd    = {"value": amount, "currency": "BRL"}
 
-            if should_send:
-                resp = send_capi("Purchase", eid, etime, user_data, cd, action_source, event_source_url)
+                should_send = True
                 try:
-                    if resp.get("ok"):
-                        if hasattr(pix_transaction, "capi_purchase_event_id"):
-                            pix_transaction.capi_purchase_event_id = eid
-                        if hasattr(pix_transaction, "capi_purchase_sent_at"):
-                            pix_transaction.capi_purchase_sent_at = timezone.now()
-                        if hasattr(pix_transaction, "capi_last_error"):
-                            pix_transaction.capi_last_error = None
-                        pix_transaction.save(update_fields=[f for f in [
-                            "capi_purchase_event_id", "capi_purchase_sent_at", "capi_last_error"
-                        ] if hasattr(pix_transaction, f)])
-                    else:
-                        if hasattr(pix_transaction, "capi_last_error"):
-                            pix_transaction.capi_last_error = f"purchase capi fail: {resp}"
-                            pix_transaction.save(update_fields=["capi_last_error"])
-                except Exception as e:
-                    logger.warning(f"[CAPI-ERR] purchase bookkeeping failed txid={txid} err={e}")
-            else:
-                logger.info(f"[CAPI-SKIP] event=Purchase txid={txid} reason=idempotent")
+                    if pix_transaction.capi_purchase_sent_at:
+                        should_send = False
+                except Exception:
+                    pass
 
+                if should_send:
+                    resp = send_capi("Purchase", eid, etime, user_data, cd, action_source, event_source_url)
+                    try:
+                        if resp.get("ok"):
+                            if hasattr(pix_transaction, "capi_purchase_event_id"):
+                                pix_transaction.capi_purchase_event_id = eid
+                            if hasattr(pix_transaction, "capi_purchase_sent_at"):
+                                pix_transaction.capi_purchase_sent_at = timezone.now()
+                            if hasattr(pix_transaction, "capi_last_error"):
+                                pix_transaction.capi_last_error = None
+                            pix_transaction.save(update_fields=[f for f in [
+                                "capi_purchase_event_id", "capi_purchase_sent_at", "capi_last_error"
+                            ] if hasattr(pix_transaction, f)])
+                        else:
+                            if hasattr(pix_transaction, "capi_last_error"):
+                                pix_transaction.capi_last_error = f"purchase capi fail: {resp}"
+                                pix_transaction.save(update_fields=["capi_last_error"])
+                    except Exception as e:
+                        logger.warning(f"[CAPI-ERR] purchase bookkeeping failed txid={txid} err={e}")
+                else:
+                    logger.info(f"[CAPI-SKIP] event=Purchase txid={txid} reason=idempotent")
+
+        # ====== EXPIRED ======
         if status == 'EXPIRED':
-            eid   = event_id_for('expire', txid)
-            etime = int(timezone.now().timestamp())
-            cd    = {"value": amount, "currency": "BRL", "transaction_id": txid}
+            # UTMify sempre
+            send_utmify_order(
+                status_str="expired",
+                txid=txid,
+                amount_brl=amount,
+                click_data=click_data,
+                created_at=created_dt,
+                approved_at=None,
+                payment_method="pix",
+                is_test=False
+            )
 
-            should_send = True
-            try:
-                if pix_transaction.capi_expired_sent_at:
-                    should_send = False
-            except Exception:
-                pass
+            # CAPI somente se não estiver skipado
+            if not skip_capi:
+                eid   = event_id_for('expire', txid)
+                etime = int(timezone.now().timestamp())
+                cd    = {"value": amount, "currency": "BRL", "transaction_id": txid}
 
-            if should_send:
-                resp = send_capi("PaymentExpired", eid, etime, user_data, cd, action_source, event_source_url)
+                should_send = True
                 try:
-                    if resp.get("ok"):
-                        if hasattr(pix_transaction, "capi_expired_event_id"):
-                            pix_transaction.capi_expired_event_id = eid
-                        if hasattr(pix_transaction, "capi_expired_sent_at"):
-                            pix_transaction.capi_expired_sent_at = timezone.now()
-                        if hasattr(pix_transaction, "capi_last_error"):
-                            pix_transaction.capi_last_error = None
-                        pix_transaction.save(update_fields=[f for f in [
-                            "capi_expired_event_id", "capi_expired_sent_at", "capi_last_error"
-                        ] if hasattr(pix_transaction, f)])
-                    else:
-                        if hasattr(pix_transaction, "capi_last_error"):
-                            pix_transaction.capi_last_error = f"expired capi fail: {resp}"
-                            pix_transaction.save(update_fields=["capi_last_error"])
-                except Exception as e:
-                    logger.warning(f"[CAPI-ERR] expired bookkeeping failed txid={txid} err={e}")
-            else:
-                logger.info(f"[CAPI-SKIP] event=PaymentExpired txid={txid} reason=idempotent")
+                    if pix_transaction.capi_expired_sent_at:
+                        should_send = False
+                except Exception:
+                    pass
+
+                if should_send:
+                    resp = send_capi("PaymentExpired", eid, etime, user_data, cd, action_source, event_source_url)
+                    try:
+                        if resp.get("ok"):
+                            if hasattr(pix_transaction, "capi_expired_event_id"):
+                                pix_transaction.capi_expired_event_id = eid
+                            if hasattr(pix_transaction, "capi_expired_sent_at"):
+                                pix_transaction.capi_expired_sent_at = timezone.now()
+                            if hasattr(pix_transaction, "capi_last_error"):
+                                pix_transaction.capi_last_error = None
+                            pix_transaction.save(update_fields=[f for f in [
+                                "capi_expired_event_id", "capi_expired_sent_at", "capi_last_error"
+                            ] if hasattr(pix_transaction, f)])
+                        else:
+                            if hasattr(pix_transaction, "capi_last_error"):
+                                pix_transaction.capi_last_error = f"expired capi fail: {resp}"
+                                pix_transaction.save(update_fields=["capi_last_error"])
+                    except Exception as e:
+                        logger.warning(f"[CAPI-ERR] expired bookkeeping failed txid={txid} err={e}")
+                else:
+                    logger.info(f"[CAPI-SKIP] event=PaymentExpired txid={txid} reason=idempotent")
 
         # Notificação local
-        from core.models import Notification  # ajuste se necessário
+        from core.models import Notification
         Notification.objects.create(
             user=pix_transaction.user,
             title="Pagamento Recebido" if pix_transaction.paid_at else ("Pagamento Expirado" if status == "EXPIRED" else "Pagamento Autorizado"),
