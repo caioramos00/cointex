@@ -1025,40 +1025,44 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
         except Exception:
             return default
 
-    def repair_fbc_if_needed(fbc: str, event_time_s: int) -> str:
+    # Substitua a função antiga por esta
+    FBC_PARSE_RE = re.compile(r"^fb\.1\.(\d{10,13})\.(.+)$")
+
+    def normalize_fbc(fbc_raw: str, event_time_s: int, fbclid_hint: str = None) -> str:
         """
-        Garante que o creation_time do fbc é válido e não está no futuro / à frente do event_time.
-        Retorna o fbc original ou reconstruído (mantendo fbclid).
+        Normaliza 'fbc' preservando o fbclid exatamente como veio (case-sensitive).
+        - Se o formato estiver inválido e houver fbclid_hint, reconstrói como fb.1.<event_time_ms>.<fbclid_hint>.
+        - Se o creation_time estiver no futuro, <=0 ou à frente de event_time, reconstrói mantendo o fbclid original.
+        - Nunca coloca fbclid em minúsculas e nunca trunca.
         """
-        if not fbc:
-            return ""
-        m = FBC_RE.match(fbc.strip())
+        if not fbc_raw:
+            return f"fb.1.{event_time_s * 1000}.{fbclid_hint}" if fbclid_hint else ""
+
+        raw = fbc_raw.strip()
+        m = FBC_PARSE_RE.match(raw)
         if not m:
-            return fbc
-        ct_raw, fbclid = m.group(1), m.group(2)
-        if len(ct_raw) == 13:
-            ct_s = _safe_int(ct_raw) // 1000
-        else:
-            ct_s = _safe_int(ct_raw)
+            # Formato inválido → só reconstrói se houver fbclid_hint
+            return (f"fb.1.{event_time_s * 1000}.{fbclid_hint}" if fbclid_hint else raw)
 
-        now_s = now_ts()
+        ct_raw, fbclid = m.group(1), m.group(2)  # NÃO alterar 'fbclid' (case/length)
+        try:
+            ct_s = int(ct_raw) // 1000 if len(ct_raw) == 13 else int(ct_raw)
+        except Exception:
+            # creation_time não numérico → reconstrói
+            return f"fb.1.{event_time_s * 1000}.{fbclid}"
+
+        now_s = int(time.time())
         FUTURE_FUZZ = 300
-        need_fix = False
+        invalid_ct = (ct_s <= 0) or (ct_s > now_s + FUTURE_FUZZ) or (ct_s > event_time_s + FUTURE_FUZZ)
 
-        if ct_s <= 0:
-            need_fix = True
-        elif ct_s > now_s + FUTURE_FUZZ:
-            need_fix = True
-        elif ct_s > event_time_s + FUTURE_FUZZ:
-            need_fix = True
-
-        base_ts = event_time_s or now_s
-        if need_fix:
-            fixed = f"fb.1.{base_ts * 1000}.{fbclid}"
-            logger.info("[CAPI-LOOKUP] fbc_repaired=1 base_ts=%s old_ct=%s fbclid_len=%s",
-                        base_ts, ct_raw, len(fbclid))
+        if invalid_ct:
+            fixed = f"fb.1.{event_time_s * 1000}.{fbclid}"
+            logger.info("[CAPI-LOOKUP] fbc_fixed=1 base_ts=%s old_ct=%s fbclid_len=%s", event_time_s, ct_raw, len(fbclid))
             return fixed
-        return fbc
+
+        # Válido → devolve o original 'raw' sem tocar em fbclid/case/tamanho
+        return raw
+
 
     # EMQ (proxy): conta de campos úteis presentes
     def compute_emq(user_data: dict) -> str:
@@ -1141,9 +1145,20 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
 
         # ========= Identificação do clique / decisão de pular CAPI =========
         txid   = pix_transaction.transaction_id or f"pix:{getattr(pix_transaction,'external_id', '') or pix_transaction.id}"
-        amount = float(pix_transaction.amount or 0)
         created_dt = getattr(pix_transaction, "created_at", None) or timezone.now()
 
+        def _to_float(x, default=0.0):
+            try:
+                return float(x)
+            except Exception:
+                return float(default)
+
+        amount = (
+            _to_float(pix_transaction.amount, 0.0)
+            if getattr(pix_transaction, "amount", None) not in (None, "")
+            else _to_float(data.get("total_amount") or data.get("totalAmount") or 0.0, 0.0)
+        )
+        
         user = pix_transaction.user
         tracking_id = getattr(user, 'tracking_id', '') or ''
         click_type  = getattr(user, 'click_type', '') or ''
@@ -1210,17 +1225,20 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
 
             # Campos plain (não hash)
             fbp = click.get('fbp') or (click.get('data') or {}).get('fbp')
-            fbc_raw = click.get('fbc') or (click.get('data') or {}).get('fbc')
-            fbc = repair_fbc_if_needed(fbc_raw, event_time_s) if fbc_raw else ""
+
+            # Pega fbc e (se houver) fbclid "cru" da Landing para usar como hint
+            fbc_raw      = click.get('fbc') or (click.get('data') or {}).get('fbc')
+            fbclid_hint  = click.get('fbclid') or ((click.get('context') or {}).get('fbclid'))
+            fbc          = normalize_fbc(fbc_raw, event_time_s, fbclid_hint)
 
             ip  = click.get('client_ip_address') or click.get('ip') or client_ip
             ua  = click.get('client_user_agent') or click.get('ua') or client_ua
 
-            # Derivar phone a partir de CTWA wa_id quando aplicável
+            # Deriva phone a partir do CTWA wa_id quando aplicável
             wa_id = click.get("wa_id") if t == "CTWA" else ""
             ph_norm = norm_phone_from_lp_or_wa(ph=click.get("ph", ""), wa_id=wa_id)
 
-            # País, estado, cidade, cep vindos da Landing
+            # País/estado/cidade/cep vindos da Landing
             country_norm = norm_country(click.get("country"))
             st_norm = norm_state(click.get("st"), country_norm or "br")
             ct_norm = norm_city(click.get("ct"))
@@ -1232,7 +1250,7 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
             ln_norm = norm_name(click.get("ln"))
             xid_norm = collapse_spaces(str(click.get("external_id") or ""))
 
-            # Campos plain
+            # Monta user_data
             user_data = {
                 "client_ip_address": (ip or "")[:100],
                 "client_user_agent": (ua or "")[:400],
@@ -1314,36 +1332,18 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
             except Exception:
                 return None
 
-        def send_utmify_order(
-            *, status_str: str, txid: str, amount_brl: float,
-            click_data: dict, created_at, approved_at=None,
-            payment_method: str = "pix", is_test: bool = False
-        ):
+        def send_utmify_order(*, status_str: str, txid: str, amount_brl: float,
+                      click_data: dict, created_at, approved_at=None,
+                      payment_method: str = "pix", is_test: bool = False):
             """
-            Envia um 'pedido' para a UTMify (API Credentials).
-            - status: waiting_payment | paid | refused | refunded | chargedback
-            - customer: inclui SEMPRE 'document' (string ou null)
-            - trackingParameters.src: SEMPRE string (nunca objeto)
+            Envia 'order' para UTMify com validações:
+            - Não envia se priceInCents <= 0 (p/ evitar pedidos zerados que viram -0,30).
+            - Sem bloco 'commission' (deixa a UTMify calcular internamente).
+            - Logs explícitos de UTMs e total em centavos.
             """
-
             if not UTMIFY_API_TOKEN:
                 logger.info("[UTMIFY-SKIP] reason=no_token txid=%s", txid)
                 return {"ok": False, "skipped": "no_token"}
-
-            # -------- helpers locais --------
-            ALLOWED_STATUS = {"waiting_payment", "paid", "refused", "refunded", "chargedback"}
-            STATUS_MAP = {
-                "approved": "paid",
-                "confirmed": "paid",
-                "authorized": "paid",
-                "expired": "refused",
-                "declined": "refused",
-            }
-            st = (status_str or "").strip().lower()
-            st = STATUS_MAP.get(st, st)
-            if st not in ALLOWED_STATUS:
-                logger.warning("[UTMIFY-WARN] txid=%s invalid_status=%s -> forcing=paid", txid, st)
-                st = "paid"
 
             def _iso8601(dt):
                 try:
@@ -1354,151 +1354,92 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
                 except Exception:
                     return None
 
-            def _to_iso2_country(val: str) -> str:
-                v = (val or "").strip()
-                # se vier hash, ignora
-                if is_sha256_hex(v):
-                    return "BR"
-                base = strip_accents_lower(v)
-                if len(base) == 2 and all(ch in ascii_letters for ch in base):
-                    return base.upper()
-                MAP = {
-                    "br": "BR", "brazil": "BR", "brasil": "BR",
-                    "us": "US", "usa": "US", "united states": "US",
-                    "mexico": "MX", "méxico": "MX",
-                    "argentina": "AR", "portugal": "PT",
-                }
-                return MAP.get(base, "BR")
+            def _safe_str(v):
+                return v if (isinstance(v, str) and v.strip()) else None
 
-            def _safe_document(click: dict):
-                # aceita document/cpf/doc em texto; se vier hash ou vazio, retorna None
-                for k in ("document", "cpf", "doc"):
-                    val = (click or {}).get(k)
-                    if val is None:
-                        continue
-                    s = str(val).strip()
-                    if not s or is_sha256_hex(s):
-                        continue
-                    # se tiver muitos não-dígitos, mantém como string crua; se for CPF/CEP-like, só dígitos
-                    digits = re.sub(r"\D+", "", s)
-                    return digits or s
-                return None
+            # ==== calcular total com segurança ====
+            try:
+                price_in_cents = int(round(float(amount_brl or 0) * 100))
+            except Exception:
+                price_in_cents = 0
 
-            def _is_ctwa(click: dict) -> bool:
-                c = click or {}
-                # heurística simples: presença de wa_id indica CTWA
-                return bool(c.get("wa_id"))
+            if price_in_cents <= 0:
+                logger.info("[UTMIFY-SKIP] txid=%s reason=non_positive_total amount_brl=%s price_cents=%s",
+                            txid, amount_brl, price_in_cents)
+                return {"ok": False, "skipped": "non_positive_total"}
 
-            def _extract_src(click: dict) -> str:
-                raw = (click or {}).get("network")
-                # string direta
-                if isinstance(raw, str) and raw.strip():
-                    return raw.strip()
-                # objeto: tenta campos comuns, senão usa fallback
-                if isinstance(raw, dict):
-                    for k in ("name", "source", "src", "provider"):
-                        v = raw.get(k)
-                        if isinstance(v, str) and v.strip():
-                            return v.strip()
-                return "ctwa" if _is_ctwa(click) else "website"
-
-            def _derive_customer(click: dict) -> dict:
-                click = click or {}
-
-                # nome: name || (fn + ln) se não forem hash
-                fn = click.get("fn") or ""
-                ln = click.get("ln") or ""
-                name = (click.get("name") or "").strip()
-                if not name:
-                    parts = []
-                    if fn and not is_sha256_hex(fn): parts.append(fn)
-                    if ln and not is_sha256_hex(ln): parts.append(ln)
-                    name = " ".join(p for p in parts if p).strip()
-                if not name:
-                    name = "Cliente Cointex"
-
-                # email: email || em_raw || em (se não for hash e tiver '@'); fallback válido
-                em = (click.get("email") or click.get("em_raw") or click.get("em") or "").strip()
-                if (not em) or is_sha256_hex(em) or ("@" not in em):
-                    em = f"unknown+{txid[:8]}@cointex.local"
-
-                # country: ISO2 uppercase
-                country = _to_iso2_country(click.get("country") or "BR")
-
-                # phone: aceita se não for hash; senão omite
-                phone = click.get("phone") or click.get("ph_raw") or click.get("ph")
-                if phone and is_sha256_hex(str(phone)):
-                    phone = None
-
-                # document: string ou null (sempre incluir a chave!)
-                document = _safe_document(click)
-
-                return {
-                    "name": name,
-                    "email": em,
-                    "phone": phone or None,
-                    "country": country,
-                    "document": document if (document is None or isinstance(document, str)) else None,
-                }
-
+            # ==== UTMs (string-only) ====
             utm = {}
             try:
                 utm = (click_data or {}).get("utm") or {}
             except Exception:
                 utm = {}
 
-            customer = _derive_customer(click_data)
+            # src precisa ser string; se vier objeto (ex.: info de rede), ignore
+            raw_src = (click_data or {}).get("network")
+            src_str = raw_src if isinstance(raw_src, str) else None
 
-            price_in_cents = int(round(float(amount_brl or 0) * 100))
+            # ==== cliente (apenas dados de clique/Landing) ====
+            customer = {
+                "name":   _safe_str((click_data or {}).get("name")) or "Cliente Cointex",
+                "email":  _safe_str((click_data or {}).get("email")) or f"unknown+{txid[:8]}@cointex.local",
+                "phone":  _safe_str((click_data or {}).get("phone") or (click_data or {}).get("ph_raw")),
+                "country": _safe_str((click_data or {}).get("country")) or "BR",
+                # document é requerido (string ou null) → usamos None por padrão
+                "document": _safe_str((click_data or {}).get("document")),
+            }
+
             products = [{
-                "id":       (click_data or {}).get("product_id")   or "pix_validation",
-                "name":     (click_data or {}).get("product_name") or "Taxa de validação - CoinTex",
-                "planId":   (click_data or {}).get("plan_id")      or None,
-                "planName": (click_data or {}).get("plan_name")    or None,
-                "quantity": 1,
+                "id":           (click_data or {}).get("product_id")   or "pix_validation",
+                "name":         (click_data or {}).get("product_name") or "Taxa de validação - CoinTex",
+                "planId":       _safe_str((click_data or {}).get("plan_id")),
+                "planName":     _safe_str((click_data or {}).get("plan_name")),
+                "quantity":     1,
                 "priceInCents": price_in_cents,
             }]
 
-            # src sempre string
-            src_str = _extract_src(click_data)
-
             payload = {
                 "isTest": bool(is_test),
-                "status": st,                      # paid | refused | ...
+                "status": status_str,              # "waiting_payment" | "paid" | "refused" | "refunded" | "chargedback"
                 "orderId": txid,
-                "customer": customer,              # inclui SEMPRE document
+                "customer": customer,
                 "platform": "Cointex",
                 "products": products,
                 "createdAt": _iso8601(created_at),
-                "commission": {
-                    "gatewayFeeInCents": 0,
-                    "totalPriceInCents": price_in_cents,
-                    "userCommissionInCents": 0
-                },
-                "refundedAt": None,
                 "approvedDate": _iso8601(approved_at) if approved_at else None,
                 "paymentMethod": payment_method,
                 "trackingParameters": {
                     "sck": None,
-                    "src": src_str,  # string garantida
-                    "utm_term":    utm.get("utm_term")    or None,
-                    "utm_medium":  utm.get("utm_medium")  or None,
-                    "utm_source":  utm.get("utm_source")  or None,
-                    "utm_content": utm.get("utm_content") or None,
-                    "utm_campaign":utm.get("utm_campaign")or None,
+                    "src": src_str,  # só string, senão None
+                    "utm_term":     _safe_str(utm.get("utm_term")),
+                    "utm_medium":   _safe_str(utm.get("utm_medium")),
+                    "utm_source":   _safe_str(utm.get("utm_source")),
+                    "utm_content":  _safe_str(utm.get("utm_content")),
+                    "utm_campaign": _safe_str(utm.get("utm_campaign")),
                 }
             }
+
+            # Logs ricos para auditoria
+            logger.info(
+                "[UTMIFY-PAYLOAD] txid=%s gross_cents=%s utm={source=%s,medium=%s,campaign=%s,content=%s,term=%s} src=%s",
+                txid, price_in_cents,
+                payload["trackingParameters"]["utm_source"],
+                payload["trackingParameters"]["utm_medium"],
+                payload["trackingParameters"]["utm_campaign"],
+                payload["trackingParameters"]["utm_content"],
+                payload["trackingParameters"]["utm_term"],
+                payload["trackingParameters"]["src"],
+            )
+            # (opcional) também logar o JSON completo:
+            try:
+                logger.debug("[UTMIFY-PAYLOAD-JSON] %s", json.dumps(payload, ensure_ascii=False))
+            except Exception:
+                pass
 
             headers = {
                 "Content-Type": "application/json",
                 "x-api-token": UTMIFY_API_TOKEN,
             }
-
-            try:
-                preview = json.dumps(payload)
-                logger.info("[UTMIFY-PAYLOAD] txid=%s %s", txid, (preview[:400] + ("..." if len(preview) > 400 else "")))
-            except Exception:
-                pass
 
             try:
                 resp = http_post(
