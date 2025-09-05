@@ -879,133 +879,23 @@ def _validate_webhook_signature(raw_body: bytes, header_signature: str) -> bool:
 
 def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
     """
-    Processa webhook de forma assíncrona (evita travar request).
+    Processa webhook de forma assíncrona.
     - Idempotência por transaction_id
     - Transições de status somente forward
     - Dispara CAPI:
         • Purchase quando pago (AUTHORIZED/RECEIVED/CONFIRMED)
         • PaymentExpired quando expira
-    - Logs específicos para CAPI (lookup, send, resp, skip, err)
-    - Log de EMQ (local) por evento, com breakdown de identificadores
+    - Pula CAPI para cliques orgânicos
+    - EMQ (Event Match Quality) estimado no log
+    - Deriva ph (hash) a partir do wa_id (CTWA) e normaliza fbc/creationTime
+    - Webhook genérico para UTMify (se configurado)
     """
+    from django.conf import settings
+    import os, json, time, re, hashlib
+    from django.db import transaction as dj_tx
+    from django.utils import timezone
+    from utils.http import http_get, http_post
 
-    # =========================
-    # Helpers de normalização / hash
-    # =========================
-    def _sha256(x: str) -> str:
-        import hashlib
-        return hashlib.sha256((x or "").encode("utf-8")).hexdigest()
-
-    def _strip_accents(s: str) -> str:
-        if not s:
-            return ""
-        nfkd = unicodedata.normalize("NFKD", s)
-        return "".join(ch for ch in nfkd if unicodedata.category(ch) != "Mn")
-
-    def _norm_spaces(s: str) -> str:
-        return re.sub(r"\s+", " ", (s or "").strip())
-
-    def _norm_email(em: str) -> str | None:
-        em = (em or "").strip().lower()
-        # email simples: precisa ter @ e pelo menos 1 ponto no domínio
-        if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", em):
-            return None
-        return em
-
-    def _norm_name(n: str) -> str | None:
-        n = _strip_accents(_norm_spaces(n)).lower()
-        # remove pontuação solta
-        n = re.sub(r"[^a-zà-ÿ\s\-']", " ", n)
-        n = _norm_spaces(n)
-        return n or None
-
-    def _only_digits(s: str) -> str:
-        return re.sub(r"\D+", "", s or "")
-
-    def _clean_wa_id(wa_id: str, default_cc: str = "") -> str | None:
-        """
-        Heurística conservadora p/ WhatsApp ID -> E.164-like digits.
-        - remove tudo que não é dígito
-        - remove zeros à esquerda
-        - se faltar DDI e houver default_cc configurado, prefixa
-        - rejeita se <7 ou >15 dígitos (faixa razoável de E.164)
-        """
-        d = _only_digits(wa_id).lstrip("0")
-        if not d:
-            return None
-
-        # Prefixa DDI se configurado e parecer número local (<= 11 dígitos é comum para BR sem DDI)
-        if default_cc and not d.startswith(default_cc) and len(d) <= 11:
-            d = f"{default_cc}{d}"
-
-        if len(d) < 7 or len(d) > 15:
-            return None
-        return d
-
-    def _norm_zip(zp: str) -> str | None:
-        # CEP/ZIP: apenas dígitos
-        zp = _only_digits(zp)
-        return zp or None
-
-    def _norm_city(s: str) -> str | None:
-        s = _norm_name(s or "")
-        return s
-
-    def _norm_state(s: str) -> str | None:
-        s = _strip_accents(_norm_spaces(s or "")).lower()
-        s = re.sub(r"[^a-z]", "", s)  # guarda apenas letras
-        return s or None
-
-    def _norm_country(c: str) -> str | None:
-        """
-        Retorna ISO-3166 alpha-2 lower (se possível). Mapeia variações comuns para BR e US.
-        """
-        m = (c or "").strip().lower()
-        aliases = {
-            "br": "br", "bra": "br", "brazil": "br", "brasil": "br",
-            "us": "us", "usa": "us", "united states": "us", "estados unidos": "us",
-        }
-        if m in aliases:
-            return aliases[m]
-        # 2 letras já é ok (ex.: 'pt', 'es', 'ar')
-        if re.match(r"^[a-z]{2}$", m):
-            return m
-        return None
-
-    def _safe_add_hashed(ud: dict, key: str, raw: str | None, normalizer, must_hash=True):
-        if raw is None:
-            return
-        norm = normalizer(raw)
-        if not norm:
-            return
-        ud[key] = _sha256(norm) if must_hash else norm
-
-    # EMQ: pesos heurísticos (máx ~10)
-    _EMQ_WEIGHTS = {
-        "ph": 2.0, "em": 2.0,
-        "fbc": 1.0, "fbp": 1.0,
-        "fn": 0.5, "ln": 0.5,
-        "ct": 0.25, "st": 0.25, "zp": 0.25, "country": 0.25,
-        "client_ip_address": 1.0, "client_user_agent": 1.0,
-        "external_id": 0.5,  # baixo peso, pode não ser PII
-    }
-
-    def _compute_emq_score(ud: dict) -> tuple[float, dict]:
-        present = {}
-        score = 0.0
-        for k, w in _EMQ_WEIGHTS.items():
-            has = (k in ud) and bool(ud.get(k))
-            present[k] = int(has)
-            if has:
-                score += w
-        # normaliza para escala 0..10
-        max_score = sum(_EMQ_WEIGHTS.values())
-        scaled = round(10.0 * score / max_score, 2) if max_score else 0.0
-        return scaled, present
-
-    # =========================
-    # Fluxo original
-    # =========================
     try:
         transaction_id = data.get('id')
         status = (data.get('status') or '').upper().strip()
@@ -1032,7 +922,7 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
                 pix_transaction.paid_at = timezone.now()
             pix_transaction.save(update_fields=['status', 'paid_at'] if pix_transaction.paid_at else ['status'])
 
-            # cache PIX (mesma lógica de antes)
+            # Atualiza cache PIX (best-effort)
             try:
                 from utils.pix_cache import get_cached_pix, set_cached_pix
                 u_id = pix_transaction.user_id
@@ -1046,6 +936,7 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
             except Exception as e:
                 logger.warning(f"update pix cache on webhook failed: {e}")
 
+        # Helpers de settings/env
         def _settings(name, default=""):
             return getattr(settings, name, os.getenv(name, default))
 
@@ -1055,9 +946,9 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
         TEST_CODE     = _settings('CAPI_TEST_EVENT_CODE', '')
         GRAPH_URL     = f"https://graph.facebook.com/{GRAPH_VERSION}/{PIXEL_ID}/events"
 
-        LOOKUP_URL    = _settings('LANDING_LOOKUP_URL', 'https://grupo-whatsapp-trampos-lara-2025.onrender.com/capi/lookup')
-        LOOKUP_TOKEN  = _settings('LANDING_LOOKUP_TOKEN', '')
-        DEFAULT_CC    = _settings('CAPI_DEFAULT_COUNTRY_CODE', '')  # ex.: '55' se quiser prefixar BR em CTWA sem DDI
+        # UTMify (opcional)
+        UTMIFY_URL   = _settings("UTMIFY_WEBHOOK_URL", "")
+        UTMIFY_TOKEN = _settings("UTMIFY_API_KEY", "")
 
         def event_id_for(kind: str, txid: str) -> str:
             return f"{kind}_{txid}"
@@ -1066,8 +957,128 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
             x = (x or "")
             return x if len(x) <= n else x[:n] + "...(trunc)"
 
-        def send_capi(event_name: str, event_id: str, event_time: int, user_data: dict, custom_data: dict,
-                      action_source: str, event_source_url: str):
+        # -------- Helpers de identificação / EMQ --------
+        _NON_DIGITS = re.compile(r"\D+")
+
+        def _clean_wa_id(wa: str) -> str:
+            """
+            Normaliza wa_id para E.164-like (só dígitos). Heurística BR:
+            - remove não-dígitos, zeros à esquerda
+            - se 10-11 dígitos e sem DDI, prefixa 55
+            """
+            if not wa:
+                return ""
+            d = _NON_DIGITS.sub("", str(wa))
+            d = d.lstrip("0")
+            if len(d) in (10, 11) and not d.startswith("55"):
+                d = "55" + d
+            return d
+
+        def _meta_sha256(s: str) -> str:
+            """Hash SHA-256 lowercase conforme Meta (para em, ph, fn, ln, ct, st, zp, country)."""
+            s = (s or "").strip().lower()
+            if not s:
+                return ""
+            return hashlib.sha256(s.encode("utf-8")).hexdigest()
+
+        def _parse_fbc_ts_secs(fbc: str):
+            """
+            Extrai creationTime do FBC (segundos). Aceita 10 ou 13 dígitos.
+            Retorna int ou None.
+            """
+            if not fbc or "." not in fbc:
+                return None
+            parts = fbc.split(".")
+            for p in parts:
+                if p.isdigit() and len(p) in (10, 13):
+                    ts = int(p)
+                    if len(p) == 13:
+                        ts //= 1000
+                    return ts
+            return None
+
+        def _repair_fbc(fbc: str, fbclid: str, click_event_ts, event_ts: int) -> str:
+            """
+            Repara FBC inconsistente (ausente/futuro/à frente de event_time).
+            Se necessário, reconstrói: fb.1.<ts_ms>.<fbclid>, usando click_event_ts (ou event_ts).
+            """
+            if not fbc and not fbclid:
+                return None
+
+            now_ts = int(time.time())
+            ts = _parse_fbc_ts_secs(fbc or "")
+            too_old  = lambda t: t and t < 1262304000       # < 2010-01-01
+            too_new  = lambda t: t and t > now_ts + 300
+            ahead_ev = lambda t: t and t > event_ts + 300
+
+            if not ts or too_old(ts) or too_new(ts) or ahead_ev(ts):
+                base_ts = int(click_event_ts or min(event_ts, now_ts))
+                if not fbclid:
+                    return None
+                return f"fb.1.{base_ts * 1000}.{fbclid}"
+            return fbc
+
+        def _estimate_emq(user_data: dict):
+            """
+            Estima EMQ pra logging:
+            Pesos: fbc=5, fbp=4, em=4, ph=4, external_id=3, fn/ln/ct/st/zp/country=1.
+            Retorna (level, score, ids_presentes).
+            """
+            weights = {
+                "fbc": 5, "fbp": 4, "em": 4, "ph": 4,
+                "external_id": 3,
+                "fn": 1, "ln": 1, "ct": 1, "st": 1, "zp": 1, "country": 1
+            }
+            present = [k for k, v in (user_data or {}).items() if v]
+            score = sum(weights.get(k, 0) for k in present)
+            level = "low"
+            if score >= 11:
+                level = "high"
+            elif score >= 7:
+                level = "medium"
+            return level, score, sorted(present)
+
+        def build_user_data(click: dict, click_type: str, event_ts: int) -> dict:
+            """
+            Monta user_data somente com dados vindos da Landing/CTWA:
+            - LP: usa hashes já fornecidos (em, ph, fn, ln, ct, st, zp, country, external_id)
+            - CTWA: deriva ph (hash) a partir do wa_id higienizado (E.164-like) + SHA-256
+            - Ambos: fbp/fbc (com reparo), IP/UA com fallback do request
+            """
+            click = click or {}
+            ip  = click.get('client_ip_address') or click.get('ip') or client_ip
+            ua  = click.get('client_user_agent') or click.get('ua') or client_ua
+
+            fbp    = click.get('fbp') or (click.get('data') or {}).get('fbp')
+            raw_fbc = click.get('fbc') or (click.get('data') or {}).get('fbc')
+            fbclid = click.get('fbclid')
+            try:
+                click_ts = int(click.get("event_time")) if click.get("event_time") else None
+            except Exception:
+                click_ts = None
+
+            fbc = _repair_fbc(raw_fbc, fbclid, click_ts, event_ts)
+
+            ud = {"client_ip_address": ip, "client_user_agent": ua}
+            if fbp: ud["fbp"] = fbp
+            if fbc: ud["fbc"] = fbc
+
+            # LP: campos já hashed vindos da landing
+            for k in ("em","ph","fn","ln","ct","st","zp","country","external_id"):
+                v = click.get(k) or (click.get("data") or {}).get(k)
+                if v:
+                    ud[k] = v
+
+            # CTWA: deriva ph de wa_id
+            if (click_type or "").upper() == "CTWA":
+                wa = click.get("wa_id") or ""
+                cleaned = _clean_wa_id(wa)
+                if len(cleaned) >= 10:
+                    ud["ph"] = _meta_sha256(cleaned)
+
+            return ud
+
+        def send_capi(event_name: str, event_id: str, event_time: int, user_data: dict, custom_data: dict, action_source: str, source_url: str):
             """Envia 1 evento para a CAPI e retorna dict com ok/status/text."""
             if not PIXEL_ID or not CAPI_TOKEN:
                 msg = "missing pixel/token"
@@ -1078,7 +1089,7 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
                 "data": [{
                     "event_name": event_name,
                     "event_time": int(event_time),
-                    "event_source_url": event_source_url or "https://www.cointex.cash/",
+                    "event_source_url": source_url or "https://www.cointex.cash/withdraw-validation/",
                     "action_source": action_source or "website",
                     "event_id": event_id,
                     "user_data": user_data,
@@ -1088,24 +1099,12 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
             if TEST_CODE:
                 payload["test_event_code"] = TEST_CODE
 
-            emq_score, emq_present = _compute_emq_score(user_data)
+            emq_level, emq_score, emq_ids = _estimate_emq(user_data)
             logger.info(
-                "[EMQ] event=%s txid=%s score=%.2f/10 ids ph=%d em=%d fbc=%d fbp=%d fn=%d ln=%d ct=%d st=%d zp=%d country=%d ip=%d ua=%d extid=%d",
-                event_name, txid, emq_score,
-                emq_present.get("ph",0), emq_present.get("em",0),
-                emq_present.get("fbc",0), emq_present.get("fbp",0),
-                emq_present.get("fn",0), emq_present.get("ln",0),
-                emq_present.get("ct",0), emq_present.get("st",0),
-                emq_present.get("zp",0), emq_present.get("country",0),
-                emq_present.get("client_ip_address",0), emq_present.get("client_user_agent",0),
-                emq_present.get("external_id",0),
-            )
-
-            logger.info(
-                "[CAPI-SEND] event=%s txid=%s eid=%s amount=%s fbp=%s fbc=%s action_source=%s",
-                event_name, txid, event_id, custom_data.get('value'),
-                bool(user_data.get('fbp')), bool(user_data.get('fbc')),
-                action_source
+                "[CAPI-SEND] event=%s txid=%s eid=%s amount=%s action_source=%s emq_level=%s emq_score=%s emq_ids=%s fbp=%s fbc=%s",
+                event_name, txid, event_id, custom_data.get('value'), action_source,
+                emq_level, emq_score, emq_ids,
+                bool(user_data.get('fbp')), bool(user_data.get('fbc'))
             )
 
             resp = http_post(
@@ -1120,21 +1119,60 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
             logger.info(f"[CAPI-RESP] event={event_name} txid={txid} status={status} body={text}")
             return {"ok": status == 200, "status": status, "text": text}
 
-        # =========================
-        # Lookup + construção do user_data (somente dados da Landing/CTWA)
-        # =========================
+        def _send_utmify(kind: str, txid: str, amount: float, click_type: str, click: dict, emq: dict):
+            """Webhook genérico para UTMify (best-effort)."""
+            if not UTMIFY_URL or not UTMIFY_TOKEN:
+                return
+            try:
+                utm = click.get("utm") or {}
+                payload = {
+                    "event": "purchase" if kind == "purchase" else "payment_expired",
+                    "transaction_id": txid,
+                    "value": amount,
+                    "currency": "BRL",
+                    "click_type": (click_type or "").upper() or "UNKNOWN",
+                    "source_url": click.get("source_url") or click.get("page_url"),
+                    "fb": {
+                        "fbc": click.get("fbc"),
+                        "fbp": click.get("fbp"),
+                        "fbclid": click.get("fbclid"),
+                    },
+                    "utm": {
+                        "source": utm.get("source"),
+                        "medium": utm.get("medium"),
+                        "campaign": utm.get("campaign"),
+                        "content": utm.get("content"),
+                        "term": utm.get("term"),
+                    },
+                    "ads": click.get("ads") or {},
+                    "context": click.get("context") or {},
+                    "network": click.get("network") or {},
+                    "emq": emq,
+                    "timestamp": int(time.time()),
+                }
+                headers = {"Authorization": f"Bearer {UTMIFY_TOKEN}", "Content-Type": "application/json"}
+                r = http_post(UTMIFY_URL, headers=headers, json=payload, timeout=(2, 6), measure="utmify/webhook")
+                logger.info("utmify.webhook kind=%s txid=%s status=%s", kind, txid, getattr(r, "status_code", 0))
+            except Exception as e:
+                logger.warning("utmify.webhook error kind=%s txid=%s err=%s", kind, txid, e)
+
+        # ===== Dados do usuário e clique =====
         user = pix_transaction.user
         tracking_id = getattr(user, 'tracking_id', '') or ''
-        click_type  = (getattr(user, 'click_type', '') or '').upper()
+        click_type = getattr(user, 'click_type', '') or ''
 
-        # Pula CAPI se orgânico
-        if click_type in ("ORGANICO", "ORGÂNICO", "ORGANIC"):
-            logger.info("[CAPI-SKIP] event=all txid=%s reason=organic_click", transaction_id)
+        # Identificação de transação/valor para logs
+        txid   = pix_transaction.transaction_id or f"pix:{getattr(pix_transaction,'external_id', '') or pix_transaction.id}"
+        amount = float(pix_transaction.amount or 0)
+
+        # Pula totalmente cliques orgânicos (sem lookup e sem CAPI)
+        if (click_type or "").strip().lower().startswith("org"):
+            logger.info("[CAPI-SKIP] event=all txid=%s reason=organic_click", txid)
             return
 
         logger.info("[CAPI-LOOKUP] call kind=%s id=%s", (click_type or 'UNKNOWN'), tracking_id)
 
-        # Usa capi.lookup_click que você já integrou
+        # Busca dados do clique (LP/CTWA) via capi.lookup (módulo capi.py)
         click_data = lookup_click(tracking_id, click_type) if tracking_id else {}
 
         keys = list(click_data.keys()) if isinstance(click_data, dict) else []
@@ -1145,15 +1183,15 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
             int(bool(click_data.get('fbc'))) if isinstance(click_data, dict) else 0
         )
 
-        # Diagnóstico CTWA se vazio
+        # Diagnóstico extra para CTWA vazio (consulta Redis e /debug)
         try:
-            if click_type == "CTWA" and tracking_id and not click_data:
-                base_lookup = LOOKUP_URL
+            if (click_type or "").upper() == "CTWA" and tracking_id and not click_data:
+                base_lookup = _settings('LANDING_LOOKUP_URL', '')
                 if base_lookup.endswith("/capi/lookup"):
                     base_lookup = base_lookup[: -len("/capi/lookup")]
                 resp = http_get(
                     f"{base_lookup}/ctwa/get",
-                    headers={"X-Lookup-Token": LOOKUP_TOKEN} if LOOKUP_TOKEN else None,
+                    headers={"X-Lookup-Token": _settings('LANDING_LOOKUP_TOKEN', '')} if _settings('LANDING_LOOKUP_TOKEN', '') else None,
                     params={"ctwa_clid": tracking_id},
                     timeout=(2, 5),
                     measure="landing/ctwa_get"
@@ -1161,10 +1199,11 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
                 sc = getattr(resp, "status_code", 0)
                 body = (getattr(resp, "text", "") or "")[:400].replace("\n", " ")
                 logger.info("[CAPI-LOOKUP] diag ctwa-redis status=%s body=%s", sc, body)
+
                 try:
                     resp2 = http_get(
                         f"{base_lookup}/debug/ctwa/{tracking_id}",
-                        headers={"X-Lookup-Token": LOOKUP_TOKEN} if LOOKUP_TOKEN else None,
+                        headers={"X-Lookup-Token": _settings('LANDING_LOOKUP_TOKEN', '')} if _settings('LANDING_LOOKUP_TOKEN', '') else None,
                         timeout=(2, 5),
                         measure="landing/ctwa_debug"
                     )
@@ -1176,59 +1215,14 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
         except Exception as e:
             logger.warning("[CAPI-LOOKUP] diag ctwa error=%s", e)
 
-        # ==== build user_data ====
-        # Base sempre: ip/ua + fbp/fbc (se existirem)
-        ud = {
-            "client_ip_address": (click_data.get('client_ip_address') or client_ip),
-            "client_user_agent": (click_data.get('client_user_agent') or client_ua),
-        }
-        if click_data.get("fbp"):
-            ud["fbp"] = click_data["fbp"]
-        if click_data.get("fbc"):
-            ud["fbc"] = click_data["fbc"]
-
-        event_source_url = "https://www.cointex.cash/"
-        action_source = "website"
-
-        if click_type == "CTWA":
-            # Deriva ph a partir do wa_id, limpando antes
-            wa_id = click_data.get("wa_id") or ""
-            cleaned = _clean_wa_id(wa_id, DEFAULT_CC)
-            if cleaned:
-                _safe_add_hashed(ud, "ph", cleaned, lambda x: x)  # já está só dígitos
-            action_source = "chat"
-            event_source_url = click_data.get("source_url") or event_source_url
-
-        else:
-            # LP: aproveita campos da Landing (sem dados da Cointex)
-            # email
-            _safe_add_hashed(ud, "em", click_data.get("em"), _norm_email)
-            # phone
-            _safe_add_hashed(ud, "ph", click_data.get("ph"), lambda s: _only_digits(s))
-            # first/last name
-            _safe_add_hashed(ud, "fn", click_data.get("fn"), _norm_name)
-            _safe_add_hashed(ud, "ln", click_data.get("ln"), _norm_name)
-            # city/state/zip/country
-            _safe_add_hashed(ud, "ct", click_data.get("ct"), _norm_city)
-            _safe_add_hashed(ud, "st", click_data.get("st"), _norm_state)
-            _safe_add_hashed(ud, "zp", click_data.get("zp"), _norm_zip)
-            _safe_add_hashed(ud, "country", click_data.get("country"), _norm_country)
-            # external_id (se vier da LP; peso baixo)
-            _safe_add_hashed(ud, "external_id", click_data.get("external_id"), _norm_spaces)
-
-            action_source = (click_data.get("action_source") or "website")
-            event_source_url = click_data.get("page_url") or event_source_url
-
-        # =========================
-        # Envio CAPI
-        # =========================
-        txid   = pix_transaction.transaction_id or f"pix:{getattr(pix_transaction,'external_id', '') or pix_transaction.id}"
-        amount = float(pix_transaction.amount or 0)
-
+        # ===== Disparo CAPI =====
         if pix_transaction.paid_at and status in ('AUTHORIZED', 'RECEIVED', 'CONFIRMED'):
             eid   = event_id_for('purchase', txid)
             etime = int((pix_transaction.paid_at or timezone.now()).timestamp())
+            ud    = build_user_data(click_data, click_type, etime)
             cd    = {"value": amount, "currency": "BRL"}
+            action_source   = "chat" if (click_type or "").upper() == "CTWA" else "website"
+            event_source_url = (click_data or {}).get("source_url") or (click_data or {}).get("page_url") or "https://www.cointex.cash/withdraw-validation/"
 
             should_send = True
             try:
@@ -1238,6 +1232,7 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
                 pass
 
             if should_send:
+                emq_level, emq_score, emq_ids = _estimate_emq(ud)
                 resp = send_capi("Purchase", eid, etime, ud, cd, action_source, event_source_url)
                 try:
                     if resp.get("ok"):
@@ -1250,6 +1245,10 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
                         pix_transaction.save(update_fields=[f for f in [
                             "capi_purchase_event_id", "capi_purchase_sent_at", "capi_last_error"
                         ] if hasattr(pix_transaction, f)])
+                        # UTMify (best-effort)
+                        _send_utmify("purchase", txid, amount, click_type, click_data or {}, {
+                            "level": emq_level, "score": emq_score, "ids": emq_ids
+                        })
                     else:
                         if hasattr(pix_transaction, "capi_last_error"):
                             pix_transaction.capi_last_error = f"purchase capi fail: {resp}"
@@ -1262,28 +1261,45 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
         if status == 'EXPIRED':
             eid   = event_id_for('expire', txid)
             etime = int(timezone.now().timestamp())
+            ud    = build_user_data(click_data, click_type, etime)
             cd    = {"value": amount, "currency": "BRL", "transaction_id": txid}
-            # Para expiração, mantemos mesmo action_source/url do clique
-            resp = send_capi("PaymentExpired", eid, etime, ud, cd, action_source, event_source_url)
-            try:
-                if resp.get("ok"):
-                    if hasattr(pix_transaction, "capi_expired_event_id"):
-                        pix_transaction.capi_expired_event_id = eid
-                    if hasattr(pix_transaction, "capi_expired_sent_at"):
-                        pix_transaction.capi_expired_sent_at = timezone.now()
-                    if hasattr(pix_transaction, "capi_last_error"):
-                        pix_transaction.capi_last_error = None
-                    pix_transaction.save(update_fields=[f for f in [
-                        "capi_expired_event_id", "capi_expired_sent_at", "capi_last_error"
-                    ] if hasattr(pix_transaction, f)])
-                else:
-                    if hasattr(pix_transaction, "capi_last_error"):
-                        pix_transaction.capi_last_error = f"expired capi fail: {resp}"
-                        pix_transaction.save(update_fields=["capi_last_error"])
-            except Exception as e:
-                logger.warning(f"[CAPI-ERR] expired bookkeeping failed txid={txid} err={e}")
+            action_source   = "chat" if (click_type or "").upper() == "CTWA" else "website"
+            event_source_url = (click_data or {}).get("source_url") or (click_data or {}).get("page_url") or "https://www.cointex.cash/withdraw-validation/"
 
-        # Notificação (igual de antes)
+            should_send = True
+            try:
+                if pix_transaction.capi_expired_sent_at:
+                    should_send = False
+            except Exception:
+                pass
+
+            if should_send:
+                emq_level, emq_score, emq_ids = _estimate_emq(ud)
+                resp = send_capi("PaymentExpired", eid, etime, ud, cd, action_source, event_source_url)
+                try:
+                    if resp.get("ok"):
+                        if hasattr(pix_transaction, "capi_expired_event_id"):
+                            pix_transaction.capi_expired_event_id = eid
+                        if hasattr(pix_transaction, "capi_expired_sent_at"):
+                            pix_transaction.capi_expired_sent_at = timezone.now()
+                        if hasattr(pix_transaction, "capi_last_error"):
+                            pix_transaction.capi_last_error = None
+                        pix_transaction.save(update_fields=[f for f in [
+                            "capi_expired_event_id", "capi_expired_sent_at", "capi_last_error"
+                        ] if hasattr(pix_transaction, f)])
+                        _send_utmify("expired", txid, amount, click_type, click_data or {}, {
+                            "level": emq_level, "score": emq_score, "ids": emq_ids
+                        })
+                    else:
+                        if hasattr(pix_transaction, "capi_last_error"):
+                            pix_transaction.capi_last_error = f"expired capi fail: {resp}"
+                            pix_transaction.save(update_fields=["capi_last_error"])
+                except Exception as e:
+                    logger.warning(f"[CAPI-ERR] expired bookkeeping failed txid={txid} err={e}")
+            else:
+                logger.info(f"[CAPI-SKIP] event=PaymentExpired txid={txid} reason=idempotent")
+
+        # Notificação para o usuário
         Notification.objects.create(
             user=pix_transaction.user,
             title="Pagamento Recebido" if pix_transaction.paid_at else ("Pagamento Expirado" if status == "EXPIRED" else "Pagamento Autorizado"),
