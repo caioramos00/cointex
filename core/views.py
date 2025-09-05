@@ -1013,62 +1013,38 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
         norm = normalizer(value)
         return sha256_hex(norm) if norm else ""
 
-    # Reparo do fbc (creation_time) e parse
-    FBC_RE = re.compile(r"^fb\.1\.(\d{10,13})\.(.+)$")
-
-    def now_ts() -> int:
-        return int(time.time())
-
-    def _safe_int(x, default: int = 0) -> int:
-        try:
-            return int(x)
-        except Exception:
-            return default
-
-    # Substitua a função antiga por esta
+    # ===== fbc: consertar creation_time sem mexer no fbclid =====
     FBC_PARSE_RE = re.compile(r"^fb\.1\.(\d{10,13})\.(.+)$")
 
     def normalize_fbc(fbc_raw: str, event_time_s: int, fbclid_hint: str = None) -> str:
         """
-        Normaliza 'fbc' preservando o fbclid exatamente como veio (case-sensitive).
-        - Se o formato estiver inválido e houver fbclid_hint, reconstrói como fb.1.<event_time_ms>.<fbclid_hint>.
-        - Se o creation_time estiver no futuro, <=0 ou à frente de event_time, reconstrói mantendo o fbclid original.
-        - Nunca coloca fbclid em minúsculas e nunca trunca.
+        Normaliza 'fbc' preservando o fbclid exatamente como veio (case/length).
+        - Se formato inválido e houver fbclid_hint, reconstrói como fb.1.<event_time_ms>.<fbclid_hint>.
+        - Se o creation_time estiver inválido/futuro/à frente do event_time, reconstrói mantendo fbclid original.
+        - Nunca minúscula nem trunca.
         """
         if not fbc_raw:
             return f"fb.1.{event_time_s * 1000}.{fbclid_hint}" if fbclid_hint else ""
-
         raw = fbc_raw.strip()
         m = FBC_PARSE_RE.match(raw)
         if not m:
-            # Formato inválido → só reconstrói se houver fbclid_hint
             return (f"fb.1.{event_time_s * 1000}.{fbclid_hint}" if fbclid_hint else raw)
-
-        ct_raw, fbclid = m.group(1), m.group(2)  # NÃO alterar 'fbclid' (case/length)
+        ct_raw, fbclid = m.group(1), m.group(2)
         try:
             ct_s = int(ct_raw) // 1000 if len(ct_raw) == 13 else int(ct_raw)
         except Exception:
-            # creation_time não numérico → reconstrói
             return f"fb.1.{event_time_s * 1000}.{fbclid}"
-
         now_s = int(time.time())
         FUTURE_FUZZ = 300
-        invalid_ct = (ct_s <= 0) or (ct_s > now_s + FUTURE_FUZZ) or (ct_s > event_time_s + FUTURE_FUZZ)
-
-        if invalid_ct:
+        invalid = (ct_s <= 0) or (ct_s > now_s + FUTURE_FUZZ) or (ct_s > event_time_s + FUTURE_FUZZ)
+        if invalid:
             fixed = f"fb.1.{event_time_s * 1000}.{fbclid}"
             logger.info("[CAPI-LOOKUP] fbc_fixed=1 base_ts=%s old_ct=%s fbclid_len=%s", event_time_s, ct_raw, len(fbclid))
             return fixed
-
-        # Válido → devolve o original 'raw' sem tocar em fbclid/case/tamanho
         return raw
 
-
-    # EMQ (proxy): conta de campos úteis presentes
+    # EMQ (proxy): diagnóstico
     def compute_emq(user_data: dict) -> str:
-        """
-        Proxy simples p/ diagnóstico. (Não é o EMQ oficial da Meta.)
-        """
         hashed_keys = ["em", "ph", "fn", "ln", "ct", "st", "zp", "country", "external_id"]
         plain_keys  = ["client_ip_address", "client_user_agent", "fbc", "fbp"]
         present_h = sum(1 for k in hashed_keys if user_data.get(k))
@@ -1133,8 +1109,10 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
         LOOKUP_URL    = _settings('LANDING_LOOKUP_URL', 'https://grupo-whatsapp-trampos-lara-2025.onrender.com').rstrip("/")
         LOOKUP_TOKEN  = _settings('LANDING_LOOKUP_TOKEN', '')
 
-        UTMIFY_API_TOKEN = _settings('UTMIFY_API_TOKEN', '')
-        UTMIFY_ENDPOINT  = _settings('UTMIFY_ENDPOINT', 'https://api.utmify.com.br/api-credentials/orders')
+        UTMIFY_API_TOKEN             = _settings('UTMIFY_API_TOKEN', '')
+        UTMIFY_ENDPOINT              = _settings('UTMIFY_ENDPOINT', 'https://api.utmify.com.br/api-credentials/orders')
+        UTMIFY_GATEWAY_FEE_CENTS     = int(os.getenv('UTMIFY_GATEWAY_FEE_CENTS', '0') or 0)
+        UTMIFY_USER_COMMISSION_CENTS = int(os.getenv('UTMIFY_USER_COMMISSION_CENTS', '0') or 0)
 
         def event_id_for(kind: str, txid: str) -> str:
             return f"{kind}_{txid}"
@@ -1158,7 +1136,7 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
             if getattr(pix_transaction, "amount", None) not in (None, "")
             else _to_float(data.get("total_amount") or data.get("totalAmount") or 0.0, 0.0)
         )
-        
+
         user = pix_transaction.user
         tracking_id = getattr(user, 'tracking_id', '') or ''
         click_type  = getattr(user, 'click_type', '') or ''
@@ -1169,7 +1147,7 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
         if skip_capi:
             logger.info("[CAPI-SKIP] event=all txid=%s reason=organic_click", txid)
 
-        # ========= Busca click data (usa função centralizada) =========
+        # ========= Busca click data =========
         from .capi import lookup_click
         click_data = lookup_click(tracking_id, click_type) if tracking_id else {}
 
@@ -1210,7 +1188,7 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
         except Exception as e:
             logger.warning("[CAPI-LOOKUP] diag ctwa error=%s", e)
 
-        # ========= Montagem action_source / source_url =========
+        # ========= action_source / source_url =========
         if (click_type or "").upper() == "CTWA":
             action_source = "chat"
             event_source_url = click_data.get("source_url") or "https://www.cointex.cash/withdraw-validation/"
@@ -1218,39 +1196,35 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
             action_source = "website"
             event_source_url = click_data.get("page_url") or "https://www.cointex.cash/withdraw-validation/"
 
-        # ========= Montagem do user_data (com hash obrigatório) =========
+        # ========= user_data (com hash obrigatório) =========
         def build_user_data(click: dict, click_type: str, event_time_s: int) -> (dict, str):
             click = click or {}
             t = (click_type or "").upper()
 
             # Campos plain (não hash)
             fbp = click.get('fbp') or (click.get('data') or {}).get('fbp')
-
-            # Pega fbc e (se houver) fbclid "cru" da Landing para usar como hint
-            fbc_raw      = click.get('fbc') or (click.get('data') or {}).get('fbc')
-            fbclid_hint  = click.get('fbclid') or ((click.get('context') or {}).get('fbclid'))
-            fbc          = normalize_fbc(fbc_raw, event_time_s, fbclid_hint)
+            fbc_raw     = click.get('fbc') or (click.get('data') or {}).get('fbc')
+            fbclid_hint = click.get('fbclid') or ((click.get('context') or {}).get('fbclid'))
+            fbc         = normalize_fbc(fbc_raw, event_time_s, fbclid_hint)
 
             ip  = click.get('client_ip_address') or click.get('ip') or client_ip
             ua  = click.get('client_user_agent') or click.get('ua') or client_ua
 
-            # Deriva phone a partir do CTWA wa_id quando aplicável
+            # Deriva phone de wa_id (CTWA)
             wa_id = click.get("wa_id") if t == "CTWA" else ""
             ph_norm = norm_phone_from_lp_or_wa(ph=click.get("ph", ""), wa_id=wa_id)
 
-            # País/estado/cidade/cep vindos da Landing
+            # Geo & nomes (LP)
             country_norm = norm_country(click.get("country"))
             st_norm = norm_state(click.get("st"), country_norm or "br")
             ct_norm = norm_city(click.get("ct"))
             zp_norm = norm_zip(click.get("zp"))
 
-            # Email / Names (LP)
             em_norm = norm_email(click.get("em"))
             fn_norm = norm_name(click.get("fn"))
             ln_norm = norm_name(click.get("ln"))
             xid_norm = collapse_spaces(str(click.get("external_id") or ""))
 
-            # Monta user_data
             user_data = {
                 "client_ip_address": (ip or "")[:100],
                 "client_user_agent": (ua or "")[:400],
@@ -1258,7 +1232,7 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
             if fbp: user_data["fbp"] = fbp
             if fbc: user_data["fbc"] = fbc
 
-            # Campos hash obrigatórios
+            # Campos hash
             if click.get("em") or em_norm:
                 user_data["em"] = hash_if_needed(click.get("em") or em_norm, norm_email)
             if ph_norm or click.get("ph"):
@@ -1298,8 +1272,7 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
                     "event_id": event_id,
                     "user_data": user_data,
                     "custom_data": custom_data or {}
-                }]
-            }
+                }]}
             if TEST_CODE:
                 payload["test_event_code"] = TEST_CODE
 
@@ -1333,31 +1306,22 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
                 return None
 
         def send_utmify_order(*, status_str: str, txid: str, amount_brl: float,
-                      click_data: dict, created_at, approved_at=None,
-                      payment_method: str = "pix", is_test: bool = False):
+                              click_data: dict, created_at, approved_at=None,
+                              payment_method: str = "pix", is_test: bool = False):
             """
             Envia 'order' para UTMify com validações:
-            - Não envia se priceInCents <= 0 (p/ evitar pedidos zerados que viram -0,30).
-            - Sem bloco 'commission' (deixa a UTMify calcular internamente).
+            - Não envia se priceInCents <= 0 (para evitar pedidos zerados que virem -0,30).
+            - Inclui bloco 'commission' obrigatório (usa envs para taxas).
+            - Força country ISO2 MAIÚSCULO; 'src' precisa ser string.
             - Logs explícitos de UTMs e total em centavos.
             """
             if not UTMIFY_API_TOKEN:
                 logger.info("[UTMIFY-SKIP] reason=no_token txid=%s", txid)
                 return {"ok": False, "skipped": "no_token"}
 
-            def _iso8601(dt):
-                try:
-                    if not dt.tzinfo:
-                        from django.utils import timezone as _tz
-                        dt = _tz.make_aware(dt, _tz.get_current_timezone())
-                    return dt.isoformat()
-                except Exception:
-                    return None
-
             def _safe_str(v):
                 return v if (isinstance(v, str) and v.strip()) else None
 
-            # ==== calcular total com segurança ====
             try:
                 price_in_cents = int(round(float(amount_brl or 0) * 100))
             except Exception:
@@ -1368,25 +1332,26 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
                             txid, amount_brl, price_in_cents)
                 return {"ok": False, "skipped": "non_positive_total"}
 
-            # ==== UTMs (string-only) ====
+            # UTMs
             utm = {}
             try:
                 utm = (click_data or {}).get("utm") or {}
             except Exception:
                 utm = {}
 
-            # src precisa ser string; se vier objeto (ex.: info de rede), ignore
             raw_src = (click_data or {}).get("network")
             src_str = raw_src if isinstance(raw_src, str) else None
 
-            # ==== cliente (apenas dados de clique/Landing) ====
+            # Cliente: só dados da Landing; country sempre 2 letras maiúsculas
+            country_raw = _safe_str((click_data or {}).get("country")) or "BR"
+            country_iso2 = (country_raw[:2] if len(country_raw) >= 2 else country_raw).upper()
+
             customer = {
-                "name":   _safe_str((click_data or {}).get("name")) or "Cliente Cointex",
-                "email":  _safe_str((click_data or {}).get("email")) or f"unknown+{txid[:8]}@cointex.local",
-                "phone":  _safe_str((click_data or {}).get("phone") or (click_data or {}).get("ph_raw")),
-                "country": _safe_str((click_data or {}).get("country")) or "BR",
-                # document é requerido (string ou null) → usamos None por padrão
-                "document": _safe_str((click_data or {}).get("document")),
+                "name":     _safe_str((click_data or {}).get("name")) or "Cliente Cointex",
+                "email":    _safe_str((click_data or {}).get("email")) or f"unknown+{txid[:8]}@cointex.local",
+                "phone":    _safe_str((click_data or {}).get("phone") or (click_data or {}).get("ph_raw")),
+                "country":  country_iso2,
+                "document": _safe_str((click_data or {}).get("document")),  # string ou null
             }
 
             products = [{
@@ -1408,9 +1373,14 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
                 "createdAt": _iso8601(created_at),
                 "approvedDate": _iso8601(approved_at) if approved_at else None,
                 "paymentMethod": payment_method,
+                "commission": {
+                    "gatewayFeeInCents": UTMIFY_GATEWAY_FEE_CENTS,
+                    "totalPriceInCents": price_in_cents,
+                    "userCommissionInCents": UTMIFY_USER_COMMISSION_CENTS
+                },
                 "trackingParameters": {
                     "sck": None,
-                    "src": src_str,  # só string, senão None
+                    "src": src_str,  # só string; se objeto → None
                     "utm_term":     _safe_str(utm.get("utm_term")),
                     "utm_medium":   _safe_str(utm.get("utm_medium")),
                     "utm_source":   _safe_str(utm.get("utm_source")),
@@ -1419,7 +1389,6 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
                 }
             }
 
-            # Logs ricos para auditoria
             logger.info(
                 "[UTMIFY-PAYLOAD] txid=%s gross_cents=%s utm={source=%s,medium=%s,campaign=%s,content=%s,term=%s} src=%s",
                 txid, price_in_cents,
@@ -1430,16 +1399,12 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
                 payload["trackingParameters"]["utm_term"],
                 payload["trackingParameters"]["src"],
             )
-            # (opcional) também logar o JSON completo:
             try:
                 logger.debug("[UTMIFY-PAYLOAD-JSON] %s", json.dumps(payload, ensure_ascii=False))
             except Exception:
                 pass
 
-            headers = {
-                "Content-Type": "application/json",
-                "x-api-token": UTMIFY_API_TOKEN,
-            }
+            headers = {"Content-Type": "application/json", "x-api-token": UTMIFY_API_TOKEN}
 
             try:
                 resp = http_post(
@@ -1469,9 +1434,9 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
 
         # ====== PURCHASE (pago) ======
         if pix_transaction.paid_at and status in ('AUTHORIZED', 'RECEIVED', 'CONFIRMED'):
-            # UTMify sempre (independe de pular CAPI)
+            # UTMify: usar 'paid'
             send_utmify_order(
-                status_str="approved",
+                status_str="paid",
                 txid=txid,
                 amount_brl=amount,
                 click_data=click_data,
@@ -1481,7 +1446,7 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
                 is_test=False
             )
 
-            # CAPI somente se não estiver skipado
+            # CAPI se não pulado
             if not skip_capi:
                 eid   = event_id_for('purchase', txid)
                 etime = base_event_ts
@@ -1518,9 +1483,9 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
 
         # ====== EXPIRED ======
         if status == 'EXPIRED':
-            # UTMify sempre
+            # UTMify: mapear para 'refused'
             send_utmify_order(
-                status_str="expired",
+                status_str="refused",
                 txid=txid,
                 amount_brl=amount,
                 click_data=click_data,
@@ -1530,7 +1495,7 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
                 is_test=False
             )
 
-            # CAPI somente se não estiver skipado
+            # CAPI se não pulado
             if not skip_capi:
                 eid   = event_id_for('expire', txid)
                 etime = int(timezone.now().timestamp())
