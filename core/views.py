@@ -1,4 +1,4 @@
-import os, json, hmac, hashlib, logging, threading
+import os, json, hmac, hashlib, logging, threading, re, time
 from decimal import InvalidOperation, Decimal
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
@@ -11,12 +11,12 @@ from django.contrib.auth import update_session_auth_hash
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.cache import cache_page
-from django.db import transaction
+from django.db import transaction as dj_tx
 from django.urls import reverse
 from django.core.cache import cache
 from django.conf import settings
 
-from utils.http import http_get, http_post, http_put, http_delete
+from utils.http import http_get, http_post
 from utils.pix_cache import get_cached_pix, set_cached_pix, with_user_pix_lock
 from accounts.models import *
 from .capi import lookup_click
@@ -882,17 +882,68 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
     Processa webhook de forma assíncrona (evita travar request).
     - Idempotência por transaction_id
     - Transições de status somente forward
-    - Dispara CAPI:
+    - Dispara CAPI (exceto Orgânico):
         • Purchase quando pago (AUTHORIZED/RECEIVED/CONFIRMED)
         • PaymentExpired quando expira
-    - Logs específicos para CAPI (lookup, send, resp, skip, err)
+    - Ajusta action_source/event_source_url por tipo de clique (LP vs CTWA)
+    - Monta e (opcionalmente) envia payload genérico para UTMify
+    - Logs específicos para CAPI/UTMify (lookup, send, resp, skip, err)
     """
-    from django.conf import settings
-    import os, json
-    from django.db import transaction as dj_tx
-    from django.utils import timezone
-    from utils.http import http_get, http_post
 
+    # ===== Helpers de normalização/hash (Meta guidelines) =====
+    def _sha256_hex(s: str) -> str:
+        return hashlib.sha256((s or "").encode("utf-8")).hexdigest()
+
+    def _norm_str(s: str) -> str:
+        # lower + strip + normalização unicode básica
+        s = (s or "").strip().lower()
+        try:
+            s = unicodedata.normalize("NFKC", s)
+        except Exception:
+            pass
+        return s
+
+    def _norm_email_for_meta(em: str) -> str:
+        # email: lower/trim, sem hashear aqui (hash acontece ao montar user_data)
+        return _norm_str(em)
+
+    def _only_digits(s: str) -> str:
+        return re.sub(r"\D+", "", s or "")
+
+    def _norm_phone_e164_digits(s: str) -> str:
+        """
+        Conversions API (ph): enviar apenas DÍGITOS, com DDI, sem '+', sem espaços/letras.
+        Ex.: '+55 11 91234-5678' -> '5511912345678'
+        """
+        return _only_digits(s)
+
+    def _derive_ph_from_waid(wa_id: str) -> str:
+        """
+        CTWA: wa_id normalmente já vem em E.164 dígitos com DDI (ex.: '5511999998888').
+        Mantemos apenas dígitos e we hash posteriormente.
+        """
+        return _norm_phone_e164_digits(wa_id)
+
+    def _norm_city(s: str) -> str:
+        # city: lowercase/trim (Meta aceita acentuação), sem números supérfluos
+        return _norm_str(s)
+
+    def _norm_state(s: str) -> str:
+        # state: usar UF/abreviação quando possível (ex.: 'SP', 'rj'); deixamos lowercase
+        return _norm_str(s)
+
+    def _norm_zip(s: str) -> str:
+        # zip/postcode: remover espaços/pontos/hífens -> dígitos/alfanum compactos
+        return re.sub(r"\s|-|\.", "", (s or "")).strip().lower()
+
+    def _norm_country_iso2(s: str) -> str:
+        # country: ISO-3166 alpha-2, lowercase (ex.: 'br')
+        return (_norm_str(s) or "")[:2]
+
+    def _mask(tok: str) -> str:
+        return (tok[:4] + "…" + tok[-4:]) if tok else ""
+
+    # ===== Início fluxo =====
     try:
         transaction_id = data.get('id')
         status = (data.get('status') or '').upper().strip()
@@ -919,6 +970,7 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
                 pix_transaction.paid_at = timezone.now()
             pix_transaction.save(update_fields=['status', 'paid_at'] if pix_transaction.paid_at else ['status'])
 
+            # Cache PIX (não crítico)
             try:
                 from utils.pix_cache import get_cached_pix, set_cached_pix
                 u_id = pix_transaction.user_id
@@ -932,6 +984,7 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
             except Exception as e:
                 logger.warning(f"update pix cache on webhook failed: {e}")
 
+        # ===== Settings/URLs =====
         def _settings(name, default=""):
             return getattr(settings, name, os.getenv(name, default))
 
@@ -941,9 +994,10 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
         TEST_CODE     = _settings('CAPI_TEST_EVENT_CODE', '')
         GRAPH_URL     = f"https://graph.facebook.com/{GRAPH_VERSION}/{PIXEL_ID}/events"
 
-        LOOKUP_URL    = _settings('LANDING_LOOKUP_URL', 'https://grupo-whatsapp-trampos-lara-2025.onrender.com/capi/lookup')
-        LOOKUP_TOKEN  = _settings('LANDING_LOOKUP_TOKEN', '')
+        UTMIFY_URL    = _settings('UTMIFY_WEBHOOK_URL', '')     # ex.: https://api.utmify.com.br/webhook
+        UTMIFY_TOKEN  = _settings('UTMIFY_API_TOKEN', '')       # token da Credencial de API
 
+        # ===== Utilitários de envio =====
         def event_id_for(kind: str, txid: str) -> str:
             return f"{kind}_{txid}"
 
@@ -951,72 +1005,90 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
             x = (x or "")
             return x if len(x) <= n else x[:n] + "...(trunc)"
 
-        def fetch_click_data(tracking_id: str) -> dict:
+        # ===== Lookup do clique (sem dados de cadastro) =====
+        user = pix_transaction.user
+        tracking_id = getattr(user, 'tracking_id', '') or ''
+        click_type  = (getattr(user, 'click_type', '') or '').strip()
+
+        logger.info("[CAPI-LOOKUP] call kind=%s id=%s", (click_type or 'UNKNOWN'), tracking_id)
+
+        # LP/CTWA unified
+        click_data = lookup_click(tracking_id, click_type) if tracking_id else {}
+        keys = list(click_data.keys()) if isinstance(click_data, dict) else []
+        logger.info(
+            "[CAPI-LOOKUP] result ok=%s keys=%s has_fbp=%s has_fbc=%s",
+            bool(click_data), len(keys),
+            int(bool(isinstance(click_data, dict) and click_data.get('fbp'))),
+            int(bool(isinstance(click_data, dict) and click_data.get('fbc')))
+        )
+
+        # ===== Construção do user_data (apenas dados do clique) =====
+        def build_user_data_for_meta(click: dict, ctype: str) -> tuple[dict, str, str]:
             """
-            Busca dados do clique na Landing:
-              - PG-first (/capi/lookup) com header X-Lookup-Token
-              - fallback para /capi/get-click?tid=...
-            Retorna dict com fbp, fbc, client_ip_address, client_user_agent, page_url, event_time...
+            Retorna (user_data, action_source, event_source_url)
+            - CTWA: action_source='chat'; event_source_url=source_url (quando houver)
+                    ph = sha256(E164 dígitos do wa_id)
+            - LP:   action_source='website'; event_source_url=page_url
+                    normaliza em/fn/ln/ct/st/zp/country e hashea (SHA-256)
             """
-            if not tracking_id:
-                logger.info("[CAPI-LOOKUP] skip: empty tracking_id")
-                return {}
+            ctype_up = (ctype or "").upper()
+            ud = {}
+            action_source = "website"
+            event_source_url = None
 
-            try:
-                r = http_get(
-                    LOOKUP_URL,
-                    headers={"X-Lookup-Token": LOOKUP_TOKEN} if LOOKUP_TOKEN else None,
-                    params={"tid": tracking_id},
-                    timeout=(2, 5),
-                    measure="landing/lookup"
-                )
-                sc = getattr(r, "status_code", 0)
-                if sc == 200:
-                    js = r.json() or {}
-                    data = js.get("data") or {}
-                    logger.info(f"[CAPI-LOOKUP] source=pg tid={tracking_id} ok=1 keys={list(data.keys())}")
-                    if data:
-                        return data
-                else:
-                    logger.warning(f"[CAPI-LOOKUP] source=pg tid={tracking_id} status={sc} body={_trunc(getattr(r,'text',''))}")
-            except Exception as e:
-                logger.warning(f"[CAPI-LOOKUP] source=pg tid={tracking_id} error={e}")
+            # Comuns (quando existirem no clique)
+            fbp = click.get('fbp') or (click.get('data') or {}).get('fbp')
+            fbc = click.get('fbc') or (click.get('data') or {}).get('fbc')
+            if fbp: ud['fbp'] = _norm_str(fbp)
+            if fbc: ud['fbc'] = _norm_str(fbc)
 
-            try:
-                r = http_get(
-                    'https://grupo-whatsapp-trampos-lara-2025.onrender.com/capi/get-click',
-                    params={"tid": tracking_id},
-                    timeout=(2, 5),
-                    measure="capi/get-click"
-                )
-                sc = getattr(r, "status_code", 0)
-                if sc == 200:
-                    js = r.json() or {}
-                    data = js.get("data") or js
-                    logger.info(f"[CAPI-LOOKUP] source=legacy tid={tracking_id} ok=1 keys={list((data or {}).keys())}")
-                    return data or {}
-                else:
-                    logger.warning(f"[CAPI-LOOKUP] source=legacy tid={tracking_id} status={sc} body={_trunc(getattr(r,'text',''))}")
-            except Exception as e:
-                logger.warning(f"[CAPI-LOOKUP] source=legacy tid={tracking_id} error={e}")
+            # IP/UA (fallback para request)
+            ip = click.get('client_ip_address') or click.get('ip') or client_ip
+            ua = click.get('client_user_agent') or click.get('ua') or client_ua
+            if ip: ud['client_ip_address'] = ip
+            if ua: ud['client_user_agent'] = ua
 
-            logger.warning(f"[CAPI-LOOKUP] miss tid={tracking_id}")
-            return {}
+            if ctype_up == "CTWA":
+                action_source = "chat"  # Meta allowed values incluem 'chat'
+                event_source_url = click.get('source_url') or click.get('page_url')
 
-        def build_user_data(click: dict) -> dict:
-            """Monta user_data para CAPI (fbp/fbc/IP/UA) com fallbacks do request."""
-            fbp = click.get('fbp') or click.get('data', {}).get('fbp')
-            fbc = click.get('fbc') or click.get('data', {}).get('fbc')
-            ip  = click.get('client_ip_address') or click.get('ip') or client_ip
-            ua  = click.get('client_user_agent') or click.get('ua') or client_ua
+                wa_id = click.get('wa_id') or ""
+                ph_digits = _derive_ph_from_waid(wa_id)
+                if ph_digits:
+                    ud['ph'] = _sha256_hex(ph_digits)  # hash SHA-256 do E.164 dígitos (sem '+')
+                # CTWA geralmente não traz em/fn/ln/ct/st/zp/country — não inferimos do cadastro
 
-            ud = {"client_ip_address": ip, "client_user_agent": ua}
-            if fbp: ud["fbp"] = fbp
-            if fbc: ud["fbc"] = fbc
-            return ud
+            else:
+                action_source = "website"
+                event_source_url = click.get('page_url') or click.get('source_url')
 
-        def send_capi(event_name: str, event_id: str, event_time: int, user_data: dict, custom_data: dict):
-            """Envia 1 evento para a CAPI e retorna dict com ok/status/text."""
+                # Normalizações LP → hashes
+                em = click.get('em') or (click.get('data') or {}).get('em')
+                if em:
+                    ud['em'] = _sha256_hex(_norm_email_for_meta(em))
+
+                fn = click.get('fn') or (click.get('data') or {}).get('fn')
+                ln = click.get('ln') or (click.get('data') or {}).get('ln')
+                if fn:
+                    ud['fn'] = _sha256_hex(_norm_str(fn))
+                if ln:
+                    ud['ln'] = _sha256_hex(_norm_str(ln))
+
+                ct = click.get('ct') or (click.get('data') or {}).get('ct')
+                st = click.get('st') or (click.get('data') or {}).get('st')
+                zp = click.get('zp') or (click.get('data') or {}).get('zp')
+                country = click.get('country') or (click.get('data') or {}).get('country')
+
+                if ct:      ud['ct'] = _sha256_hex(_norm_city(ct))
+                if st:      ud['st'] = _sha256_hex(_norm_state(st))
+                if zp:      ud['zp'] = _sha256_hex(_norm_zip(zp))
+                if country: ud['country'] = _sha256_hex(_norm_country_iso2(country))
+
+            return ud, action_source, event_source_url
+
+        # ===== Envio CAPI =====
+        def send_capi(event_name: str, event_id: str, event_time: int, user_data: dict,
+                      custom_data: dict, action_source: str, event_source_url: str):
             if not PIXEL_ID or not CAPI_TOKEN:
                 msg = "missing pixel/token"
                 logger.warning(f"[CAPI-ERR] {event_name} txid={txid} reason={msg}")
@@ -1026,8 +1098,8 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
                 "data": [{
                     "event_name": event_name,
                     "event_time": int(event_time),
-                    "event_source_url": "https://www.cointex.cash/withdraw-validation/",
-                    "action_source": "website",
+                    "event_source_url": event_source_url or "https://www.cointex.cash/withdraw-validation/",
+                    "action_source": action_source or "website",
                     "event_id": event_id,
                     "user_data": user_data,
                     "custom_data": custom_data or {}
@@ -1036,7 +1108,12 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
             if TEST_CODE:
                 payload["test_event_code"] = TEST_CODE
 
-            logger.info(f"[CAPI-SEND] event={event_name} txid={txid} eid={event_id} amount={custom_data.get('value')} fbp={bool(user_data.get('fbp'))} fbc={bool(user_data.get('fbc'))}")
+            logger.info(
+                "[CAPI-SEND] event=%s txid=%s eid=%s amount=%s fbp=%s fbc=%s action_source=%s",
+                event_name, txid, event_id, custom_data.get('value'),
+                bool((user_data or {}).get('fbp')), bool((user_data or {}).get('fbc')),
+                action_source
+            )
 
             resp = http_post(
                 GRAPH_URL,
@@ -1047,153 +1124,192 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
             )
             status = getattr(resp, "status_code", 0)
             text   = _trunc(getattr(resp, "text", ""))
-            logger.info(f"[CAPI-RESP] event={event_name} txid={txid} status={status} body={text}")
+            logger.info("[CAPI-RESP] event=%s txid=%s status=%s body=%s", event_name, txid, status, text)
             return {"ok": status == 200, "status": status, "text": text}
 
-        user = pix_transaction.user
-        tracking_id = getattr(user, 'tracking_id', '') or ''
-        click_type  = getattr(user, 'click_type', '') or ''
+        # ===== UTMify: montar payload genérico + envio opcional =====
+        def build_utmify_payload(evt: str, txid: str, amount: float, ctype: str, click: dict, paid_at):
+            """
+            Payload genérico para UTMify.
+            Observações:
+            - UTMify usa utm_content=telefone para casar WhatsApp↔️venda; enviamos phone_raw quando disponível.
+            - Enviamos fbc/fbp/fbclid e page/source_url como contexto.
+            - Autenticação: header Authorization: Bearer <UTMIFY_API_TOKEN>.
+            """
+            utm = click.get('utm') or {}
+            # alguns setups guardam utms “flat”
+            for k in ['utm_source','utm_medium','utm_campaign','utm_content','utm_term']:
+                if k in click and k not in utm:
+                    utm[k] = click.get(k)
 
-        logger.info("[CAPI-LOOKUP] call kind=%s id=%s", (click_type or 'UNKNOWN'), tracking_id)
+            payload = {
+                "event": evt,  # "purchase" | "expired"
+                "event_time": int((paid_at or timezone.now()).timestamp()),
+                "transaction": {
+                    "id": txid,
+                    "value": float(amount or 0),
+                    "currency": "BRL"
+                },
+                "click": {
+                    "type": (ctype or "").upper() or "UNKNOWN",
+                    "tid": click.get('tid') or click.get('ctwa_clid'),
+                    "page_url": click.get('page_url') or click.get('source_url'),
+                    "source_url": click.get('source_url'),
+                    "network": (click.get('network') or {}).get('name') if isinstance(click.get('network'), dict) else click.get('network'),
+                },
+                "ids": {
+                    "fbc": click.get('fbc'),
+                    "fbp": click.get('fbp'),
+                    "fbclid": click.get('fbclid'),
+                    # para UTMify casar com WhatsApp, priorizamos telefone em claro
+                    "phone_raw": click.get('ph') or click.get('phone') or click.get('wa_id')
+                },
+                "utm": {
+                    "utm_source": utm.get('utm_source'),
+                    "utm_medium": utm.get('utm_medium'),
+                    "utm_campaign": utm.get('utm_campaign'),
+                    "utm_content": utm.get('utm_content'),
+                    "utm_term": utm.get('utm_term'),
+                },
+                "extra": click.get('extra') or {}
+            }
+            return payload
 
-        # === PULAR CAPI PARA ORGÂNICO ===
-        ctype = (click_type or "").strip().upper()
-        skip_capi = ctype in ("ORGÂNICO", "ORGANICO", "ORGANIC")
-        if skip_capi:
-            logger.info("[CAPI-SKIP] reason=organic click_type=%s", click_type)
-            click_data = {}
-        else:
-            click_data = lookup_click(tracking_id, click_type) if tracking_id else {}
+        def send_utmify(payload: dict):
+            if not (UTMIFY_URL and UTMIFY_TOKEN):
+                logger.info("[UTMIFY-SKIP] reason=missing_url_or_token url=%s token=%s",
+                            UTMIFY_URL, bool(UTMIFY_TOKEN))
+                return {"ok": False, "status": 0, "text": "missing url/token"}
+            headers = {
+                "Authorization": f"Bearer {UTMIFY_TOKEN}",
+                "Content-Type": "application/json"
+            }
+            resp = http_post(
+                UTMIFY_URL,
+                headers=headers,
+                json=payload,
+                timeout=(2, 8),
+                measure="utmify/webhook"
+            )
+            status = getattr(resp, "status_code", 0)
+            text   = _trunc(getattr(resp, "text", ""))
+            logger.info("[UTMIFY-RESP] status=%s body=%s", status, text)
+            return {"ok": 200 <= status < 300, "status": status, "text": text}
 
-        keys = list(click_data.keys()) if isinstance(click_data, dict) else []
-        logger.info(
-            "[CAPI-LOOKUP] result ok=%s keys=%s has_fbp=%s has_fbc=%s",
-            bool(click_data), len(keys),
-            int(bool(click_data.get('fbp'))) if isinstance(click_data, dict) else 0,
-            int(bool(click_data.get('fbc'))) if isinstance(click_data, dict) else 0
-        )
-
-        # === DIAGNÓSTICO CTWA QUANDO VEM VAZIO ===
-        try:
-            if (click_type or "").upper() == "CTWA" and tracking_id and not click_data and not skip_capi:
-                # Normaliza base do lookup
-                base_lookup = LOOKUP_URL
-                if base_lookup.endswith("/capi/lookup"):
-                    base_lookup = base_lookup[: -len("/capi/lookup")]
-                # Bate direto no Redis da Landing
-                resp = http_get(
-                    f"{base_lookup}/ctwa/get",
-                    headers={"X-Lookup-Token": LOOKUP_TOKEN} if LOOKUP_TOKEN else None,
-                    params={"ctwa_clid": tracking_id},
-                    timeout=(2, 5),
-                    measure="landing/ctwa_get"
-                )
-                sc = getattr(resp, "status_code", 0)
-                body = (getattr(resp, "text", "") or "")[:400].replace("\n", " ")
-                logger.info("[CAPI-LOOKUP] diag ctwa-redis status=%s body=%s", sc, body)
-
-                # (opcional) tenta também o /debug/ctwa/:id se existir
-                try:
-                    resp2 = http_get(
-                        f"{base_lookup}/debug/ctwa/{tracking_id}",
-                        headers={"X-Lookup-Token": LOOKUP_TOKEN} if LOOKUP_TOKEN else None,
-                        timeout=(2, 5),
-                        measure="landing/ctwa_debug"
-                    )
-                    sc2 = getattr(resp2, "status_code", 0)
-                    body2 = (getattr(resp2, "text", "") or "")[:400].replace("\n", " ")
-                    logger.info("[CAPI-LOOKUP] diag ctwa-debug status=%s body=%s", sc2, body2)
-                except Exception as e2:
-                    logger.warning("[CAPI-LOOKUP] diag ctwa-debug error=%s", e2)
-        except Exception as e:
-            logger.warning("[CAPI-LOOKUP] diag ctwa error=%s", e)
-
+        # ===== Lógica de disparo =====
         txid   = pix_transaction.transaction_id or f"pix:{getattr(pix_transaction,'external_id', '') or pix_transaction.id}"
         amount = float(pix_transaction.amount or 0)
+        paid   = bool(pix_transaction.paid_at)
+        etime_paid = int((pix_transaction.paid_at or timezone.now()).timestamp())
 
-        if pix_transaction.paid_at and status in ('AUTHORIZED', 'RECEIVED', 'CONFIRMED'):
-            if not skip_capi:
-                eid   = event_id_for('purchase', txid)
-                etime = int((pix_transaction.paid_at or timezone.now()).timestamp())
-                ud    = build_user_data(click_data)
-                cd    = {"value": amount, "currency": "BRL"}
+        # 1) Definir user_data/action_source/event_source_url
+        user_data, action_source, event_src_url = build_user_data_for_meta(click_data, click_type)
 
-                should_send = True
+        # 2) Pular CAPI quando clique for Orgânico
+        if (click_type or "").upper() == "ORGÂNICO":
+            logger.info("[CAPI-SKIP] event=all txid=%s reason=organic_click", txid)
+            # Ainda assim, podemos notificar UTMify (opcional)
+            try:
+                utm_payload = build_utmify_payload(
+                    "expired" if status == "EXPIRED" else ("purchase" if paid else "authorized"),
+                    txid, amount, click_type, click_data, pix_transaction.paid_at
+                )
+                send_utmify(utm_payload)
+            except Exception as e:
+                logger.warning(f"[UTMIFY-ERR] build/send failed txid={txid} err={e}")
+            # Aviso ao usuário
+            Notification.objects.create(
+                user=pix_transaction.user,
+                title="Pagamento Recebido" if paid else ("Pagamento Expirado" if status == "EXPIRED" else "Pagamento Autorizado"),
+                message=("Seu pagamento foi confirmado com sucesso." if paid else
+                         ("Seu QR Code expirou sem pagamento." if status == "EXPIRED" else "Seu pagamento foi autorizado e está sendo processado."))
+            )
+            return
+
+        # 3) Enviar CAPI (Purchase / PaymentExpired)
+        if paid and status in ('AUTHORIZED', 'RECEIVED', 'CONFIRMED'):
+            eid = event_id_for('purchase', txid)
+            cd  = {"value": amount, "currency": "BRL"}
+            # idempotência
+            should_send = True
+            try:
+                if pix_transaction.capi_purchase_sent_at:
+                    should_send = False
+            except Exception:
+                pass
+
+            if should_send:
+                resp = send_capi("Purchase", eid, etime_paid, user_data, cd, action_source, event_src_url)
                 try:
-                    if pix_transaction.capi_purchase_sent_at:
-                        should_send = False
-                except Exception:
-                    pass
-
-                if should_send:
-                    resp = send_capi("Purchase", eid, etime, ud, cd)
-                    try:
-                        if resp.get("ok"):
-                            if hasattr(pix_transaction, "capi_purchase_event_id"):
-                                pix_transaction.capi_purchase_event_id = eid
-                            if hasattr(pix_transaction, "capi_purchase_sent_at"):
-                                pix_transaction.capi_purchase_sent_at = timezone.now()
-                            if hasattr(pix_transaction, "capi_last_error"):
-                                pix_transaction.capi_last_error = None
-                            pix_transaction.save(update_fields=[f for f in [
-                                "capi_purchase_event_id", "capi_purchase_sent_at", "capi_last_error"
-                            ] if hasattr(pix_transaction, f)])
-                        else:
-                            if hasattr(pix_transaction, "capi_last_error"):
-                                pix_transaction.capi_last_error = f"purchase capi fail: {resp}"
-                                pix_transaction.save(update_fields=["capi_last_error"])
-                    except Exception as e:
-                        logger.warning(f"[CAPI-ERR] purchase bookkeeping failed txid={txid} err={e}")
-                else:
-                    logger.info(f"[CAPI-SKIP] event=Purchase txid={txid} reason=idempotent")
+                    if resp.get("ok"):
+                        if hasattr(pix_transaction, "capi_purchase_event_id"):
+                            pix_transaction.capi_purchase_event_id = eid
+                        if hasattr(pix_transaction, "capi_purchase_sent_at"):
+                            pix_transaction.capi_purchase_sent_at = timezone.now()
+                        if hasattr(pix_transaction, "capi_last_error"):
+                            pix_transaction.capi_last_error = None
+                        pix_transaction.save(update_fields=[f for f in [
+                            "capi_purchase_event_id", "capi_purchase_sent_at", "capi_last_error"
+                        ] if hasattr(pix_transaction, f)])
+                    else:
+                        if hasattr(pix_transaction, "capi_last_error"):
+                            pix_transaction.capi_last_error = f"purchase capi fail: {resp}"
+                            pix_transaction.save(update_fields=["capi_last_error"])
+                except Exception as e:
+                    logger.warning(f"[CAPI-ERR] purchase bookkeeping failed txid={txid} err={e}")
             else:
-                logger.info("[CAPI-SKIP] event=Purchase txid=%s reason=organic", txid)
+                logger.info(f"[CAPI-SKIP] event=Purchase txid={txid} reason=idempotent")
 
         if status == 'EXPIRED':
-            if not skip_capi:
-                eid   = event_id_for('expire', txid)
-                etime = int(timezone.now().timestamp())
-                ud    = build_user_data(click_data)
-                cd    = {"value": amount, "currency": "BRL", "transaction_id": txid}
+            eid = event_id_for('expire', txid)
+            et  = int(timezone.now().timestamp())
+            cd  = {"value": amount, "currency": "BRL", "transaction_id": txid}
 
-                should_send = True
+            should_send = True
+            try:
+                if pix_transaction.capi_expired_sent_at:
+                    should_send = False
+            except Exception:
+                pass
+
+            if should_send:
+                resp = send_capi("PaymentExpired", eid, et, user_data, cd, action_source, event_src_url)
                 try:
-                    if pix_transaction.capi_expired_sent_at:
-                        should_send = False
-                except Exception:
-                    pass
-
-                if should_send:
-                    resp = send_capi("PaymentExpired", eid, etime, ud, cd)
-                    try:
-                        if resp.get("ok"):
-                            if hasattr(pix_transaction, "capi_expired_event_id"):
-                                pix_transaction.capi_expired_event_id = eid
-                            if hasattr(pix_transaction, "capi_expired_sent_at"):
-                                pix_transaction.capi_expired_sent_at = timezone.now()
-                            if hasattr(pix_transaction, "capi_last_error"):
-                                pix_transaction.capi_last_error = None
-                            pix_transaction.save(update_fields=[f for f in [
-                                "capi_expired_event_id", "capi_expired_sent_at", "capi_last_error"
-                            ] if hasattr(pix_transaction, f)])
-                        else:
-                            if hasattr(pix_transaction, "capi_last_error"):
-                                pix_transaction.capi_last_error = f"expired capi fail: {resp}"
-                                pix_transaction.save(update_fields=["capi_last_error"])
-                    except Exception as e:
-                        logger.warning(f"[CAPI-ERR] expired bookkeeping failed txid={txid} err={e}")
-                else:
-                    logger.info(f"[CAPI-SKIP] event=PaymentExpired txid={txid} reason=idempotent")
+                    if resp.get("ok"):
+                        if hasattr(pix_transaction, "capi_expired_event_id"):
+                            pix_transaction.capi_expired_event_id = eid
+                        if hasattr(pix_transaction, "capi_expired_sent_at"):
+                            pix_transaction.capi_expired_sent_at = timezone.now()
+                        if hasattr(pix_transaction, "capi_last_error"):
+                            pix_transaction.capi_last_error = None
+                        pix_transaction.save(update_fields=[f for f in [
+                            "capi_expired_event_id", "capi_expired_sent_at", "capi_last_error"
+                        ] if hasattr(pix_transaction, f)])
+                    else:
+                        if hasattr(pix_transaction, "capi_last_error"):
+                            pix_transaction.capi_last_error = f"expired capi fail: {resp}"
+                            pix_transaction.save(update_fields=["capi_last_error"])
+                except Exception as e:
+                    logger.warning(f"[CAPI-ERR] expired bookkeeping failed txid={txid} err={e}")
             else:
-                logger.info("[CAPI-SKIP] event=PaymentExpired txid=%s reason=organic", txid)
+                logger.info(f"[CAPI-SKIP] event=PaymentExpired txid={txid} reason=idempotent")
 
+        # 4) UTMify (opcional, sempre que houver URL/token)
+        try:
+            utm_payload = build_utmify_payload(
+                "expired" if status == "EXPIRED" else ("purchase" if paid else "authorized"),
+                txid, amount, click_type, click_data, pix_transaction.paid_at
+            )
+            send_utmify(utm_payload)
+        except Exception as e:
+            logger.warning(f"[UTMIFY-ERR] build/send failed txid={txid} err={e}")
+
+        # 5) Notificação ao usuário
         Notification.objects.create(
             user=pix_transaction.user,
-            title="Pagamento Recebido" if pix_transaction.paid_at else ("Pagamento Expirado" if status == "EXPIRED" else "Pagamento Autorizado"),
-            message=(
-                "Seu pagamento foi confirmado com sucesso." if pix_transaction.paid_at else
-                ("Seu QR Code expirou sem pagamento." if status == "EXPIRED" else "Seu pagamento foi autorizado e está sendo processado.")
-            )
+            title="Pagamento Recebido" if paid else ("Pagamento Expirado" if status == "EXPIRED" else "Pagamento Autorizado"),
+            message=("Seu pagamento foi confirmado com sucesso." if paid else
+                     ("Seu QR Code expirou sem pagamento." if status == "EXPIRED" else "Seu pagamento foi autorizado e está sendo processado."))
         )
 
     except Exception as e:
