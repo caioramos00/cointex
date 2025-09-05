@@ -1,4 +1,4 @@
-import os, json, hmac, hashlib, logging, threading, re, unicodedata
+import os, json, hmac, hashlib, logging, threading
 from decimal import InvalidOperation, Decimal
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
@@ -1313,12 +1313,98 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
             except Exception:
                 return None
 
-        def send_utmify_order(*, status_str: str, txid: str, amount_brl: float,
-                              click_data: dict, created_at, approved_at=None,
-                              payment_method: str = "pix", is_test: bool = False):
+        def send_utmify_order(
+            *, status_str: str, txid: str, amount_brl: float,
+            click_data: dict, created_at, approved_at=None,
+            payment_method: str = "pix", is_test: bool = False
+        ):
+            """
+            Envia um 'pedido' para a UTMify (API Credentials).
+            - status: waiting_payment | paid | refused | refunded | chargedback
+            - customer: NUNCA null (usa dados da Landing quando disponíveis; senão defaults seguros)
+            - country: ISO2 UPPERCASE (ex.: BR)
+            """
             if not UTMIFY_API_TOKEN:
                 logger.info("[UTMIFY-SKIP] reason=no_token txid=%s", txid)
                 return {"ok": False, "skipped": "no_token"}
+
+            # -------- helpers locais --------
+            ALLOWED_STATUS = {"waiting_payment", "paid", "refused", "refunded", "chargedback"}
+            STATUS_MAP = {  # converte sinônimos antigos para válidos
+                "approved": "paid",
+                "confirmed": "paid",
+                "authorized": "paid",
+                "expired": "refused",
+                "declined": "refused",
+            }
+            st = (status_str or "").strip().lower()
+            st = STATUS_MAP.get(st, st)
+            if st not in ALLOWED_STATUS:
+                logger.warning("[UTMIFY-WARN] txid=%s invalid_status=%s -> forcing=paid", txid, st)
+                st = "paid"
+
+            def _to_iso2_country(val: str) -> str:
+                from string import ascii_letters
+                v = (val or "").strip()
+                # se vier hash, ignora
+                if is_sha256_hex(v):
+                    return "BR"
+                base = strip_accents_lower(v)
+                # já é ISO2?
+                if len(base) == 2 and all(ch in ascii_letters for ch in base):
+                    return base.upper()
+                MAP = {
+                    "br": "BR", "brazil": "BR", "brasil": "BR",
+                    "us": "US", "usa": "US", "united states": "US",
+                    "mexico": "MX", "méxico": "MX",
+                    "argentina": "AR", "portugal": "PT",
+                }
+                iso = MAP.get(base)
+                return iso if iso else "BR"
+
+            def _derive_customer(click: dict) -> dict:
+                click = click or {}
+
+                # nome: name || (fn + ln) se não forem hash
+                fn = click.get("fn") or ""
+                ln = click.get("ln") or ""
+                name = (click.get("name") or "").strip()
+                if not name:
+                    parts = []
+                    if fn and not is_sha256_hex(fn): parts.append(fn)
+                    if ln and not is_sha256_hex(ln): parts.append(ln)
+                    name = " ".join(p for p in parts if p).strip()
+                if not name:
+                    name = "Cliente Cointex"
+
+                # email: email || em_raw || em (se não for hash e tiver '@'); fallback válido
+                em = (click.get("email") or click.get("em_raw") or click.get("em") or "").strip()
+                if (not em) or is_sha256_hex(em) or ("@" not in em):
+                    em = f"unknown+{txid[:8]}@cointex.local"
+
+                # country: ISO2 uppercase
+                country = _to_iso2_country(click.get("country") or "BR")
+
+                # phone: aceita se não for hash; senão omite
+                phone = click.get("phone") or click.get("ph_raw") or click.get("ph")
+                if phone and is_sha256_hex(str(phone)):
+                    phone = None
+
+                return {
+                    "name": name,
+                    "email": em,
+                    "phone": phone or None,
+                    "country": country
+                }
+
+            def _iso8601(dt):
+                try:
+                    if not dt.tzinfo:
+                        from django.utils import timezone as _tz
+                        dt = _tz.make_aware(dt, _tz.get_current_timezone())
+                    return dt.isoformat()
+                except Exception:
+                    return None
 
             utm = {}
             try:
@@ -1326,29 +1412,23 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
             except Exception:
                 utm = {}
 
-            customer = {
-                "name": (click_data or {}).get("name") or None,
-                "email": (click_data or {}).get("email") or None,
-                "phone": (click_data or {}).get("phone") or (click_data or {}).get("ph_raw") or None,
-                "country": (click_data or {}).get("country") or "BR",
-                "document": (click_data or {}).get("document") or None,
-            }
+            customer = _derive_customer(click_data)
 
             price_in_cents = int(round(float(amount_brl or 0) * 100))
             products = [{
-                "id":       (click_data or {}).get("product_id") or "pix_validation",
+                "id":       (click_data or {}).get("product_id")   or "pix_validation",
                 "name":     (click_data or {}).get("product_name") or "Taxa de validação - CoinTex",
-                "planId":   (click_data or {}).get("plan_id") or None,
-                "planName": (click_data or {}).get("plan_name") or None,
+                "planId":   (click_data or {}).get("plan_id")      or None,
+                "planName": (click_data or {}).get("plan_name")    or None,
                 "quantity": 1,
                 "priceInCents": price_in_cents,
             }]
 
             payload = {
                 "isTest": bool(is_test),
-                "status": status_str,                 # "approved" | "confirmed" | "expired"
+                "status": st,                      # EX.: paid | refused
                 "orderId": txid,
-                "customer": customer,
+                "customer": customer,              # nunca null
                 "platform": "Cointex",
                 "products": products,
                 "createdAt": _iso8601(created_at),
@@ -1363,15 +1443,24 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
                 "trackingParameters": {
                     "sck": None,
                     "src": (click_data or {}).get("network") or None,
-                    "utm_term":    utm.get("utm_term") or None,
-                    "utm_medium":  utm.get("utm_medium") or None,
-                    "utm_source":  utm.get("utm_source") or None,
+                    "utm_term":    utm.get("utm_term")    or None,
+                    "utm_medium":  utm.get("utm_medium")  or None,
+                    "utm_source":  utm.get("utm_source")  or None,
                     "utm_content": utm.get("utm_content") or None,
-                    "utm_campaign":utm.get("utm_campaign") or None,
+                    "utm_campaign":utm.get("utm_campaign")or None,
                 }
             }
 
-            headers = {"Content-Type": "application/json", "x-api-token": UTMIFY_API_TOKEN}
+            headers = {
+                "Content-Type": "application/json",
+                "x-api-token": UTMIFY_API_TOKEN,
+            }
+
+            # loga um preview do payload para debug
+            try:
+                logger.info("[UTMIFY-PAYLOAD] txid=%s %s", txid, (json.dumps(payload)[:400] + ("..." if len(json.dumps(payload))>400 else "")))
+            except Exception:
+                pass
 
             try:
                 resp = http_post(
@@ -1381,11 +1470,11 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
                     timeout=(3, 10),
                     measure="utmify/orders"
                 )
-                status_code = getattr(resp, "status_code", 0)
+                status = getattr(resp, "status_code", 0)
                 body   = (getattr(resp, "text", "") or "")[:400].replace("\n", " ")
-                ok     = 200 <= status_code < 300
-                logger.info("[UTMIFY-RESP] txid=%s status=%s ok=%s body=%s", txid, status_code, int(ok), body)
-                return {"ok": ok, "status": status_code, "body": body}
+                ok     = 200 <= status < 300
+                logger.info("[UTMIFY-RESP] txid=%s status=%s ok=%s body=%s", txid, status, int(ok), body)
+                return {"ok": ok, "status": status, "body": body}
             except Exception as e:
                 logger.warning("[UTMIFY-ERR] txid=%s error=%s", txid, e)
                 return {"ok": False, "error": str(e)}
