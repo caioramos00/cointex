@@ -1,4 +1,5 @@
 import os, json, hmac, hashlib, logging, threading
+from string import ascii_letters
 from decimal import InvalidOperation, Decimal
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
@@ -1321,16 +1322,17 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
             """
             Envia um 'pedido' para a UTMify (API Credentials).
             - status: waiting_payment | paid | refused | refunded | chargedback
-            - customer: NUNCA null (usa dados da Landing quando disponíveis; senão defaults seguros)
-            - country: ISO2 UPPERCASE (ex.: BR)
+            - customer: inclui SEMPRE 'document' (string ou null)
+            - trackingParameters.src: SEMPRE string (nunca objeto)
             """
+
             if not UTMIFY_API_TOKEN:
                 logger.info("[UTMIFY-SKIP] reason=no_token txid=%s", txid)
                 return {"ok": False, "skipped": "no_token"}
 
             # -------- helpers locais --------
             ALLOWED_STATUS = {"waiting_payment", "paid", "refused", "refunded", "chargedback"}
-            STATUS_MAP = {  # converte sinônimos antigos para válidos
+            STATUS_MAP = {
                 "approved": "paid",
                 "confirmed": "paid",
                 "authorized": "paid",
@@ -1343,14 +1345,21 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
                 logger.warning("[UTMIFY-WARN] txid=%s invalid_status=%s -> forcing=paid", txid, st)
                 st = "paid"
 
+            def _iso8601(dt):
+                try:
+                    if not dt.tzinfo:
+                        from django.utils import timezone as _tz
+                        dt = _tz.make_aware(dt, _tz.get_current_timezone())
+                    return dt.isoformat()
+                except Exception:
+                    return None
+
             def _to_iso2_country(val: str) -> str:
-                from string import ascii_letters
                 v = (val or "").strip()
                 # se vier hash, ignora
                 if is_sha256_hex(v):
                     return "BR"
                 base = strip_accents_lower(v)
-                # já é ISO2?
                 if len(base) == 2 and all(ch in ascii_letters for ch in base):
                     return base.upper()
                 MAP = {
@@ -1359,8 +1368,39 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
                     "mexico": "MX", "méxico": "MX",
                     "argentina": "AR", "portugal": "PT",
                 }
-                iso = MAP.get(base)
-                return iso if iso else "BR"
+                return MAP.get(base, "BR")
+
+            def _safe_document(click: dict):
+                # aceita document/cpf/doc em texto; se vier hash ou vazio, retorna None
+                for k in ("document", "cpf", "doc"):
+                    val = (click or {}).get(k)
+                    if val is None:
+                        continue
+                    s = str(val).strip()
+                    if not s or is_sha256_hex(s):
+                        continue
+                    # se tiver muitos não-dígitos, mantém como string crua; se for CPF/CEP-like, só dígitos
+                    digits = re.sub(r"\D+", "", s)
+                    return digits or s
+                return None
+
+            def _is_ctwa(click: dict) -> bool:
+                c = click or {}
+                # heurística simples: presença de wa_id indica CTWA
+                return bool(c.get("wa_id"))
+
+            def _extract_src(click: dict) -> str:
+                raw = (click or {}).get("network")
+                # string direta
+                if isinstance(raw, str) and raw.strip():
+                    return raw.strip()
+                # objeto: tenta campos comuns, senão usa fallback
+                if isinstance(raw, dict):
+                    for k in ("name", "source", "src", "provider"):
+                        v = raw.get(k)
+                        if isinstance(v, str) and v.strip():
+                            return v.strip()
+                return "ctwa" if _is_ctwa(click) else "website"
 
             def _derive_customer(click: dict) -> dict:
                 click = click or {}
@@ -1390,21 +1430,16 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
                 if phone and is_sha256_hex(str(phone)):
                     phone = None
 
+                # document: string ou null (sempre incluir a chave!)
+                document = _safe_document(click)
+
                 return {
                     "name": name,
                     "email": em,
                     "phone": phone or None,
-                    "country": country
+                    "country": country,
+                    "document": document if (document is None or isinstance(document, str)) else None,
                 }
-
-            def _iso8601(dt):
-                try:
-                    if not dt.tzinfo:
-                        from django.utils import timezone as _tz
-                        dt = _tz.make_aware(dt, _tz.get_current_timezone())
-                    return dt.isoformat()
-                except Exception:
-                    return None
 
             utm = {}
             try:
@@ -1424,11 +1459,14 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
                 "priceInCents": price_in_cents,
             }]
 
+            # src sempre string
+            src_str = _extract_src(click_data)
+
             payload = {
                 "isTest": bool(is_test),
-                "status": st,                      # EX.: paid | refused
+                "status": st,                      # paid | refused | ...
                 "orderId": txid,
-                "customer": customer,              # nunca null
+                "customer": customer,              # inclui SEMPRE document
                 "platform": "Cointex",
                 "products": products,
                 "createdAt": _iso8601(created_at),
@@ -1442,7 +1480,7 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
                 "paymentMethod": payment_method,
                 "trackingParameters": {
                     "sck": None,
-                    "src": (click_data or {}).get("network") or None,
+                    "src": src_str,  # string garantida
                     "utm_term":    utm.get("utm_term")    or None,
                     "utm_medium":  utm.get("utm_medium")  or None,
                     "utm_source":  utm.get("utm_source")  or None,
@@ -1456,9 +1494,9 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
                 "x-api-token": UTMIFY_API_TOKEN,
             }
 
-            # loga um preview do payload para debug
             try:
-                logger.info("[UTMIFY-PAYLOAD] txid=%s %s", txid, (json.dumps(payload)[:400] + ("..." if len(json.dumps(payload))>400 else "")))
+                preview = json.dumps(payload)
+                logger.info("[UTMIFY-PAYLOAD] txid=%s %s", txid, (preview[:400] + ("..." if len(preview) > 400 else "")))
             except Exception:
                 pass
 
