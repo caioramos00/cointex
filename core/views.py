@@ -213,7 +213,6 @@ def send_utmify_order(*, status_str: str, txid: str, amount_brl: float,
         except Exception:
             pass
 
-
 def format_number_br(value):
     return f"{value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
