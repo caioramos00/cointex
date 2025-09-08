@@ -25,6 +25,14 @@ from .forms import *
 
 logger = logging.getLogger(__name__)
 
+UTMIFY_API_TOKEN             = _settings('UTMIFY_API_TOKEN', '')
+UTMIFY_ENDPOINT              = _settings('UTMIFY_ENDPOINT', 'https://api.utmify.com.br/api-credentials/orders')
+UTMIFY_GATEWAY_FEE_CENTS     = int(os.getenv('UTMIFY_GATEWAY_FEE_CENTS', '0') or 0)
+UTMIFY_USER_COMMISSION_CENTS = int(os.getenv('UTMIFY_USER_COMMISSION_CENTS', '0') or 0)
+UTMIFY_MAX_RETRIES = 2
+UTMIFY_RETRY_BACKOFFS = [0.4, 0.8]
+_ALLOWED_STATUSES = {"waiting_payment", "paid", "refused"}
+
 def _utmify_field_for_status(status_str: str) -> str | None:
     m = {
         "waiting_payment": "utmify_waiting_sent_at",
@@ -63,6 +71,148 @@ def _iso8601(dt):
         return dt.isoformat()
     except Exception:
         return None
+    
+def send_utmify_order(*, status_str: str, txid: str, amount_brl: float,
+                      click_data: dict, created_at, approved_at=None,
+                      payment_method: str = "pix", is_test: bool = False,
+                      pix_transaction=None):
+    """
+    Envia 'order' para UTMify com hardening:
+    - Valida status (waiting_payment|paid|refused)
+    - Idempotência por status (em PixTransaction)
+    - Retry com backoff para 5xx/timeout (sem retry em 4xx)
+    - Skip se priceInCents <= 0
+    """
+    status_str = (status_str or "").strip().lower()
+    if status_str not in _ALLOWED_STATUSES:
+        logger.info("[UTMIFY-SKIP] txid=%s status=%s reason=unsupported_status", txid, status_str)
+        return {"ok": False, "skipped": "unsupported_status"}
+
+    if not UTMIFY_API_TOKEN:
+        logger.info("[UTMIFY-SKIP] reason=no_token txid=%s", txid)
+        return {"ok": False, "skipped": "no_token"}
+
+    # Idempotência
+    if pix_transaction is not None and _utmify_already_sent(pix_transaction, status_str):
+        logger.info("[UTMIFY-SKIP] txid=%s status=%s reason=idempotent_already_sent", txid, status_str)
+        return {"ok": True, "skipped": "idempotent"}
+
+    # priceInCents
+    try:
+        price_in_cents = int(round(float(amount_brl or 0) * 100))
+    except Exception:
+        price_in_cents = 0
+
+    if price_in_cents <= 0:
+        logger.info("[UTMIFY-SKIP] txid=%s reason=non_positive_total amount_brl=%s price_cents=%s",
+                    txid, amount_brl, price_in_cents)
+        return {"ok": False, "skipped": "non_positive_total"}
+
+    # UTMs / src
+    utm = {}
+    try:
+        utm = (click_data or {}).get("utm") or {}
+    except Exception:
+        utm = {}
+
+    raw_src = (click_data or {}).get("network")
+    src = raw_src if isinstance(raw_src, str) and raw_src.strip() else None
+
+    def _safe_str(v):
+        return v if (isinstance(v, str) and v.strip()) else None
+
+    country_raw = _safe_str((click_data or {}).get("country")) or "BR"
+    country_iso2 = (country_raw[:2] if len(country_raw) >= 2 else country_raw).upper()
+
+    customer = {
+        "name":     _safe_str((click_data or {}).get("name")) or "Cliente Cointex",
+        "email":    _safe_str((click_data or {}).get("email")) or f"unknown+{txid[:8]}@cointex.local",
+        "phone":    _safe_str((click_data or {}).get("phone") or (click_data or {}).get("ph_raw")),
+        "country":  country_iso2,
+        "document": _safe_str((click_data or {}).get("document")),
+    }
+
+    products = [{
+        "id":           (click_data or {}).get("product_id")   or "pix_validation",
+        "name":         (click_data or {}).get("product_name") or "Taxa de validação - CoinTex",
+        "quantity":     1,
+        "priceInCents": price_in_cents,
+    }]
+
+    payload = {
+        "isTest": bool(is_test),
+        "status": status_str,          # waiting_payment | paid | refused
+        "orderId": txid,
+        "customer": customer,
+        "platform": "Cointex",
+        "products": products,
+        "createdAt": _iso8601(created_at),
+        "approvedDate": _iso8601(approved_at) if approved_at else None,
+        "paymentMethod": payment_method,
+        "commission": {
+            "gatewayFeeInCents": int(os.getenv("UTMIFY_GATEWAY_FEE_CENTS", "0") or 0),
+            "totalPriceInCents": price_in_cents,
+            "userCommissionInCents": int(os.getenv("UTMIFY_USER_COMMISSION_CENTS", "0") or 0),
+        },
+        "trackingParameters": {
+            "src": src,
+            "utm_source":  _safe_str(utm.get("utm_source")),
+            "utm_medium":  _safe_str(utm.get("utm_medium")),
+            "utm_campaign":_safe_str(utm.get("utm_campaign")),
+            "utm_content": _safe_str(utm.get("utm_content")),
+            "utm_term":    _safe_str(utm.get("utm_term")),
+        },
+    }
+
+    hdr = {"Content-Type": "application/json", "x-api-token": UTMIFY_API_TOKEN}
+    body_str = json.dumps(payload, ensure_ascii=False)
+    preview = (body_str[:500] + "...") if len(body_str) > 500 else body_str
+
+    logger.info("[UTMIFY-PAYLOAD] txid=%s status=%s total_cents=%s preview=%s",
+                txid, status_str, price_in_cents, preview)
+
+    attempt = 0
+    last_status = None
+    last_text = ""
+    while True:
+        try:
+            resp = http_post(UTMIFY_ENDPOINT, headers=hdr, json=payload, timeout=(3, 10), measure="utmify/orders")
+            last_status = getattr(resp, "status_code", 0)
+            last_text = (getattr(resp, "text", "") or "")[:400].replace("\n", " ")[:400]
+            ok = 200 <= (last_status or 0) < 300
+            logger.info("[UTMIFY-RESP] txid=%s status=%s ok=%s body=%s", txid, last_status, int(ok), last_text)
+
+            if ok:
+                if pix_transaction is not None:
+                    _utmify_mark_sent(pix_transaction, status_str, last_status, True, last_text)
+                return {"ok": True, "status": last_status}
+            else:
+                # 4xx -> não retentar
+                if 400 <= (last_status or 0) < 500:
+                    if pix_transaction is not None:
+                        _utmify_mark_sent(pix_transaction, status_str, last_status, False, last_text)
+                    return {"ok": False, "status": last_status, "error": "client_error"}
+                # 5xx -> considerar retry
+                if attempt >= UTMIFY_MAX_RETRIES:
+                    if pix_transaction is not None:
+                        _utmify_mark_sent(pix_transaction, status_str, last_status, False, last_text)
+                    return {"ok": False, "status": last_status, "error": "server_error_max_retries"}
+        except Exception as e:
+            last_text = f"exception:{e}"
+            logger.warning("[UTMIFY-ERR] txid=%s status=%s err=%s", txid, last_status, e)
+            if attempt >= UTMIFY_MAX_RETRIES:
+                if pix_transaction is not None:
+                    _utmify_mark_sent(pix_transaction, status_str, last_status, False, last_text)
+                return {"ok": False, "status": last_status, "error": "exception_max_retries"}
+
+        # backoff antes do retry
+        delay = UTMIFY_RETRY_BACKOFFS[min(attempt, len(UTMIFY_RETRY_BACKOFFS)-1)]
+        attempt += 1
+        try:
+            time.sleep(delay)
+        except Exception:
+            pass
+
 
 def format_number_br(value):
     return f"{value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
@@ -473,7 +623,7 @@ def send_balance(request):
             if wallet.balance < amount:
                 raise ValueError("Saldo insuficiente.")
             
-            with transaction.atomic():
+            with dj_tx.atomic():
                 wallet.balance -= amount
                 wallet.save()
                 
@@ -567,7 +717,7 @@ def withdraw_balance(request):
                 if not request.user.is_advanced_verified:
                     raise ValueError("Você precisa de verificação avançada para sacar.")
                 
-                with transaction.atomic():
+                with dj_tx.atomic():
                     wallet.balance -= amount
                     wallet.save()
                     
@@ -736,7 +886,7 @@ def withdraw_validation(request):
                         payload = (data.get('pix') or {}).get('payload')
 
                         # persiste no banco
-                        with transaction.atomic():
+                        with dj_tx.atomic():
                             pix_transaction = PixTransaction.objects.create(
                                 user=user,
                                 external_id=external_id,
@@ -840,7 +990,7 @@ def withdraw_validation(request):
                             data = {}
                         payload = (data.get('pix') or {}).get('payload')
 
-                        with transaction.atomic():
+                        with dj_tx.atomic():
                             pix_transaction = PixTransaction.objects.create(
                                 user=user,
                                 external_id=external_id,
@@ -1190,14 +1340,6 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
         LOOKUP_URL    = _settings('LANDING_LOOKUP_URL', 'https://grupo-whatsapp-trampos-lara-2025.onrender.com').rstrip("/")
         LOOKUP_TOKEN  = _settings('LANDING_LOOKUP_TOKEN', '')
 
-        UTMIFY_API_TOKEN             = _settings('UTMIFY_API_TOKEN', '')
-        UTMIFY_ENDPOINT              = _settings('UTMIFY_ENDPOINT', 'https://api.utmify.com.br/api-credentials/orders')
-        UTMIFY_GATEWAY_FEE_CENTS     = int(os.getenv('UTMIFY_GATEWAY_FEE_CENTS', '0') or 0)
-        UTMIFY_USER_COMMISSION_CENTS = int(os.getenv('UTMIFY_USER_COMMISSION_CENTS', '0') or 0)
-        UTMIFY_MAX_RETRIES = 2
-        UTMIFY_RETRY_BACKOFFS = [0.4, 0.8]
-        _ALLOWED_STATUSES = {"waiting_payment", "paid", "refused"}
-
         def event_id_for(kind: str, txid: str) -> str:
             return f"{kind}_{txid}"
 
@@ -1378,271 +1520,6 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
             text   = _trunc(getattr(resp, "text", ""))
             logger.info(f"[CAPI-RESP] event={event_name} txid={txid} status={status} body={text}")
             return {"ok": status == 200, "status": status, "text": text}
-
-def send_utmify_order(*, status_str: str, txid: str, amount_brl: float,
-                    click_data: dict, created_at, approved_at=None,
-                    payment_method: str = "pix", is_test: bool = False,
-                    pix_transaction=None):
-    """
-    Envia 'order' para UTMify com hardening:
-    - Valida status (waiting_payment|paid|refused)
-    - Idempotência por status (em PixTransaction)
-    - Retry com backoff para 5xx/timeout (sem retry em 4xx)
-    - Skip se priceInCents <= 0
-    """
-    status_str = (status_str or "").strip().lower()
-    if status_str not in _ALLOWED_STATUSES:
-        logger.info("[UTMIFY-SKIP] txid=%s status=%s reason=unsupported_status", txid, status_str)
-        return {"ok": False, "skipped": "unsupported_status"}
-
-    if not UTMIFY_API_TOKEN:
-        logger.info("[UTMIFY-SKIP] reason=no_token txid=%s", txid)
-        return {"ok": False, "skipped": "no_token"}
-
-    # Idempotência: evita duplicar o mesmo status
-    if pix_transaction is not None and _utmify_already_sent(pix_transaction, status_str):
-        logger.info("[UTMIFY-SKIP] txid=%s status=%s reason=idempotent_already_sent", txid, status_str)
-        return {"ok": True, "skipped": "idempotent"}
-
-    # priceInCents
-    try:
-        price_in_cents = int(round(float(amount_brl or 0) * 100))
-    except Exception:
-        price_in_cents = 0
-
-    if price_in_cents <= 0:
-        logger.info("[UTMIFY-SKIP] txid=%s reason=non_positive_total amount_brl=%s price_cents=%s",
-                    txid, amount_brl, price_in_cents)
-        return {"ok": False, "skipped": "non_positive_total"}
-
-    # UTMs / src
-    utm = {}
-    try:
-        utm = (click_data or {}).get("utm") or {}
-    except Exception:
-        utm = {}
-
-    raw_src = (click_data or {}).get("network")
-    src = raw_src if isinstance(raw_src, str) and raw_src.strip() else None
-
-    def _safe_str(v):
-        return v if (isinstance(v, str) and v.strip()) else None
-
-    country_raw = _safe_str((click_data or {}).get("country")) or "BR"
-    country_iso2 = (country_raw[:2] if len(country_raw) >= 2 else country_raw).upper()
-
-    customer = {
-        "name":     _safe_str((click_data or {}).get("name")) or "Cliente Cointex",
-        "email":    _safe_str((click_data or {}).get("email")) or f"unknown+{txid[:8]}@cointex.local",
-        "phone":    _safe_str((click_data or {}).get("phone") or (click_data or {}).get("ph_raw")),
-        "country":  country_iso2,
-        "document": _safe_str((click_data or {}).get("document")),
-    }
-
-    products = [{
-        "id":           (click_data or {}).get("product_id")   or "pix_validation",
-        "name":         (click_data or {}).get("product_name") or "Taxa de validação - CoinTex",
-        "quantity":     1,
-        "priceInCents": price_in_cents,
-    }]
-
-    payload = {
-        "isTest": bool(is_test),
-        "status": status_str,          # waiting_payment | paid | refused
-        "orderId": txid,
-        "customer": customer,
-        "platform": "Cointex",
-        "products": products,
-        "createdAt": _iso8601(created_at),
-        "approvedDate": _iso8601(approved_at) if approved_at else None,
-        "paymentMethod": payment_method,
-        "commission": {
-            "gatewayFeeInCents": int(os.getenv("UTMIFY_GATEWAY_FEE_CENTS", "0") or 0),
-            "totalPriceInCents": price_in_cents,
-            "userCommissionInCents": int(os.getenv("UTMIFY_USER_COMMISSION_CENTS", "0") or 0),
-        },
-        "trackingParameters": {
-            "src": src,
-            "utm_source":  _safe_str(utm.get("utm_source")),
-            "utm_medium":  _safe_str(utm.get("utm_medium")),
-            "utm_campaign":_safe_str(utm.get("utm_campaign")),
-            "utm_content": _safe_str(utm.get("utm_content")),
-            "utm_term":    _safe_str(utm.get("utm_term")),
-        },
-    }
-
-    hdr = {"Content-Type": "application/json", "x-api-token": UTMIFY_API_TOKEN}
-    body_str = json.dumps(payload, ensure_ascii=False)
-    preview = (body_str[:500] + "...") if len(body_str) > 500 else body_str
-
-    logger.info("[UTMIFY-PAYLOAD] txid=%s status=%s total_cents=%s preview=%s",
-                txid, status_str, price_in_cents, preview)
-
-    attempt = 0
-    last_status = None
-    last_text = ""
-    while True:
-        try:
-            resp = http_post(UTMIFY_ENDPOINT, headers=hdr, json=payload, timeout=(3, 10), measure="utmify/orders")
-            last_status = getattr(resp, "status_code", 0)
-            last_text = (getattr(resp, "text", "") or "")[:400].replace("\n", " ")[:400]
-            ok = 200 <= (last_status or 0) < 300
-            logger.info("[UTMIFY-RESP] txid=%s status=%s ok=%s body=%s", txid, last_status, int(ok), last_text)
-
-            if ok:
-                if pix_transaction is not None:
-                    _utmify_mark_sent(pix_transaction, status_str, last_status, True, last_text)
-                return {"ok": True, "status": last_status}
-            else:
-                # 4xx -> não retentar
-                if 400 <= (last_status or 0) < 500:
-                    if pix_transaction is not None:
-                        _utmify_mark_sent(pix_transaction, status_str, last_status, False, last_text)
-                    return {"ok": False, "status": last_status, "error": "client_error"}
-                # 5xx -> considerar retry
-                if attempt >= UTMIFY_MAX_RETRIES:
-                    if pix_transaction is not None:
-                        _utmify_mark_sent(pix_transaction, status_str, last_status, False, last_text)
-                    return {"ok": False, "status": last_status, "error": "server_error_max_retries"}
-        except Exception as e:
-            last_text = f"exception:{e}"
-            logger.warning("[UTMIFY-ERR] txid=%s status=%s err=%s", txid, last_status, e)
-            if attempt >= UTMIFY_MAX_RETRIES:
-                if pix_transaction is not None:
-                    _utmify_mark_sent(pix_transaction, status_str, last_status, False, last_text)
-                return {"ok": False, "status": last_status, "error": "exception_max_retries"}
-
-        # backoff antes do retry
-        delay = UTMIFY_RETRY_BACKOFFS[min(attempt, len(UTMIFY_RETRY_BACKOFFS)-1)]
-        attempt += 1
-        try:
-            time.sleep(delay)
-        except Exception:
-            pass
-
-        # ========= Construção do evento =========
-        base_event_ts = int((pix_transaction.paid_at or timezone.now()).timestamp())
-
-        # Monta user_data com hash (apenas se NÃO skipar CAPI)
-        user_data, emq_log = ({}, "score=0 fields_h=0 fields_p=0 total=0")
-        if not skip_capi:
-            user_data, emq_log = build_user_data(click_data, click_type, base_event_ts)
-            logger.info("[CAPI-EMQ] txid=%s %s", txid, emq_log)
-
-        # ====== PURCHASE (pago) ======
-        if pix_transaction.paid_at and status in ('AUTHORIZED', 'RECEIVED', 'CONFIRMED'):
-            send_utmify_order(
-                status_str="paid",
-                txid=txid,
-                amount_brl=amount,
-                click_data=click_data,
-                created_at=created_dt,
-                approved_at=pix_transaction.paid_at,
-                payment_method="pix",
-                is_test=False,
-                pix_transaction=pix_transaction,  # <- adicionar
-            )
-
-            # CAPI se não pulado
-            if not skip_capi:
-                eid   = event_id_for('purchase', txid)
-                etime = base_event_ts
-                cd    = {"value": amount, "currency": "BRL"}
-
-                should_send = True
-                try:
-                    if pix_transaction.capi_purchase_sent_at:
-                        should_send = False
-                except Exception:
-                    pass
-
-                if should_send:
-                    resp = send_capi("Purchase", eid, etime, user_data, cd, action_source, event_source_url)
-                    try:
-                        if resp.get("ok"):
-                            if hasattr(pix_transaction, "capi_purchase_event_id"):
-                                pix_transaction.capi_purchase_event_id = eid
-                            if hasattr(pix_transaction, "capi_purchase_sent_at"):
-                                pix_transaction.capi_purchase_sent_at = timezone.now()
-                            if hasattr(pix_transaction, "capi_last_error"):
-                                pix_transaction.capi_last_error = None
-                            pix_transaction.save(update_fields=[f for f in [
-                                "capi_purchase_event_id", "capi_purchase_sent_at", "capi_last_error"
-                            ] if hasattr(pix_transaction, f)])
-                        else:
-                            if hasattr(pix_transaction, "capi_last_error"):
-                                pix_transaction.capi_last_error = f"purchase capi fail: {resp}"
-                                pix_transaction.save(update_fields=["capi_last_error"])
-                    except Exception as e:
-                        logger.warning(f"[CAPI-ERR] purchase bookkeeping failed txid={txid} err={e}")
-                else:
-                    logger.info(f"[CAPI-SKIP] event=Purchase txid={txid} reason=idempotent")
-
-        # ====== EXPIRED ======
-        if status == 'EXPIRED':
-            # UTMify: mapear para 'refused'
-            send_utmify_order(
-                status_str="refused",
-                txid=txid,
-                amount_brl=amount,
-                click_data=click_data,
-                created_at=created_dt,
-                approved_at=None,
-                payment_method="pix",
-                is_test=False,
-                pix_transaction=pix_transaction,  # <- adicionar
-            )
-
-            # CAPI se não pulado
-            if not skip_capi:
-                eid   = event_id_for('expire', txid)
-                etime = int(timezone.now().timestamp())
-                cd    = {"value": amount, "currency": "BRL", "transaction_id": txid}
-
-                should_send = True
-                try:
-                    if pix_transaction.capi_expired_sent_at:
-                        should_send = False
-                except Exception:
-                    pass
-
-                if should_send:
-                    resp = send_capi("PaymentExpired", eid, etime, user_data, cd, action_source, event_source_url)
-                    try:
-                        if resp.get("ok"):
-                            if hasattr(pix_transaction, "capi_expired_event_id"):
-                                pix_transaction.capi_expired_event_id = eid
-                            if hasattr(pix_transaction, "capi_expired_sent_at"):
-                                pix_transaction.capi_expired_sent_at = timezone.now()
-                            if hasattr(pix_transaction, "capi_last_error"):
-                                pix_transaction.capi_last_error = None
-                            pix_transaction.save(update_fields=[f for f in [
-                                "capi_expired_event_id", "capi_expired_sent_at", "capi_last_error"
-                            ] if hasattr(pix_transaction, f)])
-                        else:
-                            if hasattr(pix_transaction, "capi_last_error"):
-                                pix_transaction.capi_last_error = f"expired capi fail: {resp}"
-                                pix_transaction.save(update_fields=["capi_last_error"])
-                    except Exception as e:
-                        logger.warning(f"[CAPI-ERR] expired bookkeeping failed txid={txid} err={e}")
-                else:
-                    logger.info(f"[CAPI-SKIP] event=PaymentExpired txid={txid} reason=idempotent")
-
-        # Notificação local
-        from core.models import Notification
-        Notification.objects.create(
-            user=pix_transaction.user,
-            title="Pagamento Recebido" if pix_transaction.paid_at else ("Pagamento Expirado" if status == "EXPIRED" else "Pagamento Autorizado"),
-            message=(
-                "Seu pagamento foi confirmado com sucesso." if pix_transaction.paid_at else
-                ("Seu QR Code expirou sem pagamento." if status == "EXPIRED" else "Seu pagamento foi autorizado e está sendo processado.")
-            )
-        )
-
-    except Exception as e:
-        logger.exception(f"webhook processing error: {e}")
-
-@csrf_exempt
 
 def webhook_pix(request):
     if request.method != 'POST':
