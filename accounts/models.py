@@ -338,6 +338,12 @@ class PixTransaction(models.Model):
     capi_expired_event_id = models.CharField(max_length=128, null=True, blank=True)
     capi_expired_sent_at = models.DateTimeField(null=True, blank=True)
     capi_last_error = models.TextField(null=True, blank=True)
+    utmify_waiting_sent_at = models.DateTimeField(null=True, blank=True)
+    utmify_paid_sent_at    = models.DateTimeField(null=True, blank=True)
+    utmify_refused_sent_at = models.DateTimeField(null=True, blank=True)
+    utmify_last_http_status  = models.IntegerField(null=True, blank=True)
+    utmify_last_ok           = models.BooleanField(null=True, blank=True)
+    utmify_last_resp_excerpt = models.TextField(null=True, blank=True)
 
     class Meta:
         verbose_name = _("Transação PIX")
