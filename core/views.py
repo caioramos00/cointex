@@ -1331,6 +1331,13 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
             except Exception as e:
                 logger.warning(f"update pix cache on webhook failed: {e}")
 
+            # Atualiza também o cache usado pelo polling na view check_pix_status
+            try:
+                from django.core.cache import cache
+                cache.set(f"pix_status:{pix_transaction.user_id}", status, 2)
+            except Exception as e:
+                logger.warning(f"update pix_status cache failed: {e}")
+
         # ========= Config =========
         def _settings(name, default=""):
             return getattr(settings, name, os.getenv(name, default))
@@ -1598,6 +1605,7 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
         logger.exception("webhook processing failed: %s", e)
 
 
+@csrf_exempt
 def webhook_pix(request):
     if request.method != 'POST':
         return JsonResponse({'status': 'method not allowed'}, status=405)
