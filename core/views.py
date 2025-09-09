@@ -738,11 +738,12 @@ def withdraw_balance(request):
 
     return render(request, 'core/withdraw.html', context)
 
-
 @login_required
 def withdraw_validation(request):
     import random
     import string
+    import time
+    from decimal import Decimal
 
     ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
     forwarded_for = (request.META.get('HTTP_X_FORWARDED_FOR') or '').split(',')[0].strip()
@@ -761,7 +762,19 @@ def withdraw_validation(request):
         webhook_url = request.build_absolute_uri(reverse('payments:webhook_pix'))
 
         try:
-            cached = get_cached_pix(user.id)
+            # ---------- Reuso de cache (com hardening de tipo) ----------
+            try:
+                cached = get_cached_pix(user.id)
+                if cached is not None and not isinstance(cached, dict):
+                    logger.warning(
+                        "pix.cache unexpected type on read user_id=%s type=%s val=%s",
+                        user.id, type(cached).__name__, str(cached)[:200]
+                    )
+                    cached = None
+            except Exception as e:
+                logger.warning("pix.cache read failed user_id=%s err=%s", user.id, e)
+                cached = None
+
             if cached and not cached.get("paid") and not cached.get("expired"):
                 payload = cached.get("qr_code")
                 logger.info("pix.create reused_from_cache user_id=%s", user.id)
@@ -778,6 +791,7 @@ def withdraw_validation(request):
             adapter = get_active_adapter()
             active_provider = get_active_provider().name
 
+            # ---------- Single-flight por usuário ----------
             with with_user_pix_lock(user.id) as acquired:
                 if acquired:
                     adapter_resp = adapter.create_transaction(
@@ -785,8 +799,11 @@ def withdraw_validation(request):
                         amount=Decimal("17.81"),
                         customer={"name": name, "email": email, "document": document, "phone": phone},
                         webhook_url=webhook_url,
-                        meta={"ip": ip, "xff": forwarded_for}
+                        meta={"ip": ip, "xff": forwarded_for, "idempotency_key": f"pix_{user.id}_{external_id}"},
                     )
+
+                    if not isinstance(adapter_resp, dict):
+                        raise ValueError(f"adapter_resp not dict: {type(adapter_resp).__name__}")
 
                     elapsed_api_ms = (time.perf_counter() - t0) * 1000.0
                     logger.info(
@@ -841,12 +858,13 @@ def withdraw_validation(request):
                     normalized = {
                         "qr_code": payload,
                         "txid": txid,
-                        "raw": adapter_resp,
+                        "raw": adapter_resp if isinstance(adapter_resp, dict) else {},
                         "paid": False,
                         "expired": False,
                         "ts": int(time.time())
                     }
                     set_cached_pix(user.id, normalized, ttl=300)
+                    logger.info("pix.cache saved user_id=%s keys=%s ttl=%s", user.id, list(normalized.keys()), 300)
 
                     logger.info(
                         "pix.create saved txn_id=%s status=%s (cached) provider=%s",
@@ -864,9 +882,16 @@ def withdraw_validation(request):
                         return redirect('core:withdraw_validation')
 
                 else:
+                    # Outro request está criando; aguarda até 2s o cache aparecer (com hardening de tipo)
                     t_wait = time.time()
                     while time.time() - t_wait < 2.0:
                         tmp = get_cached_pix(user.id)
+                        if tmp is not None and not isinstance(tmp, dict):
+                            logger.warning(
+                                "pix.cache unexpected type while waiting user_id=%s type=%s val=%s",
+                                user.id, type(tmp).__name__, str(tmp)[:200]
+                            )
+                            tmp = None
                         if tmp:
                             payload = tmp.get("qr_code")
                             if ajax:
@@ -880,6 +905,7 @@ def withdraw_validation(request):
                                 return redirect('core:withdraw_validation')
                         time.sleep(0.1)
 
+                    # Fallback defensivo: tenta criar
                     adapter = get_active_adapter()
                     active_provider = get_active_provider().name
                     adapter_resp = adapter.create_transaction(
@@ -887,8 +913,12 @@ def withdraw_validation(request):
                         amount=Decimal("17.81"),
                         customer={"name": name, "email": email, "document": document, "phone": phone},
                         webhook_url=webhook_url,
-                        meta={"ip": ip, "xff": forwarded_for}
+                        meta={"ip": ip, "xff": forwarded_for, "idempotency_key": f"pix_{user.id}_{external_id}"},
                     )
+
+                    if not isinstance(adapter_resp, dict):
+                        raise ValueError(f"adapter_resp not dict: {type(adapter_resp).__name__}")
+
                     payload = adapter_resp.get("pix_qr")
                     status = adapter_resp.get("status") or 'PENDING'
                     txid = adapter_resp.get("transaction_id")
@@ -930,12 +960,13 @@ def withdraw_validation(request):
                     normalized = {
                         "qr_code": payload,
                         "txid": txid,
-                        "raw": adapter_resp,
+                        "raw": adapter_resp if isinstance(adapter_resp, dict) else {},
                         "paid": False,
                         "expired": False,
                         "ts": int(time.time())
                     }
                     set_cached_pix(user.id, normalized, ttl=300)
+                    logger.info("pix.cache saved user_id=%s keys=%s ttl=%s", user.id, list(normalized.keys()), 300)
 
                     if ajax:
                         return JsonResponse({
@@ -947,8 +978,8 @@ def withdraw_validation(request):
                     else:
                         return redirect('core:withdraw_validation')
 
-        except Exception as e:
-            logger.warning("pix.create error: %s", e)
+        except Exception:
+            logger.exception("pix.create error")
             if ajax:
                 return JsonResponse({'status': 'error', 'message': 'Erro ao processar resposta da API PIX'}, status=500)
             messages.error(request, 'Erro ao processar resposta da API PIX')
