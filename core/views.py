@@ -29,6 +29,8 @@ UTMIFY_API_TOKEN = os.getenv('UTMIFY_API_TOKEN', '')
 UTMIFY_ENDPOINT = os.getenv('UTMIFY_ENDPOINT', 'https://api.utmify.com.br/api-credentials/orders')
 UTMIFY_GATEWAY_FEE_CENTS = int(os.getenv('UTMIFY_GATEWAY_FEE_CENTS', '0') or 0)
 UTMIFY_USER_COMMISSION_CENTS = int(os.getenv('UTMIFY_USER_COMMISSION_CENTS', '0') or 0)
+UTMIFY_PLAN_ID = "validation"
+UTMIFY_PLAN_NAME = "Taxa de validação - CoinTex"
 UTMIFY_MAX_RETRIES = 2
 UTMIFY_RETRY_BACKOFFS = [0.4, 0.8]
 _ALLOWED_STATUSES = {"waiting_payment", "paid", "refused"}
@@ -135,6 +137,8 @@ def send_utmify_order(*, status_str: str, txid: str, amount_brl: float,
     products = [{
         "id":           (click_data or {}).get("product_id")   or "pix_validation",
         "name":         (click_data or {}).get("product_name") or "Taxa de validação - CoinTex",
+        "planId":       (click_data or {}).get("plan_id")      or UTMIFY_PLAN_ID,
+        "planName":     (click_data or {}).get("plan_name")    or UTMIFY_PLAN_NAME,
         "quantity":     1,
         "priceInCents": price_in_cents,
     }]
