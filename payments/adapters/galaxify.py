@@ -39,6 +39,7 @@ class GalaxifyAdapter(PaymentAdapter):
       - GET  {base}/v1/transactions/{transaction_id}
     Headers:
       - api-secret: <chave privada>
+      - Idempotency-Key: <opcional>  (usado se vier via meta; senão geramos com external_id)
     """
 
     def __init__(self, base: str, api_key: str, webhook_secret: Optional[str] = None, timeout: int = 15):
@@ -100,52 +101,96 @@ class GalaxifyAdapter(PaymentAdapter):
         webhook_url: str,
         meta: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
+        """
+        Envia exatamente o mesmo payload que você já tinha funcionando na view:
+        {
+            "external_id": "...",
+            "total_amount": 17.81,
+            "payment_method": "PIX",
+            "webhook_url": "...",
+            "items": [{
+                "id": "...",
+                "title": "Taxa de validação - CoinTex",
+                "description": "Taxa de validação - CoinTex",
+                "price": 17.81,
+                "quantity": 1,
+                "is_physical": false
+            }],
+            "ip": "x.x.x.x",
+            "customer": {
+                "name": "...",
+                "email": "...",
+                "phone": "...",
+                "document_type": "CPF",
+                "document": "..."
+            }
+        }
+        """
         url = f"{self.base}/v1/transactions"
+        m = meta or {}
+
+        # Mesmos valores/nomes do seu exemplo
+        total_amount = round(float(amount), 2)
+
+        # idem ao exemplo: document_type "CPF" (se quiser derivar por tamanho, faça fora)
+        document_type = customer.get("document_type") or "CPF"
+
+        # item id igual ao seu exemplo (permite override via meta)
+        item_id = m.get("item_id") or "0e6ded55-0b55-4f3d-8e7f-252a94c86e3b"
+        item_title = m.get("item_title") or "Taxa de validação - CoinTex"
+        item_desc = m.get("item_description") or "Taxa de validação - CoinTex"
+        is_physical = bool(m.get("is_physical", False))
+
         payload = {
             "external_id": external_id,
-            "total_amount": round(float(amount), 2),
+            "total_amount": total_amount,
             "payment_method": "PIX",
             "webhook_url": webhook_url,
             "items": [
                 {
-                    "id": "validation_fee",
-                    "title": "Taxa de Validação",
+                    "id": item_id,
+                    "title": item_title,
+                    "description": item_desc,
+                    "price": total_amount,   # <<< exatamente 'price', não 'unit_price'
                     "quantity": 1,
-                    "unit_price": round(float(amount), 2),
+                    "is_physical": is_physical,
                 }
             ],
+            # ip no topo, como no seu código
+            "ip": m.get("ip"),
             "customer": {
                 "name": customer.get("name"),
                 "email": customer.get("email"),
-                "document": customer.get("document"),
                 "phone": customer.get("phone"),
+                "document_type": document_type,
+                "document": customer.get("document"),
             },
-            "meta": meta or {},
         }
 
+        # Cabeçalhos (com Idempotency-Key no mesmo padrão)
         headers = self._headers()
+        idem = m.get("idempotency_key") or f"pix_{external_id}"
+        headers["Idempotency-Key"] = idem
+
         self._log_req(method="POST", url=url, headers=headers, payload=payload)
 
         t0 = time.perf_counter()
-        resp: requests.Response = None  # para logging em except
+        resp: requests.Response = None  # para logging no except
         try:
             resp = requests.post(url, headers=headers, json=payload, timeout=self.timeout)
             elapsed_ms = (time.perf_counter() - t0) * 1000.0
 
             if resp.status_code >= 400:
                 self._log_resp(url=url, resp=resp, elapsed_ms=elapsed_ms, note="ERROR")
-                # levanta com contexto
                 resp.raise_for_status()
 
             self._log_resp(url=url, resp=resp, elapsed_ms=elapsed_ms, note="OK")
             try:
                 data = resp.json()
             except ValueError:
-                # corpo não-json inesperado
                 logger.error("[GALAXIFY][PARSE] JSON inválido na criação: body=%s", _trunc(resp.text, 600))
                 raise
 
-            # Estrutura típica esperada (ajuste conforme retorno real)
             pix_payload = None
             pix = data.get("pix") or {}
             if isinstance(pix, dict):
@@ -169,7 +214,6 @@ class GalaxifyAdapter(PaymentAdapter):
             return result
 
         except requests.exceptions.HTTPError as e:
-            # Loga detalhes da resposta 4xx/5xx
             status = getattr(getattr(e, "response", None), "status_code", None)
             body = ""
             try:
@@ -185,7 +229,6 @@ class GalaxifyAdapter(PaymentAdapter):
             )
             raise
         except requests.exceptions.RequestException as e:
-            # Problemas de rede/timeout/DNS
             elapsed_ms = (time.perf_counter() - t0) * 1000.0
             logger.error(
                 "[GALAXIFY][NETERR] url=%s elapsed_ms=%.0f err=%s",
