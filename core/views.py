@@ -16,6 +16,7 @@ from django.db import transaction as dj_tx
 from django.urls import reverse
 from django.core.cache import cache
 from django.conf import settings
+from django.http import HttpResponse
 
 from utils.http import http_get, http_post
 from utils.pix_cache import get_cached_pix, set_cached_pix, with_user_pix_lock
@@ -1602,10 +1603,6 @@ def webhook_pix(request):
         return JsonResponse({'status': 'method not allowed'}, status=405)
 
     raw = request.body or b""
-    sig = request.headers.get('X-Galaxify-Signature') or request.headers.get('X-Signature')
-
-    if not _validate_webhook_signature(raw, sig):
-        return JsonResponse({'status': 'unauthorized'}, status=401)
 
     try:
         data = json.loads(raw.decode('utf-8'))
