@@ -73,7 +73,8 @@ INSTALLED_APPS = [
     'accounts.apps.AccountsConfig',
     'rest_framework',
     'core',
-    'api'
+    'api',
+    'payments'
 ]
 
 MIDDLEWARE = [

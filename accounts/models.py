@@ -344,6 +344,14 @@ class PixTransaction(models.Model):
     utmify_last_http_status  = models.IntegerField(null=True, blank=True)
     utmify_last_ok           = models.BooleanField(null=True, blank=True)
     utmify_last_resp_excerpt = models.TextField(null=True, blank=True)
+    provider = models.CharField(
+        max_length=20,
+        choices=[('galaxify','Galaxify'), ('tribopay','TriboPay')],
+        default='galaxify',
+        db_index=True,
+        null=True, blank=True
+    )
+    hash_id = models.CharField(max_length=100, null=True, blank=True, unique=True)
 
     class Meta:
         verbose_name = _("Transação PIX")

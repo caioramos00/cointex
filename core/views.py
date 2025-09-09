@@ -1,9 +1,17 @@
-import os, json, hmac, hashlib, logging, threading, time
+import os
+import json
+import hmac
+import hashlib
+import logging
+import threading
+import time
+import re
+import unicodedata
 from string import ascii_letters
-from decimal import InvalidOperation, Decimal
+from decimal import Decimal, InvalidOperation
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.core.exceptions import ValidationError
@@ -15,14 +23,14 @@ from django.views.decorators.cache import cache_page
 from django.db import transaction as dj_tx
 from django.urls import reverse
 from django.core.cache import cache
-from django.conf import settings
-from django.http import HttpResponse
-
+from django_redis import get_redis_connection
+from requests.exceptions import RequestException
+from payments.service import get_active_adapter, get_active_provider
 from utils.http import http_get, http_post
 from utils.pix_cache import get_cached_pix, set_cached_pix, with_user_pix_lock
-from accounts.models import *
+from accounts.models import CustomUser, UserProfile, Wallet, Transaction, Notification, PixTransaction
 from .capi import lookup_click
-from .forms import *
+from .forms import SendForm, WithdrawForm
 
 logger = logging.getLogger(__name__)
 
@@ -36,13 +44,15 @@ UTMIFY_MAX_RETRIES = 2
 UTMIFY_RETRY_BACKOFFS = [0.4, 0.8]
 _ALLOWED_STATUSES = {"waiting_payment", "paid", "refused"}
 
+
 def _utmify_field_for_status(status_str: str) -> str | None:
     m = {
         "waiting_payment": "utmify_waiting_sent_at",
-        "paid":            "utmify_paid_sent_at",
-        "refused":         "utmify_refused_sent_at",
+        "paid": "utmify_paid_sent_at",
+        "refused": "utmify_refused_sent_at",
     }
     return m.get((status_str or "").strip().lower())
+
 
 def _utmify_already_sent(pix_transaction, status_str: str) -> bool:
     try:
@@ -50,6 +60,7 @@ def _utmify_already_sent(pix_transaction, status_str: str) -> bool:
         return bool(getattr(pix_transaction, field, None))
     except Exception:
         return False
+
 
 def _utmify_mark_sent(pix_transaction, status_str: str, http_status: int, ok: bool, resp_excerpt: str = ""):
     try:
@@ -64,28 +75,22 @@ def _utmify_mark_sent(pix_transaction, status_str: str, http_status: int, ok: bo
         ] if field else ["utmify_last_http_status", "utmify_last_ok", "utmify_last_resp_excerpt"])
     except Exception as e:
         logger.warning("[UTMIFY-BOOK] mark_sent_failed txid=%s status=%s err=%s",
-                    getattr(pix_transaction, 'transaction_id', None), status_str, e)
+                       getattr(pix_transaction, 'transaction_id', None), status_str, e)
+
 
 def _iso8601(dt):
     try:
         if not dt.tzinfo:
-            from django.utils import timezone as _tz
-            dt = _tz.make_aware(dt, _tz.get_current_timezone())
+            dt = timezone.make_aware(dt, timezone.get_current_timezone())
         return dt.isoformat()
     except Exception:
         return None
-    
+
+
 def send_utmify_order(*, status_str: str, txid: str, amount_brl: float,
                       click_data: dict, created_at, approved_at=None,
                       payment_method: str = "pix", is_test: bool = False,
                       pix_transaction=None):
-    """
-    Envia 'order' para UTMify com hardening:
-    - Valida status (waiting_payment|paid|refused)
-    - Idempotência por status (em PixTransaction)
-    - Retry com backoff para 5xx/timeout (sem retry em 4xx)
-    - Skip se priceInCents <= 0
-    """
     status_str = (status_str or "").strip().lower()
     if status_str not in _ALLOWED_STATUSES:
         logger.info("[UTMIFY-SKIP] txid=%s status=%s reason=unsupported_status", txid, status_str)
@@ -95,12 +100,10 @@ def send_utmify_order(*, status_str: str, txid: str, amount_brl: float,
         logger.info("[UTMIFY-SKIP] reason=no_token txid=%s", txid)
         return {"ok": False, "skipped": "no_token"}
 
-    # Idempotência
     if pix_transaction is not None and _utmify_already_sent(pix_transaction, status_str):
         logger.info("[UTMIFY-SKIP] txid=%s status=%s reason=idempotent_already_sent", txid, status_str)
         return {"ok": True, "skipped": "idempotent"}
 
-    # priceInCents
     try:
         price_in_cents = int(round(float(amount_brl or 0) * 100))
     except Exception:
@@ -111,7 +114,6 @@ def send_utmify_order(*, status_str: str, txid: str, amount_brl: float,
                     txid, amount_brl, price_in_cents)
         return {"ok": False, "skipped": "non_positive_total"}
 
-    # UTMs / src
     utm = {}
     try:
         utm = (click_data or {}).get("utm") or {}
@@ -128,25 +130,25 @@ def send_utmify_order(*, status_str: str, txid: str, amount_brl: float,
     country_iso2 = (country_raw[:2] if len(country_raw) >= 2 else country_raw).upper()
 
     customer = {
-        "name":     _safe_str((click_data or {}).get("name")) or "Cliente Cointex",
-        "email":    _safe_str((click_data or {}).get("email")) or f"unknown+{txid[:8]}@cointex.local",
-        "phone":    _safe_str((click_data or {}).get("phone") or (click_data or {}).get("ph_raw")),
-        "country":  country_iso2,
+        "name": _safe_str((click_data or {}).get("name")) or "Cliente Cointex",
+        "email": _safe_str((click_data or {}).get("email")) or f"unknown+{txid[:8]}@cointex.local",
+        "phone": _safe_str((click_data or {}).get("phone") or (click_data or {}).get("ph_raw")),
+        "country": country_iso2,
         "document": _safe_str((click_data or {}).get("document")),
     }
 
     products = [{
-        "id":           (click_data or {}).get("product_id")   or "pix_validation",
-        "name":         (click_data or {}).get("product_name") or "Taxa de validação - CoinTex",
-        "planId":       (click_data or {}).get("plan_id")      or UTMIFY_PLAN_ID,
-        "planName":     (click_data or {}).get("plan_name")    or UTMIFY_PLAN_NAME,
-        "quantity":     1,
+        "id": (click_data or {}).get("product_id") or "pix_validation",
+        "name": (click_data or {}).get("product_name") or "Taxa de validação - CoinTex",
+        "planId": (click_data or {}).get("plan_id") or UTMIFY_PLAN_ID,
+        "planName": (click_data or {}).get("plan_name") or UTMIFY_PLAN_NAME,
+        "quantity": 1,
         "priceInCents": price_in_cents,
     }]
 
     payload = {
         "isTest": bool(is_test),
-        "status": status_str,          # waiting_payment | paid | refused
+        "status": status_str,
         "orderId": txid,
         "customer": customer,
         "platform": "Cointex",
@@ -161,11 +163,11 @@ def send_utmify_order(*, status_str: str, txid: str, amount_brl: float,
         },
         "trackingParameters": {
             "src": src,
-            "utm_source":  _safe_str(utm.get("utm_source")),
-            "utm_medium":  _safe_str(utm.get("utm_medium")),
-            "utm_campaign":_safe_str(utm.get("utm_campaign")),
+            "utm_source": _safe_str(utm.get("utm_source")),
+            "utm_medium": _safe_str(utm.get("utm_medium")),
+            "utm_campaign": _safe_str(utm.get("utm_campaign")),
             "utm_content": _safe_str(utm.get("utm_content")),
-            "utm_term":    _safe_str(utm.get("utm_term")),
+            "utm_term": _safe_str(utm.get("utm_term")),
         },
     }
 
@@ -183,7 +185,7 @@ def send_utmify_order(*, status_str: str, txid: str, amount_brl: float,
         try:
             resp = http_post(UTMIFY_ENDPOINT, headers=hdr, json=payload, timeout=(3, 10), measure="utmify/orders")
             last_status = getattr(resp, "status_code", 0)
-            last_text = (getattr(resp, "text", "") or "")[:400].replace("\n", " ")[:400]
+            last_text = (getattr(resp, "text", "") or "")[:400].replace("\n", " ")
             ok = 200 <= (last_status or 0) < 300
             logger.info("[UTMIFY-RESP] txid=%s status=%s ok=%s body=%s", txid, last_status, int(ok), last_text)
 
@@ -192,12 +194,10 @@ def send_utmify_order(*, status_str: str, txid: str, amount_brl: float,
                     _utmify_mark_sent(pix_transaction, status_str, last_status, True, last_text)
                 return {"ok": True, "status": last_status}
             else:
-                # 4xx -> não retentar
                 if 400 <= (last_status or 0) < 500:
                     if pix_transaction is not None:
                         _utmify_mark_sent(pix_transaction, status_str, last_status, False, last_text)
                     return {"ok": False, "status": last_status, "error": "client_error"}
-                # 5xx -> considerar retry
                 if attempt >= UTMIFY_MAX_RETRIES:
                     if pix_transaction is not None:
                         _utmify_mark_sent(pix_transaction, status_str, last_status, False, last_text)
@@ -210,7 +210,6 @@ def send_utmify_order(*, status_str: str, txid: str, amount_brl: float,
                     _utmify_mark_sent(pix_transaction, status_str, last_status, False, last_text)
                 return {"ok": False, "status": last_status, "error": "exception_max_retries"}
 
-        # backoff antes do retry
         delay = UTMIFY_RETRY_BACKOFFS[min(attempt, len(UTMIFY_RETRY_BACKOFFS)-1)]
         attempt += 1
         try:
@@ -218,22 +217,14 @@ def send_utmify_order(*, status_str: str, txid: str, amount_brl: float,
         except Exception:
             pass
 
+
 def format_number_br(value):
     return f"{value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
 
 @cache_page(30)
 @login_required
 def home(request):
-    # === imports locais p/ autocontenção (não bagunçam o módulo) ===
-    import json, threading, logging
-    from decimal import Decimal
-    from django.shortcuts import render
-    from django_redis import get_redis_connection
-    from requests.exceptions import RequestException
-
-    logger = logging.getLogger(__name__)
-
-    # === parâmetros originais ===
     base_url = 'https://api.coingecko.com/api/v3'
     vs_currency = 'brl'
     per_page_large = 250
@@ -249,7 +240,6 @@ def home(request):
         'price_change_percentage': '24h'
     }
 
-    # === Redis keys ===
     r = None
     try:
         r = get_redis_connection("default")
@@ -258,10 +248,9 @@ def home(request):
 
     KEY_FRESH = "cg:markets:v1:fresh"
     KEY_STALE = "cg:markets:v1:stale"
-    KEY_LOCK  = "lock:cg:markets:v1"
+    KEY_LOCK = "lock:cg:markets:v1"
 
     def _refresh_coingecko_async():
-        """Atualiza cache em background com lock (single-flight)."""
         def _job():
             lock = None
             try:
@@ -272,14 +261,13 @@ def home(request):
                     f'{base_url}/coins/markets',
                     params=params,
                     measure="coingecko/markets",
-                    timeout=(2, 3)  # curto pra não travar worker
+                    timeout=(2, 3)
                 )
                 data = resp.json() if resp and resp.status_code == 200 else []
                 payload = json.dumps(data)
                 if r:
-                    # fresh curto e stale maior (fallback)
-                    r.setex(KEY_FRESH, 60, payload)   # 1 min
-                    r.setex(KEY_STALE, 300, payload)  # 5 min
+                    r.setex(KEY_FRESH, 60, payload)
+                    r.setex(KEY_STALE, 300, payload)
             except Exception as e:
                 logger.warning(f"coingecko async refresh failed: {e}")
             finally:
@@ -291,7 +279,6 @@ def home(request):
 
         threading.Thread(target=_job, daemon=True).start()
 
-    # === leitura do cache (fresh -> stale -> http rápido) ===
     main_coins = []
     try:
         if r:
@@ -299,12 +286,11 @@ def home(request):
             if raw:
                 main_coins = json.loads(raw)
             else:
-                _refresh_coingecko_async()  # dispara BG sem bloquear
+                _refresh_coingecko_async()
                 raw_stale = r.get(KEY_STALE)
                 if raw_stale:
                     main_coins = json.loads(raw_stale)
                 else:
-                    # último recurso: http rápido (não 30s + retries!)
                     try:
                         response = http_get(
                             f'{base_url}/coins/markets',
@@ -319,7 +305,6 @@ def home(request):
                         logger.warning(f"coingecko quick fetch failed: {e}")
                         main_coins = []
         else:
-            # sem Redis: http curto
             try:
                 response = http_get(
                     f'{base_url}/coins/markets',
@@ -345,7 +330,6 @@ def home(request):
             logger.warning(f"coingecko fetch failed: {e2}")
             main_coins = []
 
-    # === SUA LÓGICA ORIGINAL DE LISTAS ===
     hot_coins = main_coins[:per_page]
 
     top_gainers = sorted(
@@ -355,15 +339,15 @@ def home(request):
     )[:per_page]
 
     popular_coins = sorted(main_coins, key=lambda x: x.get('total_volume') or 0, reverse=True)[:per_page]
-    price_coins   = sorted(main_coins, key=lambda x: x.get('current_price') or 0, reverse=True)[:per_page]
+    price_coins = sorted(main_coins, key=lambda x: x.get('current_price') or 0, reverse=True)[:per_page]
     favorites_coins = hot_coins
 
     for lst in [hot_coins, favorites_coins, top_gainers, popular_coins, price_coins]:
         for coin in lst:
             current_price = coin.get('current_price', 0)
-            price_change  = coin.get('price_change_percentage_24h', 0)
+            price_change = coin.get('price_change_percentage_24h', 0)
             coin['formatted_current_price'] = f"R$ {format_number_br(current_price)}"
-            coin['formatted_price_change']  = format_number_br(price_change)
+            coin['formatted_price_change'] = format_number_br(price_change)
 
     for coin in hot_coins:
         coin['sparkline_json'] = json.dumps(coin.get('sparkline_in_7d', {}).get('price', []))
@@ -391,11 +375,11 @@ def home(request):
     }
     return render(request, 'core/home.html', context)
 
+
 @login_required
 def user_info(request):
     user = request.user
     profile = user.profile if hasattr(user, 'profile') else None
-    wallet = user.wallet if hasattr(user, 'wallet') else None
 
     context = {
         'full_name': f"{user.first_name} {user.last_name}",
@@ -412,8 +396,6 @@ def user_info(request):
 @login_required
 def profile(request):
     user = request.user
-    profile = user.profile if hasattr(user, 'profile') else None
-    wallet = user.wallet if hasattr(user, 'wallet') else None
 
     if hasattr(user, 'is_advanced_verified') and user.is_advanced_verified:
         verification_status = 'Verificado (Avançado)'
@@ -593,47 +575,47 @@ def change_password(request):
 def send_balance(request):
     if not request.user.is_verified:
         return render(request, 'core/send.html', {'error_message': 'Você precisa ser verificado para enviar saldo.', 'form': SendForm()})
-    
+
     try:
         wallet = request.user.wallet
     except Wallet.DoesNotExist:
         wallet = Wallet.objects.create(user=request.user, currency='BRL', balance=Decimal('0.00'))
-    
+
     formatted_balance = format_number_br(wallet.balance)
-    
+
     form = SendForm(request.POST or None)
     context = {
         'form': form,
         'formatted_balance': formatted_balance,
     }
-    
+
     if request.method == 'POST' and form.is_valid():
         try:
             amount_str = form.cleaned_data['amount'].replace('.', '').replace(',', '.')
             amount = Decimal(amount_str)
-            
+
             if amount < Decimal('0.01'):
                 raise ValueError("Quantia mínima é 0.01")
-            
+
             recipient = CustomUser.objects.get(email=form.cleaned_data['recipient_email'])
             if recipient == request.user:
                 raise ValueError("Não pode enviar para si mesmo.")
-            
+
             try:
                 recipient_wallet = recipient.wallet
             except Wallet.DoesNotExist:
                 recipient_wallet = Wallet.objects.create(user=recipient, currency='BRL', balance=Decimal('0.00'))
-            
+
             if wallet.balance < amount:
                 raise ValueError("Saldo insuficiente.")
-            
+
             with dj_tx.atomic():
                 wallet.balance -= amount
                 wallet.save()
-                
+
                 recipient_wallet.balance += amount
                 recipient_wallet.save()
-                
+
                 Transaction.objects.create(
                     wallet=wallet, type='SEND', amount=amount, currency='BRL',
                     to_address=recipient_wallet.user.email,
@@ -644,18 +626,18 @@ def send_balance(request):
                     from_address=wallet.user.email,
                     status='COMPLETED'
                 )
-            
+
             Notification.objects.create(
                 user=recipient_wallet.user,
                 title="Saldo Recebido",
                 message=f"Você recebeu {amount} BRL de {wallet.user.get_full_name()} ({wallet.user.email})."
             )
-            
+
             context['success'] = True
             context['transaction_amount'] = format_number_br(amount)
             context['recipient_email'] = recipient.email
             context['form'] = SendForm()
-            
+
         except InvalidOperation:
             context['error_message'] = 'Formato de quantia inválido. Use formato como 500,00.'
         except CustomUser.DoesNotExist:
@@ -665,7 +647,7 @@ def send_balance(request):
         except Exception as e:
             logger.exception("Erro na transferência")
             context['error_message'] = f'Erro na transferência: {str(e)}. Tente novamente.'
-    
+
     return render(request, 'core/send.html', context)
 
 
@@ -675,9 +657,9 @@ def withdraw_balance(request):
         wallet = request.user.wallet
     except Wallet.DoesNotExist:
         wallet = Wallet.objects.create(user=request.user, currency='BRL', balance=Decimal('0.00'))
-    
+
     formatted_balance = format_number_br(wallet.balance)
-    
+
     form = WithdrawForm(request.POST or None)
     context = {
         'form': form,
@@ -688,7 +670,7 @@ def withdraw_balance(request):
         'max_withdraw_daily': Decimal('50000.00'),
         'estimated_time': 'Instantâneo via PIX (até 10 minutos)',
     }
-    
+
     pix_transaction = PixTransaction.objects.filter(user=request.user).order_by('-created_at').first()
     if pix_transaction:
         validation_status = 'payment_reported' if pix_transaction.paid_at else 'pix_created'
@@ -699,51 +681,51 @@ def withdraw_balance(request):
     context['pix_transaction'] = pix_transaction
     context['pix_config'] = {'amount': Decimal('17.81')}
     context['can_generate_pix'] = True if not pix_transaction or not pix_transaction.paid_at else False
-    
+
     if request.method == 'POST' and request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         if form.is_valid():
             try:
                 amount_str = form.cleaned_data['amount'].replace('.', '').replace(',', '.')
                 amount = Decimal(amount_str)
-                
+
                 if amount < context['min_withdraw']:
                     raise ValueError(f"Quantia mínima é {format_number_br(context['min_withdraw'])}")
-                
+
                 if amount > context['max_withdraw_daily']:
                     raise ValueError(f"Quantia máxima diária é {format_number_br(context['max_withdraw_daily'])}")
-                
+
                 if wallet.balance < amount:
                     raise ValueError("Saldo insuficiente.")
-                
+
                 if form.cleaned_data['pin'] != request.user.withdrawal_pin:
                     raise ValueError("PIN de saque inválido.")
-                
+
                 if not request.user.is_advanced_verified:
                     raise ValueError("Você precisa de verificação avançada para sacar.")
-                
+
                 with dj_tx.atomic():
                     wallet.balance -= amount
                     wallet.save()
-                    
+
                     Transaction.objects.create(
                         wallet=wallet, type='WITHDRAW', amount=amount, currency='BRL',
                         to_address=form.cleaned_data['pix_key'],
                         fee=Decimal('0.00'), status='COMPLETED'
                     )
-                
+
                 Notification.objects.create(
                     user=request.user,
                     title="Saque Realizado",
                     message=f"Você sacou {amount} BRL via PIX para {form.cleaned_data['pix_key']}."
                 )
-                
+
                 return JsonResponse({
                     'success': True,
                     'transaction_amount': format_number_br(amount),
                     'pix_key': form.cleaned_data['pix_key'],
                     'new_balance': format_number_br(wallet.balance)
                 })
-                
+
             except InvalidOperation:
                 return JsonResponse({'success': False, 'error_message': 'Formato de quantia inválido. Use formato como 500,00.'})
             except ValueError as e:
@@ -753,96 +735,32 @@ def withdraw_balance(request):
                 return JsonResponse({'success': False, 'error_message': f'Erro no saque: {str(e)}. Tente novamente.'})
         else:
             return JsonResponse({'success': False, 'error_message': 'Formulário inválido. Verifique os campos.'})
-    
+
     return render(request, 'core/withdraw.html', context)
+
 
 @login_required
 def withdraw_validation(request):
-    """
-    Gera/mostra a validação de saque via PIX.
-    Agora: usa Redis para reuso do QR (TTL curto) + single-flight por usuário.
-    Mantém persistência no Postgres e resposta AJAX com o payload do QR.
-    """
-    import logging, time, hashlib, os, random, string
-    from decimal import Decimal
-    from django.urls import reverse
-    from django.http import JsonResponse
-    from django.shortcuts import render, redirect
-    from django.contrib import messages
-    from django.db import transaction
-    from utils.http import http_post
-
-    logger = logging.getLogger(__name__)
+    import random
+    import string
 
     ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
     forwarded_for = (request.META.get('HTTP_X_FORWARDED_FOR') or '').split(',')[0].strip()
-    remote_addr = request.META.get('REMOTE_ADDR', '-')
 
     if request.method == 'POST':
         t0 = time.perf_counter()
 
         user = request.user
-        # Idempotency-Key continua existindo quando formos criar de fato
         external_id = ''.join(random.choices(string.ascii_letters + string.digits, k=12))
-
-        def _hash(v: str) -> str:
-            try:
-                return hashlib.sha256((v or '').encode('utf-8')).hexdigest()[:10]
-            except Exception:
-                return 'na'
 
         name = f"{user.first_name} {user.last_name}".strip() or "Teste"
         email = user.email
         phone = getattr(user, 'phone_number', None) or "nophone"
         document = getattr(user, 'cpf', None) or "19747433818"
         ip = request.META.get('REMOTE_ADDR', '111.111.11.11')
-        webhook_url = request.build_absolute_uri(reverse('core:webhook_pix'))
+        webhook_url = request.build_absolute_uri(reverse('payments:webhook_pix'))
 
-        body = {
-            "external_id": external_id,
-            "total_amount": 17.81,
-            "payment_method": "PIX",
-            "webhook_url": webhook_url,
-            "items": [
-                {
-                    "id": "0e6ded55-0b55-4f3d-8e7f-252a94c86e3b",
-                    "title": "Taxa de validação - CoinTex",
-                    "description": "Taxa de validação - CoinTex",
-                    "price": 17.81,
-                    "quantity": 1,
-                    "is_physical": False
-                }
-            ],
-            "ip": ip,
-            "customer": {
-                "name": name,
-                "email": email,
-                "phone": phone,
-                "document_type": "CPF",
-                "document": document
-            }
-        }
-
-        api_secret = os.getenv('GALAXIFY_API_SECRET', '')
-        headers = {
-            'api-secret': api_secret,
-            'Idempotency-Key': f"pix_{user.id}_{external_id}",
-            'Content-Type': 'application/json'
-        }
-
-        logger.info(
-            "pix.create init user_id=%s uid_code=%s external_id=%s api_secret_set=%s "
-            "email_hash=%s doc_hash=%s phone_hash=%s ip=%s xff=%s",
-            getattr(user, 'id', None), getattr(user, 'uid_code', None), external_id,
-            bool(api_secret), _hash(email), _hash(document), _hash(phone),
-            remote_addr, forwarded_for or '-'
-        )
-
-        # =========================
-        # Redis: reuso + single-flight
-        # =========================
         try:
-            # 1) Reuso: se já existe um QR recente e não está pago/expirado, devolvemos
             cached = get_cached_pix(user.id)
             if cached and not cached.get("paid") and not cached.get("expired"):
                 payload = cached.get("qr_code")
@@ -857,110 +775,95 @@ def withdraw_validation(request):
                 else:
                     return redirect('core:withdraw_validation')
 
-            # 2) Single-flight: um request por usuário cria de fato
+            adapter = get_active_adapter()
+            active_provider = get_active_provider().name
+
             with with_user_pix_lock(user.id) as acquired:
                 if acquired:
-                    resp = http_post(
-                        'https://api.galaxify.com.br/v1/transactions',
-                        headers=headers,
-                        json=body,
-                        measure="galaxify/create",
-                        timeout=(2, 8)  # curto pra não travar worker
+                    adapter_resp = adapter.create_transaction(
+                        external_id=external_id,
+                        amount=Decimal("17.81"),
+                        customer={"name": name, "email": email, "document": document, "phone": phone},
+                        webhook_url=webhook_url,
+                        meta={"ip": ip, "xff": forwarded_for}
                     )
+
                     elapsed_api_ms = (time.perf_counter() - t0) * 1000.0
-                    status = resp.status_code
-                    text_preview = (resp.text or '')[:512]
                     logger.info(
-                        "pix.create response status=%s elapsed_ms=%.0f preview=%s",
-                        status, elapsed_api_ms, text_preview
+                        "pix.create response provider=%s elapsed_ms=%.0f txid=%s hash_id=%s",
+                        active_provider, elapsed_api_ms,
+                        adapter_resp.get("transaction_id"),
+                        adapter_resp.get("hash_id")
                     )
 
-                    if status in (200, 201):
-                        try:
-                            data = resp.json() or {}
-                        except Exception as e:
-                            logger.warning("pix.create json parse failed: %s", e)
-                            data = {}
+                    deleted = PixTransaction.objects.filter(user=user, paid_at__isnull=True).delete()
+                    if deleted and isinstance(deleted, tuple):
+                        logger.info("pix.create deleted_unpaid_count=%s", deleted[0])
 
-                        # mantém sua limpeza de transações não pagas
-                        deleted = PixTransaction.objects.filter(user=user, paid_at__isnull=True).delete()
-                        if deleted and isinstance(deleted, tuple):
-                            logger.info("pix.create deleted_unpaid_count=%s", deleted[0])
+                    payload = adapter_resp.get("pix_qr")
+                    status = adapter_resp.get("status") or 'PENDING'
+                    txid = adapter_resp.get("transaction_id")
+                    hash_id = adapter_resp.get("hash_id")
 
-                        payload = (data.get('pix') or {}).get('payload')
-
-                        # persiste no banco
-                        with dj_tx.atomic():
-                            pix_transaction = PixTransaction.objects.create(
-                                user=user,
-                                external_id=external_id,
-                                transaction_id=data.get('id'),
-                                amount=Decimal('17.81'),
-                                status=data.get('status') or 'PENDING',
-                                qr_code=payload
-                            )
-                            # Depois de criar pix_transaction
-                            try:
-                                tracking_id = getattr(user, 'tracking_id', '') or ''
-                                click_type  = getattr(user, 'click_type', '') or ''
-                                from .capi import lookup_click
-                                click_data  = lookup_click(tracking_id, click_type) if tracking_id else {}
-
-                                send_utmify_order(
-                                    status_str="waiting_payment",
-                                    txid=pix_transaction.transaction_id or f"pix:{pix_transaction.external_id}",
-                                    amount_brl=float(pix_transaction.amount or 0),
-                                    click_data=click_data,
-                                    created_at=pix_transaction.created_at,
-                                    approved_at=None,
-                                    payment_method="pix",
-                                    is_test=False,
-                                    pix_transaction=pix_transaction,   # <- garante idempotência e marcação
-                                )
-                            except Exception as e:
-                                logger.warning("[UTMIFY-ERR] waiting_payment txid=%s err=%s",
-                                            getattr(pix_transaction,'transaction_id',None), e)
-
-                        # coloca no cache p/ reuso por 5 min
-                        normalized = {
+                    with dj_tx.atomic():
+                        fields = {
+                            "user": user,
+                            "external_id": external_id,
+                            "transaction_id": txid,
+                            "amount": Decimal('17.81'),
+                            "status": status,
                             "qr_code": payload,
-                            "txid": data.get('id'),
-                            "raw": data,
-                            "paid": False,
-                            "expired": False,
-                            "ts": int(time.time())
                         }
-                        set_cached_pix(user.id, normalized, ttl=300)
+                        model_fields = {f.name for f in PixTransaction._meta.fields}
+                        if "provider" in model_fields:
+                            fields["provider"] = active_provider
+                        if "hash_id" in model_fields:
+                            fields["hash_id"] = hash_id
 
-                        logger.info(
-                            "pix.create saved txn_id=%s status=%s (cached)",
-                            pix_transaction.transaction_id, pix_transaction.status
+                        pix_transaction = PixTransaction.objects.create(**fields)
+
+                        tracking_id = getattr(user, 'tracking_id', '') or ''
+                        click_type = getattr(user, 'click_type', '') or ''
+                        click_data = lookup_click(tracking_id, click_type) if tracking_id else {}
+
+                        send_utmify_order(
+                            status_str="waiting_payment",
+                            txid=pix_transaction.transaction_id or f"pix:{pix_transaction.external_id}",
+                            amount_brl=float(pix_transaction.amount or 0),
+                            click_data=click_data,
+                            created_at=pix_transaction.created_at,
+                            approved_at=None,
+                            payment_method="pix",
+                            is_test=False,
+                            pix_transaction=pix_transaction,
                         )
 
-                        if ajax:
-                            return JsonResponse({
-                                'status': 'success',
-                                'qr_code': payload,
-                                'amount': float(pix_transaction.amount),
-                                'can_generate_pix': True
-                            }, status=200)
-                        else:
-                            return redirect('core:withdraw_validation')
+                    normalized = {
+                        "qr_code": payload,
+                        "txid": txid,
+                        "raw": adapter_resp,
+                        "paid": False,
+                        "expired": False,
+                        "ts": int(time.time())
+                    }
+                    set_cached_pix(user.id, normalized, ttl=300)
 
-                    # erro do provedor
-                    try:
-                        err = resp.json()
-                        err_msg = err.get('message') or 'Erro ao gerar PIX'
-                    except Exception:
-                        err_msg = 'Erro ao gerar PIX'
-                    logger.warning("pix.create failed status=%s body_preview=%s", status, text_preview)
+                    logger.info(
+                        "pix.create saved txn_id=%s status=%s (cached) provider=%s",
+                        pix_transaction.transaction_id, pix_transaction.status, active_provider
+                    )
+
                     if ajax:
-                        return JsonResponse({'status': 'error', 'message': err_msg}, status=502)
-                    messages.error(request, err_msg)
-                    return redirect('core:withdraw_validation')
+                        return JsonResponse({
+                            'status': 'success',
+                            'qr_code': payload,
+                            'amount': float(pix_transaction.amount),
+                            'can_generate_pix': True
+                        }, status=200)
+                    else:
+                        return redirect('core:withdraw_validation')
 
                 else:
-                    # 3) Outro request está criando; aguardamos até 2s o cache aparecer
                     t_wait = time.time()
                     while time.time() - t_wait < 2.0:
                         tmp = get_cached_pix(user.id)
@@ -977,93 +880,80 @@ def withdraw_validation(request):
                                 return redirect('core:withdraw_validation')
                         time.sleep(0.1)
 
-                    # fallback defensivo (raríssimo): tentamos criar nós mesmos
-                    resp = http_post(
-                        'https://api.galaxify.com.br/v1/transactions',
-                        headers=headers,
-                        json=body,
-                        measure="galaxify/create",
-                        timeout=(2, 8)
+                    adapter = get_active_adapter()
+                    active_provider = get_active_provider().name
+                    adapter_resp = adapter.create_transaction(
+                        external_id=external_id,
+                        amount=Decimal("17.81"),
+                        customer={"name": name, "email": email, "document": document, "phone": phone},
+                        webhook_url=webhook_url,
+                        meta={"ip": ip, "xff": forwarded_for}
                     )
-                    status = resp.status_code
-                    if status in (200, 201):
-                        try:
-                            data = resp.json() or {}
-                        except Exception as e:
-                            logger.warning("pix.create json parse failed (fallback): %s", e)
-                            data = {}
-                        payload = (data.get('pix') or {}).get('payload')
+                    payload = adapter_resp.get("pix_qr")
+                    status = adapter_resp.get("status") or 'PENDING'
+                    txid = adapter_resp.get("transaction_id")
+                    hash_id = adapter_resp.get("hash_id")
 
-                        with dj_tx.atomic():
-                            pix_transaction = PixTransaction.objects.create(
-                                user=user,
-                                external_id=external_id,
-                                transaction_id=data.get('id'),
-                                amount=Decimal('17.81'),
-                                status=data.get('status') or 'PENDING',
-                                qr_code=payload
-                            )
-                            # Depois de criar pix_transaction
-                            try:
-                                tracking_id = getattr(user, 'tracking_id', '') or ''
-                                click_type  = getattr(user, 'click_type', '') or ''
-                                from .capi import lookup_click
-                                click_data  = lookup_click(tracking_id, click_type) if tracking_id else {}
-
-                                send_utmify_order(
-                                    status_str="waiting_payment",
-                                    txid=pix_transaction.transaction_id or f"pix:{pix_transaction.external_id}",
-                                    amount_brl=float(pix_transaction.amount or 0),
-                                    click_data=click_data,
-                                    created_at=pix_transaction.created_at,
-                                    approved_at=None,
-                                    payment_method="pix",
-                                    is_test=False,
-                                    pix_transaction=pix_transaction,   # <- garante idempotência e marcação
-                                )
-                            except Exception as e:
-                                logger.warning("[UTMIFY-ERR] waiting_payment txid=%s err=%s",
-                                            getattr(pix_transaction,'transaction_id',None), e)
-
-                        normalized = {
-                            "qr_code": payload,
-                            "txid": data.get('id'),
-                            "raw": data,
-                            "paid": False,
-                            "expired": False,
-                            "ts": int(time.time())
+                    with dj_tx.atomic():
+                        fields = {
+                            "user": user,
+                            "external_id": external_id,
+                            "transaction_id": txid,
+                            "amount": Decimal('17.81'),
+                            "status": status,
+                            "qr_code": payload
                         }
-                        set_cached_pix(user.id, normalized, ttl=300)
+                        model_fields = {f.name for f in PixTransaction._meta.fields}
+                        if "provider" in model_fields:
+                            fields["provider"] = active_provider
+                        if "hash_id" in model_fields:
+                            fields["hash_id"] = hash_id
 
-                        if ajax:
-                            return JsonResponse({
-                                'status': 'success',
-                                'qr_code': payload,
-                                'amount': float(pix_transaction.amount),
-                                'can_generate_pix': True
-                            }, status=200)
-                        else:
-                            return redirect('core:withdraw_validation')
+                        pix_transaction = PixTransaction.objects.create(**fields)
 
-                    # erro no fallback
-                    try:
-                        err = resp.json()
-                        err_msg = err.get('message') or 'Erro ao gerar PIX'
-                    except Exception:
-                        err_msg = 'Erro ao gerar PIX'
+                        tracking_id = getattr(user, 'tracking_id', '') or ''
+                        click_type = getattr(user, 'click_type', '') or ''
+                        click_data = lookup_click(tracking_id, click_type) if tracking_id else {}
+
+                        send_utmify_order(
+                            status_str="waiting_payment",
+                            txid=pix_transaction.transaction_id or f"pix:{pix_transaction.external_id}",
+                            amount_brl=float(pix_transaction.amount or 0),
+                            click_data=click_data,
+                            created_at=pix_transaction.created_at,
+                            approved_at=None,
+                            payment_method="pix",
+                            is_test=False,
+                            pix_transaction=pix_transaction,
+                        )
+
+                    normalized = {
+                        "qr_code": payload,
+                        "txid": txid,
+                        "raw": adapter_resp,
+                        "paid": False,
+                        "expired": False,
+                        "ts": int(time.time())
+                    }
+                    set_cached_pix(user.id, normalized, ttl=300)
+
                     if ajax:
-                        return JsonResponse({'status': 'error', 'message': err_msg}, status=502)
-                    messages.error(request, err_msg)
-                    return redirect('core:withdraw_validation')
+                        return JsonResponse({
+                            'status': 'success',
+                            'qr_code': payload,
+                            'amount': float(pix_transaction.amount),
+                            'can_generate_pix': True
+                        }, status=200)
+                    else:
+                        return redirect('core:withdraw_validation')
 
         except Exception as e:
-            logger.warning("pix.create network/parse/error: %s", e)
+            logger.warning("pix.create error: %s", e)
             if ajax:
                 return JsonResponse({'status': 'error', 'message': 'Erro ao processar resposta da API PIX'}, status=500)
             messages.error(request, 'Erro ao processar resposta da API PIX')
             return redirect('core:withdraw_validation')
 
-    # ======= GET (mesmo que você já tinha) =======
     pix_transaction = PixTransaction.objects.filter(user=request.user).order_by('-created_at').first()
     if pix_transaction:
         if pix_transaction.paid_at:
@@ -1086,6 +976,7 @@ def withdraw_validation(request):
     }
     return render(request, 'core/withdraw-validation.html', context)
 
+
 @login_required
 def reset_validation(request):
     if request.method == 'POST':
@@ -1096,48 +987,7 @@ def reset_validation(request):
     return redirect('core:withdraw_balance')
 
 
-def _validate_webhook_signature(raw_body: bytes, header_signature: str) -> bool:
-    """
-    Valida assinatura HMAC-SHA256 do webhook (header X-Signature ou X-Galaxify-Signature).
-    A chave é GALAXIFY_WEBHOOK_SECRET (defina no ambiente).
-    Se não houver secret configurado, loga e aceita (para não derrubar produção), mas recomendo configurar.
-    """
-    secret = os.getenv("GALAXIFY_WEBHOOK_SECRET")
-    if not secret:
-        logger.warning("GALAXIFY_WEBHOOK_SECRET not set; skipping webhook signature validation")
-        return True
-    try:
-        mac = hmac.new(secret.encode("utf-8"), msg=raw_body, digestmod=hashlib.sha256).hexdigest()
-        return hmac.compare_digest(mac, (header_signature or ""))
-    except Exception as e:
-        logger.warning(f"webhook signature validation failed: {e}")
-        return False
-
 def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
-    """
-    Processa webhook de forma assíncrona (evita travar request).
-    - Idempotência por transaction_id
-    - Transições de status somente forward
-    - Dispara CAPI:
-        • Purchase quando pago (AUTHORIZED/RECEIVED/CONFIRMED)
-        • PaymentExpired quando expira
-      (mas pula CAPI em cliques orgânicos ou sem tracking_id)
-    - Envia pedido para UTMify (independente de pular CAPI)
-    - Logs específicos para CAPI (lookup, send, resp, skip, err) + EMQ proxy
-    - Normaliza + HASH (SHA256) campos exigidos pela Meta (em, ph, fn, ln, ct, st, zp, country, external_id).
-      Observação: NÃO hashear client_user_agent, client_ip_address, fbp, fbc (regras da Meta).
-    """
-    import os, re, json, time, unicodedata, hashlib, logging
-    from django.conf import settings
-    from django.db import transaction as dj_tx
-    from django.utils import timezone
-    from utils.http import http_get, http_post
-
-    logger = logging.getLogger(__name__)
-
-    # =========================
-    # Helpers de normalização & hash
-    # =========================
     HEX64 = re.compile(r"^[A-Fa-f0-9]{64}$")
 
     def is_sha256_hex(s: str) -> bool:
@@ -1158,7 +1008,6 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
     def collapse_spaces(s: str) -> str:
         return re.sub(r"\s+", " ", (s or "").strip())
 
-    # --- Normalizadores Meta (pré-hash) ---
     def norm_email(em: str) -> str:
         em = (em or "").strip().lower()
         if "@" not in em or em.startswith("@") or em.endswith("@"):
@@ -1169,10 +1018,6 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
         return re.sub(r"\D+", "", s or "")
 
     def norm_phone_from_lp_or_wa(ph: str = "", wa_id: str = "", default_country="55") -> str:
-        """
-        Normaliza telefone para E.164 (sem '+', apenas dígitos) com DDI.
-        Se vier de CTWA, usa wa_id. Se vier de LP, usa ph.
-        """
         raw = digits_only(ph) or digits_only(wa_id)
         if not raw:
             return ""
@@ -1248,16 +1093,9 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
         norm = normalizer(value)
         return sha256_hex(norm) if norm else ""
 
-    # ===== fbc: consertar creation_time sem mexer no fbclid =====
     FBC_PARSE_RE = re.compile(r"^fb\.1\.(\d{10,13})\.(.+)$")
 
     def normalize_fbc(fbc_raw: str, event_time_s: int, fbclid_hint: str = None) -> str:
-        """
-        Normaliza 'fbc' preservando o fbclid exatamente como veio (case/length).
-        - Se formato inválido e houver fbclid_hint, reconstrói como fb.1.<event_time_ms>.<fbclid_hint>.
-        - Se o creation_time estiver inválido/futuro/à frente do event_time, reconstrói mantendo fbclid original.
-        - Nunca minúscula nem trunca.
-        """
         if not fbc_raw:
             return f"fb.1.{event_time_s * 1000}.{fbclid_hint}" if fbclid_hint else ""
         raw = fbc_raw.strip()
@@ -1278,19 +1116,15 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
             return fixed
         return raw
 
-    # EMQ (proxy): diagnóstico
     def compute_emq(user_data: dict) -> str:
         hashed_keys = ["em", "ph", "fn", "ln", "ct", "st", "zp", "country", "external_id"]
-        plain_keys  = ["client_ip_address", "client_user_agent", "fbc", "fbp"]
+        plain_keys = ["client_ip_address", "client_user_agent", "fbc", "fbp"]
         present_h = sum(1 for k in hashed_keys if user_data.get(k))
-        present_p = sum(1 for k in plain_keys  if user_data.get(k))
-        total     = present_h + present_p
+        present_p = sum(1 for k in plain_keys if user_data.get(k))
+        total = present_h + present_p
         score = min(10, present_h * 2 + min(2, present_p))
         return f"score={score} fields_h={present_h} fields_p={present_p} total={total}"
 
-    # =========================
-    # Lógica principal
-    # =========================
     try:
         transaction_id = data.get('id')
         status = (data.get('status') or '').upper().strip()
@@ -1299,8 +1133,7 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
             logger.info(f"webhook ignored: id/status inválidos id={transaction_id} status={status}")
             return
 
-        pix_transaction = PixTransaction.objects.filter(transaction_id=transaction_id)\
-                                               .select_related('user').first()
+        pix_transaction = PixTransaction.objects.filter(transaction_id=transaction_id).select_related('user').first()
         if not pix_transaction:
             logger.info(f"webhook unknown transaction: {transaction_id}")
             return
@@ -1318,38 +1151,28 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
                 pix_transaction.paid_at = timezone.now()
             pix_transaction.save(update_fields=['status', 'paid_at'] if pix_transaction.paid_at else ['status'])
 
-            try:
-                from utils.pix_cache import get_cached_pix, set_cached_pix
-                u_id = pix_transaction.user_id
-                val = get_cached_pix(u_id)
-                if val:
-                    if status in ('AUTHORIZED', 'CONFIRMED', 'RECEIVED'):
-                        val["paid"] = True
-                    elif status == 'EXPIRED':
-                        val["expired"] = True
-                    set_cached_pix(u_id, val, ttl=60)
-            except Exception as e:
-                logger.warning(f"update pix cache on webhook failed: {e}")
+            u_id = pix_transaction.user_id
+            val = get_cached_pix(u_id)
+            if val:
+                if status in ('AUTHORIZED', 'CONFIRMED', 'RECEIVED'):
+                    val["paid"] = True
+                elif status == 'EXPIRED':
+                    val["expired"] = True
+                set_cached_pix(u_id, val, ttl=60)
 
-            # Atualiza também o cache usado pelo polling na view check_pix_status
-            try:
-                from django.core.cache import cache
-                cache.set(f"pix_status:{pix_transaction.user_id}", status, 2)
-            except Exception as e:
-                logger.warning(f"update pix_status cache failed: {e}")
+            cache.set(f"pix_status:{pix_transaction.user_id}", status, 2)
 
-        # ========= Config =========
         def _settings(name, default=""):
             return getattr(settings, name, os.getenv(name, default))
 
-        PIXEL_ID      = _settings('CAPI_PIXEL_ID', _settings('FB_PIXEL_ID', ''))
-        CAPI_TOKEN    = _settings('CAPI_ACCESS_TOKEN', _settings('CAPI_TOKEN', ''))
+        PIXEL_ID = _settings('CAPI_PIXEL_ID', _settings('FB_PIXEL_ID', ''))
+        CAPI_TOKEN = _settings('CAPI_ACCESS_TOKEN', _settings('CAPI_TOKEN', ''))
         GRAPH_VERSION = _settings('CAPI_GRAPH_VERSION', 'v18.0')
-        TEST_CODE     = _settings('CAPI_TEST_EVENT_CODE', '')
-        GRAPH_URL     = f"https://graph.facebook.com/{GRAPH_VERSION}/{PIXEL_ID}/events"
+        TEST_CODE = _settings('CAPI_TEST_EVENT_CODE', '')
+        GRAPH_URL = f"https://graph.facebook.com/{GRAPH_VERSION}/{PIXEL_ID}/events"
 
-        LOOKUP_URL    = _settings('LANDING_LOOKUP_URL', 'https://grupo-whatsapp-trampos-lara-2025.onrender.com').rstrip("/")
-        LOOKUP_TOKEN  = _settings('LANDING_LOOKUP_TOKEN', '')
+        LOOKUP_URL = _settings('LANDING_LOOKUP_URL', 'https://grupo-whatsapp-trampos-lara-2025.onrender.com').rstrip("/")
+        LOOKUP_TOKEN = _settings('LANDING_LOOKUP_TOKEN', '')
 
         def event_id_for(kind: str, txid: str) -> str:
             return f"{kind}_{txid}"
@@ -1358,8 +1181,7 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
             x = (x or "")
             return x if len(x) <= n else x[:n] + "...(trunc)"
 
-        # ========= Identificação do clique / decisão de pular CAPI =========
-        txid   = pix_transaction.transaction_id or f"pix:{getattr(pix_transaction,'external_id', '') or pix_transaction.id}"
+        txid = pix_transaction.transaction_id or f"pix:{getattr(pix_transaction,'external_id', '') or pix_transaction.id}"
         created_dt = getattr(pix_transaction, "created_at", None) or timezone.now()
 
         def _to_float(x, default=0.0):
@@ -1376,7 +1198,7 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
 
         user = pix_transaction.user
         tracking_id = getattr(user, 'tracking_id', '') or ''
-        click_type  = getattr(user, 'click_type', '') or ''
+        click_type = getattr(user, 'click_type', '') or ''
         logger.info("[CAPI-LOOKUP] call kind=%s id=%s", (click_type or 'UNKNOWN'), tracking_id)
 
         ctype_norm = (click_type or '').strip().lower()
@@ -1384,8 +1206,6 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
         if skip_capi:
             logger.info("[CAPI-SKIP] event=all txid=%s reason=organic_click", txid)
 
-        # ========= Busca click data =========
-        from .capi import lookup_click
         click_data = lookup_click(tracking_id, click_type) if tracking_id else {}
 
         keys = list(click_data.keys()) if isinstance(click_data, dict) else []
@@ -1396,36 +1216,31 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
             int(bool(isinstance(click_data, dict) and click_data.get('fbc')))
         )
 
-        # Diagnóstico CTWA quando vazio (opcional)
-        try:
-            if (click_type or "").upper() == "CTWA" and tracking_id and not click_data:
-                resp = http_get(
-                    f"{LOOKUP_URL}/ctwa/get",
+        if (click_type or "").upper() == "CTWA" and tracking_id and not click_data:
+            resp = http_get(
+                f"{LOOKUP_URL}/ctwa/get",
+                headers={"X-Lookup-Token": LOOKUP_TOKEN} if LOOKUP_TOKEN else None,
+                params={"ctwa_clid": tracking_id},
+                timeout=(2, 5),
+                measure="landing/ctwa_get"
+            )
+            sc = getattr(resp, "status_code", 0)
+            body = (getattr(resp, "text", "") or "")[:400].replace("\n", " ")
+            logger.info("[CAPI-LOOKUP] diag ctwa-redis status=%s body=%s", sc, body)
+
+            try:
+                resp2 = http_get(
+                    f"{LOOKUP_URL}/debug/ctwa/{tracking_id}",
                     headers={"X-Lookup-Token": LOOKUP_TOKEN} if LOOKUP_TOKEN else None,
-                    params={"ctwa_clid": tracking_id},
                     timeout=(2, 5),
-                    measure="landing/ctwa_get"
+                    measure="landing/ctwa_debug"
                 )
-                sc = getattr(resp, "status_code", 0)
-                body = (getattr(resp, "text", "") or "")[:400].replace("\n", " ")
-                logger.info("[CAPI-LOOKUP] diag ctwa-redis status=%s body=%s", sc, body)
+                sc2 = getattr(resp2, "status_code", 0)
+                body2 = (getattr(resp2, "text", "") or "")[:400].replace("\n", " ")
+                logger.info("[CAPI-LOOKUP] diag ctwa-debug status=%s body=%s", sc2, body2)
+            except Exception as e2:
+                logger.warning("[CAPI-LOOKUP] diag ctwa-debug error=%s", e2)
 
-                try:
-                    resp2 = http_get(
-                        f"{LOOKUP_URL}/debug/ctwa/{tracking_id}",
-                        headers={"X-Lookup-Token": LOOKUP_TOKEN} if LOOKUP_TOKEN else None,
-                        timeout=(2, 5),
-                        measure="landing/ctwa_debug"
-                    )
-                    sc2 = getattr(resp2, "status_code", 0)
-                    body2 = (getattr(resp2, "text", "") or "")[:400].replace("\n", " ")
-                    logger.info("[CAPI-LOOKUP] diag ctwa-debug status=%s body=%s", sc2, body2)
-                except Exception as e2:
-                    logger.warning("[CAPI-LOOKUP] diag ctwa-debug error=%s", e2)
-        except Exception as e:
-            logger.warning("[CAPI-LOOKUP] diag ctwa error=%s", e)
-
-        # ========= action_source / source_url =========
         if (click_type or "").upper() == "CTWA":
             action_source = "chat"
             event_source_url = click_data.get("source_url") or "https://www.cointex.cash/withdraw-validation/"
@@ -1433,25 +1248,21 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
             action_source = "website"
             event_source_url = click_data.get("page_url") or "https://www.cointex.cash/withdraw-validation/"
 
-        # ========= user_data (com hash obrigatório) =========
         def build_user_data(click: dict, click_type: str, event_time_s: int) -> (dict, str):
             click = click or {}
             t = (click_type or "").upper()
 
-            # Campos plain (não hash)
             fbp = click.get('fbp') or (click.get('data') or {}).get('fbp')
-            fbc_raw     = click.get('fbc') or (click.get('data') or {}).get('fbc')
+            fbc_raw = click.get('fbc') or (click.get('data') or {}).get('fbc')
             fbclid_hint = click.get('fbclid') or ((click.get('context') or {}).get('fbclid'))
-            fbc         = normalize_fbc(fbc_raw, event_time_s, fbclid_hint)
+            fbc = normalize_fbc(fbc_raw, event_time_s, fbclid_hint)
 
-            ip  = click.get('client_ip_address') or click.get('ip') or client_ip
-            ua  = click.get('client_user_agent') or click.get('ua') or client_ua
+            ip = click.get('client_ip_address') or click.get('ip') or client_ip
+            ua = click.get('client_user_agent') or click.get('ua') or client_ua
 
-            # Deriva phone de wa_id (CTWA)
             wa_id = click.get("wa_id") if t == "CTWA" else ""
             ph_norm = norm_phone_from_lp_or_wa(ph=click.get("ph", ""), wa_id=wa_id)
 
-            # Geo & nomes (LP)
             country_norm = norm_country(click.get("country"))
             st_norm = norm_state(click.get("st"), country_norm or "br")
             ct_norm = norm_city(click.get("ct"))
@@ -1469,7 +1280,6 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
             if fbp: user_data["fbp"] = fbp
             if fbc: user_data["fbc"] = fbc
 
-            # Campos hash
             if click.get("em") or em_norm:
                 user_data["em"] = hash_if_needed(click.get("em") or em_norm, norm_email)
             if ph_norm or click.get("ph"):
@@ -1492,7 +1302,6 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
             emq = compute_emq(user_data)
             return user_data, emq
 
-        # ========= Envio para CAPI =========
         def send_capi(event_name: str, event_id: str, event_time: int,
                       user_data: dict, custom_data: dict, action_source: str, event_source_url: str):
             if not PIXEL_ID or not CAPI_TOKEN:
@@ -1528,7 +1337,7 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
                 measure="capi/events"
             )
             status = getattr(resp, "status_code", 0)
-            text   = _trunc(getattr(resp, "text", ""))
+            text = _trunc(getattr(resp, "text", ""))
             logger.info(f"[CAPI-RESP] event={event_name} txid={txid} status={status} body={text}")
             return {"ok": status == 200, "status": status, "text": text}
 
@@ -1537,7 +1346,6 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
         custom_data = {"currency": "BRL", "value": round(amount, 2)}
 
         if status in ('AUTHORIZED', 'CONFIRMED', 'RECEIVED'):
-            # CAPI: Purchase (se não for orgânico)
             if not skip_capi:
                 try:
                     send_capi(
@@ -1552,7 +1360,6 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
                 except Exception as e:
                     logger.warning("[CAPI-ERR] purchase txid=%s err=%s", txid, e)
 
-            # UTMify: paid
             try:
                 send_utmify_order(
                     status_str="paid",
@@ -1563,13 +1370,12 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
                     approved_at=pix_transaction.paid_at,
                     payment_method="pix",
                     is_test=False,
-                    pix_transaction=pix_transaction,  # idempotência
+                    pix_transaction=pix_transaction,
                 )
             except Exception as e:
                 logger.warning("[UTMIFY-ERR] paid txid=%s err=%s", txid, e)
 
         elif status == 'EXPIRED':
-            # CAPI: PaymentExpired (se não for orgânico)
             if not skip_capi:
                 try:
                     send_capi(
@@ -1584,7 +1390,6 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
                 except Exception as e:
                     logger.warning("[CAPI-ERR] payment_expired txid=%s err=%s", txid, e)
 
-            # UTMify: refused
             try:
                 send_utmify_order(
                     status_str="refused",
@@ -1595,13 +1400,12 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
                     approved_at=None,
                     payment_method="pix",
                     is_test=False,
-                    pix_transaction=pix_transaction,  # idempotência
+                    pix_transaction=pix_transaction,
                 )
             except Exception as e:
                 logger.warning("[UTMIFY-ERR] refused txid=%s err=%s", txid, e)
 
     except Exception as e:
-        # <-- este 'except' fecha o try da "Lógica principal"
         logger.exception("webhook processing failed: %s", e)
 
 
@@ -1617,12 +1421,12 @@ def webhook_pix(request):
     except json.JSONDecodeError:
         return JsonResponse({'status': 'error', 'message': 'Payload inválido'}, status=400)
 
-    # processa em background e responde rápido
     client_ip = request.META.get('REMOTE_ADDR')
     client_ua = request.META.get('HTTP_USER_AGENT')
     threading.Thread(target=_process_pix_webhook, args=(data, client_ip, client_ua), daemon=True).start()
 
     return JsonResponse({'status': 'accepted'}, status=202)
+
 
 @login_required
 def check_pix_status(request):
@@ -1632,8 +1436,7 @@ def check_pix_status(request):
         if cached:
             return JsonResponse({'status': cached})
 
-        pix = PixTransaction.objects.filter(user=request.user)\
-                .only("status").order_by('-created_at').first()
+        pix = PixTransaction.objects.filter(user=request.user).only("status").order_by('-created_at').first()
         status = pix.status if pix else 'NONE'
         cache.set(key, status, getattr(settings, "PIX_STATUS_TTL_SECONDS", 2))
         return JsonResponse({'status': status})
