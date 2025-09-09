@@ -25,9 +25,9 @@ from .forms import *
 
 logger = logging.getLogger(__name__)
 
-UTMIFY_API_TOKEN             = _settings('UTMIFY_API_TOKEN', '')
-UTMIFY_ENDPOINT              = _settings('UTMIFY_ENDPOINT', 'https://api.utmify.com.br/api-credentials/orders')
-UTMIFY_GATEWAY_FEE_CENTS     = int(os.getenv('UTMIFY_GATEWAY_FEE_CENTS', '0') or 0)
+UTMIFY_API_TOKEN = os.getenv('UTMIFY_API_TOKEN', '')
+UTMIFY_ENDPOINT = os.getenv('UTMIFY_ENDPOINT', 'https://api.utmify.com.br/api-credentials/orders')
+UTMIFY_GATEWAY_FEE_CENTS = int(os.getenv('UTMIFY_GATEWAY_FEE_CENTS', '0') or 0)
 UTMIFY_USER_COMMISSION_CENTS = int(os.getenv('UTMIFY_USER_COMMISSION_CENTS', '0') or 0)
 UTMIFY_MAX_RETRIES = 2
 UTMIFY_RETRY_BACKOFFS = [0.4, 0.8]
@@ -1519,6 +1519,79 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
             text   = _trunc(getattr(resp, "text", ""))
             logger.info(f"[CAPI-RESP] event={event_name} txid={txid} status={status} body={text}")
             return {"ok": status == 200, "status": status, "text": text}
+
+        event_time_s = int(time.time())
+        user_data, emq = build_user_data(click_data, click_type, event_time_s)
+        custom_data = {"currency": "BRL", "value": round(amount, 2)}
+
+        if status in ('AUTHORIZED', 'CONFIRMED', 'RECEIVED'):
+            # CAPI: Purchase (se não for orgânico)
+            if not skip_capi:
+                try:
+                    send_capi(
+                        event_name="Purchase",
+                        event_id=event_id_for("purchase", txid),
+                        event_time=event_time_s,
+                        user_data=user_data,
+                        custom_data=custom_data,
+                        action_source=action_source,
+                        event_source_url=event_source_url
+                    )
+                except Exception as e:
+                    logger.warning("[CAPI-ERR] purchase txid=%s err=%s", txid, e)
+
+            # UTMify: paid
+            try:
+                send_utmify_order(
+                    status_str="paid",
+                    txid=txid,
+                    amount_brl=amount,
+                    click_data=click_data,
+                    created_at=created_dt,
+                    approved_at=pix_transaction.paid_at,
+                    payment_method="pix",
+                    is_test=False,
+                    pix_transaction=pix_transaction,  # idempotência
+                )
+            except Exception as e:
+                logger.warning("[UTMIFY-ERR] paid txid=%s err=%s", txid, e)
+
+        elif status == 'EXPIRED':
+            # CAPI: PaymentExpired (se não for orgânico)
+            if not skip_capi:
+                try:
+                    send_capi(
+                        event_name="PaymentExpired",
+                        event_id=event_id_for("payment_expired", txid),
+                        event_time=event_time_s,
+                        user_data=user_data,
+                        custom_data=custom_data,
+                        action_source=action_source,
+                        event_source_url=event_source_url
+                    )
+                except Exception as e:
+                    logger.warning("[CAPI-ERR] payment_expired txid=%s err=%s", txid, e)
+
+            # UTMify: refused
+            try:
+                send_utmify_order(
+                    status_str="refused",
+                    txid=txid,
+                    amount_brl=amount,
+                    click_data=click_data,
+                    created_at=created_dt,
+                    approved_at=None,
+                    payment_method="pix",
+                    is_test=False,
+                    pix_transaction=pix_transaction,  # idempotência
+                )
+            except Exception as e:
+                logger.warning("[UTMIFY-ERR] refused txid=%s err=%s", txid, e)
+
+    except Exception as e:
+        # <-- este 'except' fecha o try da "Lógica principal"
+        logger.exception("webhook processing failed: %s", e)
+
 
 def webhook_pix(request):
     if request.method != 'POST':
