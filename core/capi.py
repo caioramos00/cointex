@@ -4,7 +4,20 @@ from django.conf import settings
 
 logger = logging.getLogger("core.views")
 
-LOOKUP_URL   = getattr(settings, "LANDING_LOOKUP_URL", "").rstrip("/")
+def _conf_str(name: str, default: str = "") -> str:
+    """Lê uma config do settings e devolve sempre string (sem None)."""
+    try:
+        v = getattr(settings, name, default)
+    except Exception:
+        v = default
+    return str(v or "").strip()
+
+def _url_base(name: str) -> str:
+    """Normaliza URL base (ou vazio), removendo / final."""
+    base = _conf_str(name, "")
+    return base.rstrip("/") if base else ""
+
+LOOKUP_URL   = _url_base("LANDING_LOOKUP_URL")
 LOOKUP_TOKEN = getattr(settings, "LANDING_LOOKUP_TOKEN", "")
 LEGACY_GETCLICK_URL = "https://grupo-whatsapp-trampos-lara-2025.onrender.com/capi/get-click"
 
