@@ -155,8 +155,10 @@ def send_utmify_order(*, status_str: str, txid: str, amount_brl: float,
     }
 
     products = [{
-        "id":           (safe_click or {}).get("product_id")   or "pix_validation",
-        "name":         (safe_click or {}).get("product_name") or "Taxa de validação - CoinTex",
+        "id": (safe_click or {}).get("product_id") or "pix_validation",
+        "name": (safe_click or {}).get("product_name") or "Taxa de validação - CoinTex",
+        "planId": "validation_fee",
+        "planName": "Taxa de Validação - CoinTex",
         "quantity":     1,
         "priceInCents": price_in_cents,
     }]
