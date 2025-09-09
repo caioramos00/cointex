@@ -86,11 +86,18 @@ def _iso8601(dt):
     except Exception:
         return None
 
-
 def send_utmify_order(*, status_str: str, txid: str, amount_brl: float,
                       click_data: dict, created_at, approved_at=None,
                       payment_method: str = "pix", is_test: bool = False,
                       pix_transaction=None):
+    """
+    Envia 'order' para UTMify com hardening:
+    - Valida status (waiting_payment|paid|refused)
+    - Idempotência por status (em PixTransaction)
+    - Retry com backoff para 5xx/timeout (sem retry em 4xx)
+    - Skip se priceInCents <= 0
+    - Normaliza txid para string (evita TypeError ao fatiar)
+    """
     status_str = (status_str or "").strip().lower()
     if status_str not in _ALLOWED_STATUSES:
         logger.info("[UTMIFY-SKIP] txid=%s status=%s reason=unsupported_status", txid, status_str)
@@ -100,10 +107,18 @@ def send_utmify_order(*, status_str: str, txid: str, amount_brl: float,
         logger.info("[UTMIFY-SKIP] reason=no_token txid=%s", txid)
         return {"ok": False, "skipped": "no_token"}
 
+    # --- Normalizações/hardening ---
+    # txid pode vir int do gateway; sempre trabalhar como string
+    txid_str = str(txid or "")
+    # click_data pode vir em formato inesperado; garantir dict
+    safe_click = click_data if isinstance(click_data, dict) else {}
+
+    # Idempotência
     if pix_transaction is not None and _utmify_already_sent(pix_transaction, status_str):
-        logger.info("[UTMIFY-SKIP] txid=%s status=%s reason=idempotent_already_sent", txid, status_str)
+        logger.info("[UTMIFY-SKIP] txid=%s status=%s reason=idempotent_already_sent", txid_str, status_str)
         return {"ok": True, "skipped": "idempotent"}
 
+    # priceInCents
     try:
         price_in_cents = int(round(float(amount_brl or 0) * 100))
     except Exception:
@@ -111,45 +126,45 @@ def send_utmify_order(*, status_str: str, txid: str, amount_brl: float,
 
     if price_in_cents <= 0:
         logger.info("[UTMIFY-SKIP] txid=%s reason=non_positive_total amount_brl=%s price_cents=%s",
-                    txid, amount_brl, price_in_cents)
+                    txid_str, amount_brl, price_in_cents)
         return {"ok": False, "skipped": "non_positive_total"}
 
+    # UTMs / src
     utm = {}
     try:
-        utm = (click_data or {}).get("utm") or {}
+        utm = (safe_click or {}).get("utm") or {}
     except Exception:
         utm = {}
 
-    raw_src = (click_data or {}).get("network")
+    raw_src = (safe_click or {}).get("network")
     src = raw_src if isinstance(raw_src, str) and raw_src.strip() else None
 
     def _safe_str(v):
         return v if (isinstance(v, str) and v.strip()) else None
 
-    country_raw = _safe_str((click_data or {}).get("country")) or "BR"
+    country_raw = _safe_str((safe_click or {}).get("country")) or "BR"
     country_iso2 = (country_raw[:2] if len(country_raw) >= 2 else country_raw).upper()
 
     customer = {
-        "name": _safe_str((click_data or {}).get("name")) or "Cliente Cointex",
-        "email": _safe_str((click_data or {}).get("email")) or f"unknown+{txid[:8]}@cointex.local",
-        "phone": _safe_str((click_data or {}).get("phone") or (click_data or {}).get("ph_raw")),
-        "country": country_iso2,
-        "document": _safe_str((click_data or {}).get("document")),
+        "name":     _safe_str((safe_click or {}).get("name")) or "Cliente Cointex",
+        # ← aqui usamos txid_str já normalizado
+        "email":    _safe_str((safe_click or {}).get("email")) or f"unknown+{txid_str[:8]}@cointex.local",
+        "phone":    _safe_str((safe_click or {}).get("phone") or (safe_click or {}).get("ph_raw")),
+        "country":  country_iso2,
+        "document": _safe_str((safe_click or {}).get("document")),
     }
 
     products = [{
-        "id": (click_data or {}).get("product_id") or "pix_validation",
-        "name": (click_data or {}).get("product_name") or "Taxa de validação - CoinTex",
-        "planId": (click_data or {}).get("plan_id") or UTMIFY_PLAN_ID,
-        "planName": (click_data or {}).get("plan_name") or UTMIFY_PLAN_NAME,
-        "quantity": 1,
+        "id":           (safe_click or {}).get("product_id")   or "pix_validation",
+        "name":         (safe_click or {}).get("product_name") or "Taxa de validação - CoinTex",
+        "quantity":     1,
         "priceInCents": price_in_cents,
     }]
 
     payload = {
         "isTest": bool(is_test),
-        "status": status_str,
-        "orderId": txid,
+        "status": status_str,          # waiting_payment | paid | refused
+        "orderId": txid_str,           # ← sempre string
         "customer": customer,
         "platform": "Cointex",
         "products": products,
@@ -163,11 +178,11 @@ def send_utmify_order(*, status_str: str, txid: str, amount_brl: float,
         },
         "trackingParameters": {
             "src": src,
-            "utm_source": _safe_str(utm.get("utm_source")),
-            "utm_medium": _safe_str(utm.get("utm_medium")),
-            "utm_campaign": _safe_str(utm.get("utm_campaign")),
+            "utm_source":  _safe_str(utm.get("utm_source")),
+            "utm_medium":  _safe_str(utm.get("utm_medium")),
+            "utm_campaign":_safe_str(utm.get("utm_campaign")),
             "utm_content": _safe_str(utm.get("utm_content")),
-            "utm_term": _safe_str(utm.get("utm_term")),
+            "utm_term":    _safe_str(utm.get("utm_term")),
         },
     }
 
@@ -176,7 +191,7 @@ def send_utmify_order(*, status_str: str, txid: str, amount_brl: float,
     preview = (body_str[:500] + "...") if len(body_str) > 500 else body_str
 
     logger.info("[UTMIFY-PAYLOAD] txid=%s status=%s total_cents=%s preview=%s",
-                txid, status_str, price_in_cents, preview)
+                txid_str, status_str, price_in_cents, preview)
 
     attempt = 0
     last_status = None
@@ -185,9 +200,9 @@ def send_utmify_order(*, status_str: str, txid: str, amount_brl: float,
         try:
             resp = http_post(UTMIFY_ENDPOINT, headers=hdr, json=payload, timeout=(3, 10), measure="utmify/orders")
             last_status = getattr(resp, "status_code", 0)
-            last_text = (getattr(resp, "text", "") or "")[:400].replace("\n", " ")
+            last_text = (getattr(resp, "text", "") or "")[:400].replace("\n", " ")[:400]
             ok = 200 <= (last_status or 0) < 300
-            logger.info("[UTMIFY-RESP] txid=%s status=%s ok=%s body=%s", txid, last_status, int(ok), last_text)
+            logger.info("[UTMIFY-RESP] txid=%s status=%s ok=%s body=%s", txid_str, last_status, int(ok), last_text)
 
             if ok:
                 if pix_transaction is not None:
@@ -204,7 +219,7 @@ def send_utmify_order(*, status_str: str, txid: str, amount_brl: float,
                     return {"ok": False, "status": last_status, "error": "server_error_max_retries"}
         except Exception as e:
             last_text = f"exception:{e}"
-            logger.warning("[UTMIFY-ERR] txid=%s status=%s err=%s", txid, last_status, e)
+            logger.warning("[UTMIFY-ERR] txid=%s status=%s err=%s", txid_str, last_status, e)
             if attempt >= UTMIFY_MAX_RETRIES:
                 if pix_transaction is not None:
                     _utmify_mark_sent(pix_transaction, status_str, last_status, False, last_text)
@@ -217,10 +232,8 @@ def send_utmify_order(*, status_str: str, txid: str, amount_brl: float,
         except Exception:
             pass
 
-
 def format_number_br(value):
     return f"{value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-
 
 @cache_page(30)
 @login_required
