@@ -45,11 +45,7 @@ UTMIFY_RETRY_BACKOFFS = [0.4, 0.8]
 _ALLOWED_STATUSES = {"waiting_payment", "paid", "refused"}
 
 def _to_e164_br(raw) -> str | None:
-    """
-    Normaliza telefone BR para E.164 sem '+'. Ex.: '5511998765432'.
-    Aceita strings com símbolos/espacos; mantém apenas dígitos.
-    Se não começar com '55', prefixa '55'.
-    """
+    """Normaliza telefone BR para E.164 sem '+'. Ex.: '5511998765432'."""
     if raw is None:
         return None
     s = "".join(ch for ch in str(raw) if ch.isdigit())
@@ -59,31 +55,28 @@ def _to_e164_br(raw) -> str | None:
         s = "55" + s
     return s
 
+
 def _safe_email(email: str | None, txid: str) -> str:
-    """
-    Garante um e-mail válido (fallback cointex.local).
-    """
+    """Garante e-mail válido (fallback cointex.local)."""
     e = (email or "").strip()
     if "@" in e and "." in e.split("@")[-1]:
         return e
     return f"unknown+{(txid or '')[:8]}@cointex.local"
 
+
 def _build_tracking_parameters(click_data: dict | None, customer_phone_e164: str | None, click_type: str | None) -> dict:
     """
-    Monta o bloco trackingParameters (UTMs).
-    Regras:
-      - CTWA: se não vierem, define utm_source=meta e utm_medium=ctwa.
-      - utm_content: se vier vazio, usa o telefone do cliente (E.164).
+    Monta trackingParameters (UTMs).
+      - CTWA: defaults (source=meta, medium=ctwa) se ausentes
+      - utm_content: telefone (E.164) se vier vazio
     """
     click_data = click_data or {}
     utm = (click_data.get("utm") or {}).copy()
     is_ctwa = (str(click_type or click_data.get("click_type") or "")).strip().upper() == "CTWA"
 
     if is_ctwa:
-        if not utm.get("utm_source"):
-            utm["utm_source"] = "meta"
-        if not utm.get("utm_medium"):
-            utm["utm_medium"] = "ctwa"
+        utm.setdefault("utm_source", "meta")
+        utm.setdefault("utm_medium", "ctwa")
 
     if not utm.get("utm_content") and customer_phone_e164:
         utm["utm_content"] = customer_phone_e164
@@ -132,11 +125,11 @@ def _iso8601(dt):
         return None
 
 def send_utmify_order(
+    txid,
+    status_str,
+    user=None,
+    products=None,
     *,
-    txid: str,
-    status_str: str,
-    user,
-    products: list[dict],
     click_data: dict | None = None,
     pix_transaction=None,
     total_cents: int | None = None,
@@ -147,16 +140,31 @@ def send_utmify_order(
 ):
     """
     Envia pedido para a UTMify com UTMs robustas para CTWA.
-    - Garante utm_content = telefone (WAID) quando vier vazio.
-    - Aceita amount_brl (Decimal/float/str) e calcula totalInCents se total_cents não vier.
-    - Adiciona logs específicos de CTWA no padrão solicitado.
-    - **kwargs** para compatibilidade com chamadores que passem chaves adicionais.
+    Retrocompatível:
+      - aceita posicional
+      - 'user' e 'products' podem faltar (tenta inferir)
+    Mantém logs [UTMIFY-*] e adiciona [CTWA-*].
     """
     log = logging.getLogger(__name__)
+
+    # ---- Inferências para compatibilidade ----
+    if user is None:
+        user = (
+            getattr(pix_transaction, "user", None)
+            or kwargs.get("request_user")
+            or getattr(kwargs.get("request"), "user", None)
+            or SimpleNamespace(  # fallback mínimo
+                email=None, phone_number=None, name=None, click_type=None,
+                get_full_name=lambda: None
+            )
+        )
+    if products is None:
+        products = kwargs.get("products") or []
+
     click_data = click_data or {}
     click_type = (click_data.get("click_type") or getattr(user, "click_type", "") or "").upper()
 
-    # 1) Telefone do cliente (prioriza LP/lookup; fallback user.phone_number)
+    # ---- Telefone do cliente ----
     phone_from_lp = click_data.get("phone") or click_data.get("ph_raw")
     customer_phone = _to_e164_br(phone_from_lp or getattr(user, "phone_number", None))
 
@@ -168,10 +176,10 @@ def send_utmify_order(
         "document": getattr(user, "document", None),
     }
 
-    # 2) Tracking parameters (UTMs)
+    # ---- UTMs ----
     tracking_parameters = _build_tracking_parameters(click_data, customer_phone, click_type)
 
-    # 3) totalInCents: usa total_cents se vier; senão tenta derivar de amount_brl
+    # ---- totalInCents ----
     tc = None
     if total_cents is not None:
         try:
@@ -180,18 +188,16 @@ def send_utmify_order(
             tc = None
     if tc is None and amount_brl is not None:
         try:
-            # Import local para evitar dependência global
-            from decimal import Decimal, InvalidOperation
+            from decimal import Decimal
             d = Decimal(str(amount_brl)).scaleb(2)  # *100
             tc = int(d.to_integral_value(rounding="ROUND_HALF_UP"))
         except Exception:
-            # fallback simples
             try:
                 tc = int(round(float(amount_brl) * 100))
             except Exception:
                 tc = None
 
-    # 4) Payload
+    # ---- Payload ----
     payload = {
         "isTest": bool(getattr(settings, "UTMIFY_TEST_MODE", False)),
         "status": status_str,  # waiting_payment | paid | refused | refunded | chargedback
@@ -207,7 +213,7 @@ def send_utmify_order(
     if tc is not None:
         payload["totalInCents"] = tc
 
-    # 5) Logs (preview no padrão + CTWA)
+    # ---- Logs (preview + CTWA) ----
     try:
         preview = json.dumps(
             {
@@ -225,10 +231,7 @@ def send_utmify_order(
     except Exception:
         preview = "<preview_unavailable>"
 
-    log.info(
-        "[UTMIFY-PAYLOAD] txid=%s status=%s total_cents=%s preview=%s",
-        txid, status_str, tc, preview[:1000]
-    )
+    log.info("[UTMIFY-PAYLOAD] txid=%s status=%s total_cents=%s preview=%s", txid, status_str, tc, preview[:1000])
 
     if click_type == "CTWA":
         log.info(
@@ -243,7 +246,7 @@ def send_utmify_order(
             tracking_parameters.get("utm_content"),
         )
 
-    # 6) Envio
+    # ---- POST ----
     headers = {
         "Authorization": f"Bearer {getattr(settings, 'UTMIFY_TOKEN', '')}",
         "Content-Type": "application/json",
@@ -258,15 +261,9 @@ def send_utmify_order(
         body_snippet = "<no_body>"
 
     ok_flag = 1 if 200 <= resp.status_code < 300 else 0
-    log.info(
-        "[UTMIFY-RESP] txid=%s status=%s ok=%s body=%s",
-        txid, resp.status_code, ok_flag, body_snippet
-    )
+    log.info("[UTMIFY-RESP] txid=%s status=%s ok=%s body=%s", txid, resp.status_code, ok_flag, body_snippet)
     if click_type == "CTWA":
-        log.info(
-            "[CTWA-RESP] txid=%s status=%s ok=%s",
-            txid, resp.status_code, ok_flag
-        )
+        log.info("[CTWA-RESP] txid=%s status=%s ok=%s", txid, resp.status_code, ok_flag)
 
     resp.raise_for_status()
     return resp
