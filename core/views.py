@@ -83,6 +83,32 @@ def _build_tracking_parameters(click_data: dict | None, customer_phone_e164: str
 
     return utm
 
+
+def _resolve_utmify_url() -> str:
+    """
+    Retorna a URL do webhook da UTMify usando fallback:
+    UTMIFY_WEBHOOK_URL -> UTMIFY_ENDPOINT -> UTMIFY_URL.
+    """
+    for attr in ("UTMIFY_WEBHOOK_URL", "UTMIFY_ENDPOINT", "UTMIFY_URL"):
+        url = getattr(settings, attr, "") or ""
+        if isinstance(url, str) and url.strip():
+            return url.strip()
+    return ""
+
+
+def _build_utmify_headers() -> dict:
+    """
+    Monta headers aceitando tanto 'Authorization: Bearer' quanto 'x-api-token'.
+    Usa UTMIFY_TOKEN ou UTMIFY_API_TOKEN.
+    """
+    token = (getattr(settings, "UTMIFY_TOKEN", "") or
+             getattr(settings, "UTMIFY_API_TOKEN", "") or "")
+    headers = {"Content-Type": "application/json"}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+        headers["x-api-token"] = token
+    return headers
+
 def _utmify_field_for_status(status_str: str) -> str | None:
     m = {
         "waiting_payment": "utmify_waiting_sent_at",
@@ -147,22 +173,46 @@ def send_utmify_order(
     """
     log = logging.getLogger(__name__)
 
-    # ---- Inferências para compatibilidade ----
+    # ---- Inferências p/ compatibilidade ----
     if user is None:
         user = (
             getattr(pix_transaction, "user", None)
             or kwargs.get("request_user")
             or getattr(kwargs.get("request"), "user", None)
-            or SimpleNamespace(  # fallback mínimo
-                email=None, phone_number=None, name=None, click_type=None,
-                get_full_name=lambda: None
-            )
+            or SimpleNamespace(email=None, phone_number=None, name=None, click_type=None, get_full_name=lambda: None)
         )
     if products is None:
         products = kwargs.get("products") or []
 
     click_data = click_data or {}
     click_type = (click_data.get("click_type") or getattr(user, "click_type", "") or "").upper()
+
+    # ---- Helpers locais ----
+    def _to_e164_br(raw) -> str | None:
+        if raw is None:
+            return None
+        s = "".join(ch for ch in str(raw) if ch.isdigit())
+        if not s:
+            return None
+        if not s.startswith("55"):
+            s = "55" + s
+        return s
+
+    def _safe_email(email: str | None, order_id: str) -> str:
+        e = (email or "").strip()
+        if "@" in e and "." in e.split("@")[-1]:
+            return e
+        return f"unknown+{(order_id or '')[:8]}@cointex.local"
+
+    def _build_tracking_parameters(cdata: dict | None, customer_phone_e164: str | None, ctype: str | None) -> dict:
+        utm = ((cdata or {}).get("utm") or {}).copy()
+        is_ctwa = (str(ctype or (cdata or {}).get("click_type") or "")).strip().upper() == "CTWA"
+        if is_ctwa:
+            utm.setdefault("utm_source", "meta")
+            utm.setdefault("utm_medium", "ctwa")
+        if not utm.get("utm_content") and customer_phone_e164:
+            utm["utm_content"] = customer_phone_e164
+        return utm
 
     # ---- Telefone do cliente ----
     phone_from_lp = click_data.get("phone") or click_data.get("ph_raw")
@@ -246,12 +296,14 @@ def send_utmify_order(
             tracking_parameters.get("utm_content"),
         )
 
+    # ---- URL + headers com fallback ----
+    url = _resolve_utmify_url()
+    headers = _build_utmify_headers()
+    if not url or not url.startswith(("http://", "https://")):
+        log.error("[UTMIFY-CONFIG-ERROR] url ausente/inválida: %r (defina UTMIFY_WEBHOOK_URL ou UTMIFY_ENDPOINT)", url)
+        raise ValueError("UTMify URL não configurada (UTMIFY_WEBHOOK_URL/UTMIFY_ENDPOINT)")
+
     # ---- POST ----
-    headers = {
-        "Authorization": f"Bearer {getattr(settings, 'UTMIFY_TOKEN', '')}",
-        "Content-Type": "application/json",
-    }
-    url = getattr(settings, "UTMIFY_WEBHOOK_URL", "")
     resp = requests.post(url, json=payload, headers=headers, timeout=10)
 
     body_snippet = ""
