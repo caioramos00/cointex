@@ -90,14 +90,6 @@ def send_utmify_order(*, status_str: str, txid: str, amount_brl: float,
                       click_data: dict, created_at, approved_at=None,
                       payment_method: str = "pix", is_test: bool = False,
                       pix_transaction=None):
-    """
-    Envia 'order' para UTMify com hardening:
-    - Valida status (waiting_payment|paid|refused)
-    - Idempotência por status (em PixTransaction)
-    - Retry com backoff para 5xx/timeout (sem retry em 4xx)
-    - Skip se priceInCents <= 0
-    - Normaliza txid para string (evita TypeError ao fatiar)
-    """
     status_str = (status_str or "").strip().lower()
     if status_str not in _ALLOWED_STATUSES:
         logger.info("[UTMIFY-SKIP] txid=%s status=%s reason=unsupported_status", txid, status_str)
@@ -107,10 +99,29 @@ def send_utmify_order(*, status_str: str, txid: str, amount_brl: float,
         logger.info("[UTMIFY-SKIP] reason=no_token txid=%s", txid)
         return {"ok": False, "skipped": "no_token"}
 
+    # --- Helpers locais (somente nesta função) ---
+    def _safe_str(v):
+        return v if (isinstance(v, str) and v.strip()) else None
+
+    def _digits_only(s: str) -> str:
+        import re as _re
+        return _re.sub(r"\D+", "", s or "")
+
+    def _to_e164_br(raw: str) -> str:
+        """Normaliza telefone para E.164 BR sem '+'. Idempotente para '55...'."""
+        d = _digits_only(raw)
+        if not d:
+            return ""
+        if d.startswith("55"):
+            return d
+        # Se veio só DDD+numero (10-11 dígitos), prefixa 55.
+        if 10 <= len(d) <= 11:
+            return "55" + d
+        # Caso já esteja internacional de outro país ou tamanho atípico, retorna como dígitos.
+        return d
+
     # --- Normalizações/hardening ---
-    # txid pode vir int do gateway; sempre trabalhar como string
     txid_str = str(txid or "")
-    # click_data pode vir em formato inesperado; garantir dict
     safe_click = click_data if isinstance(click_data, dict) else {}
 
     # Idempotência
@@ -123,13 +134,12 @@ def send_utmify_order(*, status_str: str, txid: str, amount_brl: float,
         price_in_cents = int(round(float(amount_brl or 0) * 100))
     except Exception:
         price_in_cents = 0
-
     if price_in_cents <= 0:
         logger.info("[UTMIFY-SKIP] txid=%s reason=non_positive_total amount_brl=%s price_cents=%s",
                     txid_str, amount_brl, price_in_cents)
         return {"ok": False, "skipped": "non_positive_total"}
 
-    # UTMs / src
+    # ----- Dados base do click -----
     utm = {}
     try:
         utm = (safe_click or {}).get("utm") or {}
@@ -139,20 +149,43 @@ def send_utmify_order(*, status_str: str, txid: str, amount_brl: float,
     raw_src = (safe_click or {}).get("network")
     src = raw_src if isinstance(raw_src, str) and raw_src.strip() else None
 
-    def _safe_str(v):
-        return v if (isinstance(v, str) and v.strip()) else None
+    # Detectar CTWA: via click_type/wa_id ou hint de origem
+    click_type = _safe_str((safe_click or {}).get("click_type")) or ""
+    is_ctwa = click_type.upper() == "CTWA" or bool(_safe_str((safe_click or {}).get("wa_id"))) \
+              or str(src or "").lower() == "ctwa"
+
+    # Telefone (prioridade: LP lookup -> wa_id). Normaliza para E.164 BR.
+    phone_raw = _safe_str((safe_click or {}).get("phone")) or _safe_str((safe_click or {}).get("ph_raw")) \
+                or _safe_str((safe_click or {}).get("wa_id"))
+    phone_e164 = _to_e164_br(phone_raw) if phone_raw else ""
 
     country_raw = _safe_str((safe_click or {}).get("country")) or "BR"
     country_iso2 = (country_raw[:2] if len(country_raw) >= 2 else country_raw).upper()
 
     customer = {
         "name":     _safe_str((safe_click or {}).get("name")) or "Cliente Cointex",
-        # ← aqui usamos txid_str já normalizado
         "email":    _safe_str((safe_click or {}).get("email")) or f"unknown+{txid_str[:8]}@cointex.local",
-        "phone":    _safe_str((safe_click or {}).get("phone") or (safe_click or {}).get("ph_raw")),
+        "phone":    phone_e164 or None,  # << agora garantimos E.164 se vier
         "country":  country_iso2,
         "document": _safe_str((safe_click or {}).get("document")),
     }
+
+    # ----- UTMs / trackingParameters -----
+    # Mantém tudo que já vinha, e aplica defaults/garantia apenas para CTWA.
+    utm_source   = _safe_str(utm.get("utm_source"))
+    utm_medium   = _safe_str(utm.get("utm_medium"))
+    utm_campaign = _safe_str(utm.get("utm_campaign"))
+    utm_content  = _safe_str(utm.get("utm_content"))
+    utm_term     = _safe_str(utm.get("utm_term"))
+
+    if is_ctwa:
+        if not utm_source:
+            utm_source = "meta"
+        if not utm_medium:
+            utm_medium = "ctwa"
+        # Critico para funil WhatsApp: utm_content = telefone (E.164) se vier vazio
+        if not utm_content and phone_e164:
+            utm_content = phone_e164
 
     products = [{
         "id": (safe_click or {}).get("product_id") or "pix_validation",
@@ -166,7 +199,7 @@ def send_utmify_order(*, status_str: str, txid: str, amount_brl: float,
     payload = {
         "isTest": bool(is_test),
         "status": status_str,          # waiting_payment | paid | refused
-        "orderId": txid_str,           # ← sempre string
+        "orderId": txid_str,
         "customer": customer,
         "platform": "Cointex",
         "products": products,
@@ -180,11 +213,11 @@ def send_utmify_order(*, status_str: str, txid: str, amount_brl: float,
         },
         "trackingParameters": {
             "src": src,
-            "utm_source":  _safe_str(utm.get("utm_source")),
-            "utm_medium":  _safe_str(utm.get("utm_medium")),
-            "utm_campaign":_safe_str(utm.get("utm_campaign")),
-            "utm_content": _safe_str(utm.get("utm_content")),
-            "utm_term":    _safe_str(utm.get("utm_term")),
+            "utm_source":   utm_source,
+            "utm_medium":   utm_medium,
+            "utm_campaign": utm_campaign,
+            "utm_content":  utm_content,
+            "utm_term":     utm_term,
         },
     }
 
@@ -195,6 +228,13 @@ def send_utmify_order(*, status_str: str, txid: str, amount_brl: float,
     logger.info("[UTMIFY-PAYLOAD] txid=%s status=%s total_cents=%s preview=%s",
                 txid_str, status_str, price_in_cents, preview)
 
+    if is_ctwa:
+        logger.info(
+            "[UTMIFY-CTWA-PAYLOAD] txid=%s status=%s phone=%s utm_source=%s utm_medium=%s utm_campaign=%s utm_term=%s utm_content=%s",
+            txid_str, status_str, (phone_e164 or "-"), (utm_source or "-"),
+            (utm_medium or "-"), (utm_campaign or "-"), (utm_term or "-"), (utm_content or "-")
+        )
+
     attempt = 0
     last_status = None
     last_text = ""
@@ -204,7 +244,11 @@ def send_utmify_order(*, status_str: str, txid: str, amount_brl: float,
             last_status = getattr(resp, "status_code", 0)
             last_text = (getattr(resp, "text", "") or "")[:400].replace("\n", " ")[:400]
             ok = 200 <= (last_status or 0) < 300
+
             logger.info("[UTMIFY-RESP] txid=%s status=%s ok=%s body=%s", txid_str, last_status, int(ok), last_text)
+            if is_ctwa:
+                logger.info("[UTMIFY-CTWA-RESP] txid=%s status=%s ok=%s body=%s",
+                            txid_str, last_status, int(ok), last_text)
 
             if ok:
                 if pix_transaction is not None:
