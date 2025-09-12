@@ -1,0 +1,12 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+  <h1>Importar catálogo CTWA (CSV)</h1>
+  <p>Faça upload do CSV exportado do Ads Manager contendo as colunas:
+     <code>Ad ID, Ad Name, Ad Set ID, Ad Set Name, Campaign ID, Campaign Name</code>.</p>
+  <form method="post" enctype="multipart/form-data" style="margin-top:1rem">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <input type="submit" class="default" value="Importar">
+    <a href="{% url 'admin:core_ctwaadcatalog_changelist' %}" class="button cancel-link">Cancelar</a>
+  </form>
+{% endblock %}

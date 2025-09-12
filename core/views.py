@@ -186,16 +186,23 @@ def send_utmify_order(*, status_str: str, txid: str, amount_brl: float,
         if not utm_content and phone_e164:
             utm_content = phone_e164
 
-        # -------- ROTA B (Graph API) --------
+        # C) Catálogo offline (ad_id → nomes)
         if (not utm_campaign) or (not utm_term):
-            try:
-                _b = build_ctwa_utm_from_meta(safe_click or {})
-                if not utm_campaign:
-                    utm_campaign = _safe_str(_b.get("utm_campaign")) or utm_campaign
-                if not utm_term:
-                    utm_term = _safe_str(_b.get("utm_term")) or utm_term
-            except Exception as _e:
-                logger.warning("[META-LOOKUP-WARN] txid=%s err=%s", txid_str, _e)
+            from core.ctwa_catalog import build_ctwa_utm_from_offline
+            _off = build_ctwa_utm_from_offline(safe_click or {})
+            if not utm_campaign:
+                utm_campaign = _safe_str(_off.get("utm_campaign")) or utm_campaign
+            if not utm_term:
+                utm_term = _safe_str(_off.get("utm_term")) or utm_term
+
+        # B) Graph API (se ainda vazio)
+        if (not utm_campaign) or (not utm_term):
+            from core.meta_lookup import build_ctwa_utm_from_meta
+            _b = build_ctwa_utm_from_meta(safe_click or {})
+            if not utm_campaign:
+                utm_campaign = _safe_str(_b.get("utm_campaign")) or utm_campaign
+            if not utm_term:
+                utm_term = _safe_str(_b.get("utm_term")) or utm_term
         # ------------------------------------
 
         # -------------------- ROTA A (fallback local) --------------------
