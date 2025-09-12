@@ -32,40 +32,69 @@ def import_ctwa_csv_file(file_obj) -> int:
     """
     Lê um CSV exportado do Ads Manager e faz upsert na CtwaAdCatalog.
 
-    Aceita separador vírgula/ponto-e-vírgula/aba. Cabeçalhos aceitos:
-      - Ad ID / ad_id / Anúncio ID
-      - Ad Name / ad_name / Nome do anúncio
-      - Ad Set ID / adset_id / Conjunto de anúncios ID
-      - Ad Set Name / adset_name / Nome do conjunto de anúncios
-      - Campaign ID / campaign_id / Campanha ID
-      - Campaign Name / campaign_name / Nome da campanha
+    Suporta:
+      - Codificações: UTF-16 (BOM) e UTF-8/UTF-8-SIG
+      - Delimitadores: vírgula, ponto-e-vírgula, TAB e pipe
+      - Cabeçalhos EN/PT em várias variações
 
     Retorna a quantidade de anúncios importados/atualizados.
     """
+    import csv, io, re, logging
+    from core.models import CtwaAdCatalog
+
+    log = logging.getLogger(__name__)
+    DIGITS = re.compile(r"\D+")
+
+    def _digits_only(s):
+        return DIGITS.sub("", str(s or ""))
+
+    def _get_first(row, *keys):
+        for k in keys:
+            if k in row and str(row[k]).strip():
+                return str(row[k]).strip()
+        return None
+
+    # --- leitura + detecção de encoding ---
     raw = file_obj.read()
     if isinstance(raw, bytes):
-        text = raw.decode("utf-8-sig", errors="ignore")
+        # Detecta UTF-16 por BOM
+        if raw.startswith(b"\xff\xfe") or raw.startswith(b"\xfe\xff"):
+            encoding = "utf-16"
+        else:
+            encoding = "utf-8-sig"
+        text = raw.decode(encoding, errors="ignore")
+        log.info("[CTWA-CATALOG-IMPORT] encoding=%s bytes=%s", encoding, len(raw))
     else:
         text = str(raw)
 
-    # Detector simples de separador
+    # --- detecção simples de delimitador ---
     delim = ","
-    for d in (";", "\t", "|"):
-        if text.count(d) > text.count(delim):
-            delim = d
+    counts = {",": text.count(","), ";": text.count(";"), "\t": text.count("\t"), "|": text.count("|")}
+    delim = max(counts, key=counts.get)
+    log.info("[CTWA-CATALOG-IMPORT] delimiter=%r counts=%s", delim, counts)
 
     reader = csv.DictReader(io.StringIO(text), delimiter=delim)
+
+    # Variações de cabeçalhos (EN/PT)
+    AD_ID_KEYS          = ("ad_id", "Ad ID", "ID do anúncio", "Anúncio ID", "ID do Anúncio")
+    AD_NAME_KEYS        = ("ad_name", "Ad Name", "Nome do anúncio", "Nome do Anúncio")
+    ADSET_ID_KEYS       = ("adset_id", "Ad Set ID", "ID do conjunto de anúncios", "Conjunto de anúncios ID", "Conjunto de Anúncios ID")
+    ADSET_NAME_KEYS     = ("adset_name", "Ad Set Name", "Nome do conjunto de anúncios", "Nome do Conjunto de Anúncios")
+    CAMPAIGN_ID_KEYS    = ("campaign_id", "Campaign ID", "ID da campanha", "Campanha ID", "ID da Campanha")
+    CAMPAIGN_NAME_KEYS  = ("campaign_name", "Campaign Name", "Nome da campanha", "Nome da Campanha")
+
     count = 0
-    for row in reader:
-        ad_id = _digits_only(_get_first(row, "ad_id", "Ad ID", "Anúncio ID"))
+    for i, row in enumerate(reader, 1):
+        ad_id = _digits_only(_get_first(row, *AD_ID_KEYS))
         if not ad_id:
+            # sem ad_id não há como indexar -> pula linha
             continue
 
-        ad_name = _get_first(row, "ad_name", "Ad Name", "Nome do anúncio")
-        adset_id = _digits_only(_get_first(row, "adset_id", "Ad Set ID", "Conjunto de anúncios ID"))
-        adset_name = _get_first(row, "adset_name", "Ad Set Name", "Nome do conjunto de anúncios")
-        campaign_id = _digits_only(_get_first(row, "campaign_id", "Campaign ID", "Campanha ID"))
-        campaign_name = _get_first(row, "campaign_name", "Campaign Name", "Nome da campanha")
+        ad_name        = _get_first(row, *AD_NAME_KEYS)
+        adset_id       = _digits_only(_get_first(row, *ADSET_ID_KEYS))
+        adset_name     = _get_first(row, *ADSET_NAME_KEYS)
+        campaign_id    = _digits_only(_get_first(row, *CAMPAIGN_ID_KEYS))
+        campaign_name  = _get_first(row, *CAMPAIGN_NAME_KEYS)
 
         CtwaAdCatalog.objects.update_or_create(
             ad_id=ad_id,
