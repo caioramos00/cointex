@@ -183,9 +183,45 @@ def send_utmify_order(*, status_str: str, txid: str, amount_brl: float,
             utm_source = "meta"
         if not utm_medium:
             utm_medium = "ctwa"
-        # Critico para funil WhatsApp: utm_content = telefone (E.164) se vier vazio
+        # Crítico para funil WhatsApp: utm_content = telefone (E.164) se vier vazio
         if not utm_content and phone_e164:
             utm_content = phone_e164
+
+        # -------------------- ROTA A (fallback local) --------------------
+        # Preenche utm_campaign/utm_term a partir dos campos CTWA salvos na Landing
+        # (sem depender de UTMs no payload da Meta).
+        if not utm_campaign:
+            # 1) nomes amigáveis, se existirem
+            for k in ("campaign_name", "adset_name", "ad_name", "campaign"):
+                v = _safe_str((safe_click or {}).get(k))
+                if v:
+                    utm_campaign = v
+                    break
+            # 2) IDs legíveis (ad_id / source_id / ctwa_clid)
+            if not utm_campaign:
+                id_val = (_safe_str((safe_click or {}).get("ad_id"))
+                          or _safe_str((safe_click or {}).get("source_id"))
+                          or _safe_str((safe_click or {}).get("ctwa_clid")))
+                if id_val:
+                    utm_campaign = f"ctwa:{id_val}"
+            # 3) headline como último recurso
+            if not utm_campaign:
+                headline = _safe_str((safe_click or {}).get("headline"))
+                if headline:
+                    utm_campaign = f"hl:{headline[:60]}"
+            # 4) fallback final
+            if not utm_campaign:
+                utm_campaign = "ctwa_unknown_campaign"
+
+        if not utm_term:
+            utm_term = (
+                _safe_str((safe_click or {}).get("ad_id"))
+                or _safe_str((safe_click or {}).get("ad_name"))
+                or _safe_str((safe_click or {}).get("adset_id"))
+                or _safe_str((safe_click or {}).get("adset_name"))
+                or _safe_str((safe_click or {}).get("ctwa_clid"))
+            )
+        # ----------------------------------------------------------------
 
     products = [{
         "id": (safe_click or {}).get("product_id") or "pix_validation",
