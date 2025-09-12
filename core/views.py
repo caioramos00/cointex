@@ -142,11 +142,15 @@ def send_utmify_order(
     total_cents: int | None = None,
     created_at=None,
     extra_meta: dict | None = None,
+    amount_brl: float | int | str | None = None,
+    **kwargs,
 ):
     """
     Envia pedido para a UTMify com UTMs robustas para CTWA.
     - Garante utm_content = telefone (WAID) quando vier vazio.
+    - Aceita amount_brl (Decimal/float/str) e calcula totalInCents se total_cents não vier.
     - Adiciona logs específicos de CTWA no padrão solicitado.
+    - **kwargs** para compatibilidade com chamadores que passem chaves adicionais.
     """
     log = logging.getLogger(__name__)
     click_data = click_data or {}
@@ -167,7 +171,27 @@ def send_utmify_order(
     # 2) Tracking parameters (UTMs)
     tracking_parameters = _build_tracking_parameters(click_data, customer_phone, click_type)
 
-    # 3) Payload
+    # 3) totalInCents: usa total_cents se vier; senão tenta derivar de amount_brl
+    tc = None
+    if total_cents is not None:
+        try:
+            tc = int(total_cents)
+        except Exception:
+            tc = None
+    if tc is None and amount_brl is not None:
+        try:
+            # Import local para evitar dependência global
+            from decimal import Decimal, InvalidOperation
+            d = Decimal(str(amount_brl)).scaleb(2)  # *100
+            tc = int(d.to_integral_value(rounding="ROUND_HALF_UP"))
+        except Exception:
+            # fallback simples
+            try:
+                tc = int(round(float(amount_brl) * 100))
+            except Exception:
+                tc = None
+
+    # 4) Payload
     payload = {
         "isTest": bool(getattr(settings, "UTMIFY_TEST_MODE", False)),
         "status": status_str,  # waiting_payment | paid | refused | refunded | chargedback
@@ -180,13 +204,10 @@ def send_utmify_order(
     }
     if extra_meta:
         payload["meta"] = extra_meta
-    if total_cents is not None:
-        try:
-            payload["totalInCents"] = int(total_cents)
-        except Exception:
-            pass
+    if tc is not None:
+        payload["totalInCents"] = tc
 
-    # 4) Logs (preview no padrão + CTWA)
+    # 5) Logs (preview no padrão + CTWA)
     try:
         preview = json.dumps(
             {
@@ -206,12 +227,12 @@ def send_utmify_order(
 
     log.info(
         "[UTMIFY-PAYLOAD] txid=%s status=%s total_cents=%s preview=%s",
-        txid, status_str, total_cents, preview[:1000]
+        txid, status_str, tc, preview[:1000]
     )
 
     if click_type == "CTWA":
         log.info(
-            "[UTMIFY-CTWA-PAYLOAD] txid=%s status=%s phone=%s utm_source=%s utm_medium=%s utm_campaign=%s utm_term=%s utm_content=%s",
+            "[CTWA-PAYLOAD] txid=%s status=%s phone=%s utm_source=%s utm_medium=%s utm_campaign=%s utm_term=%s utm_content=%s",
             txid,
             status_str,
             customer_phone,
@@ -222,7 +243,7 @@ def send_utmify_order(
             tracking_parameters.get("utm_content"),
         )
 
-    # 5) Envio
+    # 6) Envio
     headers = {
         "Authorization": f"Bearer {getattr(settings, 'UTMIFY_TOKEN', '')}",
         "Content-Type": "application/json",
@@ -243,7 +264,7 @@ def send_utmify_order(
     )
     if click_type == "CTWA":
         log.info(
-            "[UTMIFY-CTWA-RESP] txid=%s status=%s ok=%s",
+            "[CTWA-RESP] txid=%s status=%s ok=%s",
             txid, resp.status_code, ok_flag
         )
 
