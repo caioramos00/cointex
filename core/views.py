@@ -1,6 +1,6 @@
 import os
 import json
-import hmac
+import requests
 import hashlib
 import logging
 import threading
@@ -44,6 +44,51 @@ UTMIFY_MAX_RETRIES = 2
 UTMIFY_RETRY_BACKOFFS = [0.4, 0.8]
 _ALLOWED_STATUSES = {"waiting_payment", "paid", "refused"}
 
+def _to_e164_br(raw) -> str | None:
+    """
+    Normaliza telefone BR para E.164 sem '+'. Ex.: '5511998765432'.
+    Aceita strings com símbolos/espacos; mantém apenas dígitos.
+    Se não começar com '55', prefixa '55'.
+    """
+    if raw is None:
+        return None
+    s = "".join(ch for ch in str(raw) if ch.isdigit())
+    if not s:
+        return None
+    if not s.startswith("55"):
+        s = "55" + s
+    return s
+
+def _safe_email(email: str | None, txid: str) -> str:
+    """
+    Garante um e-mail válido (fallback cointex.local).
+    """
+    e = (email or "").strip()
+    if "@" in e and "." in e.split("@")[-1]:
+        return e
+    return f"unknown+{(txid or '')[:8]}@cointex.local"
+
+def _build_tracking_parameters(click_data: dict | None, customer_phone_e164: str | None, click_type: str | None) -> dict:
+    """
+    Monta o bloco trackingParameters (UTMs).
+    Regras:
+      - CTWA: se não vierem, define utm_source=meta e utm_medium=ctwa.
+      - utm_content: se vier vazio, usa o telefone do cliente (E.164).
+    """
+    click_data = click_data or {}
+    utm = (click_data.get("utm") or {}).copy()
+    is_ctwa = (str(click_type or click_data.get("click_type") or "")).strip().upper() == "CTWA"
+
+    if is_ctwa:
+        if not utm.get("utm_source"):
+            utm["utm_source"] = "meta"
+        if not utm.get("utm_medium"):
+            utm["utm_medium"] = "ctwa"
+
+    if not utm.get("utm_content") and customer_phone_e164:
+        utm["utm_content"] = customer_phone_e164
+
+    return utm
 
 def _utmify_field_for_status(status_str: str) -> str | None:
     m = {
@@ -86,153 +131,124 @@ def _iso8601(dt):
     except Exception:
         return None
 
-def send_utmify_order(*, status_str: str, txid: str, amount_brl: float,
-                      click_data: dict, created_at, approved_at=None,
-                      payment_method: str = "pix", is_test: bool = False,
-                      pix_transaction=None):
+def send_utmify_order(
+    *,
+    txid: str,
+    status_str: str,
+    user,
+    products: list[dict],
+    click_data: dict | None = None,
+    pix_transaction=None,
+    total_cents: int | None = None,
+    created_at=None,
+    extra_meta: dict | None = None,
+):
     """
-    Envia 'order' para UTMify com hardening:
-    - Valida status (waiting_payment|paid|refused)
-    - Idempotência por status (em PixTransaction)
-    - Retry com backoff para 5xx/timeout (sem retry em 4xx)
-    - Skip se priceInCents <= 0
-    - Normaliza txid para string (evita TypeError ao fatiar)
+    Envia pedido para a UTMify com UTMs robustas para CTWA.
+    - Garante utm_content = telefone (WAID) quando vier vazio.
+    - Adiciona logs específicos de CTWA no padrão solicitado.
     """
-    status_str = (status_str or "").strip().lower()
-    if status_str not in _ALLOWED_STATUSES:
-        logger.info("[UTMIFY-SKIP] txid=%s status=%s reason=unsupported_status", txid, status_str)
-        return {"ok": False, "skipped": "unsupported_status"}
+    log = logging.getLogger(__name__)
+    click_data = click_data or {}
+    click_type = (click_data.get("click_type") or getattr(user, "click_type", "") or "").upper()
 
-    if not UTMIFY_API_TOKEN:
-        logger.info("[UTMIFY-SKIP] reason=no_token txid=%s", txid)
-        return {"ok": False, "skipped": "no_token"}
-
-    # --- Normalizações/hardening ---
-    # txid pode vir int do gateway; sempre trabalhar como string
-    txid_str = str(txid or "")
-    # click_data pode vir em formato inesperado; garantir dict
-    safe_click = click_data if isinstance(click_data, dict) else {}
-
-    # Idempotência
-    if pix_transaction is not None and _utmify_already_sent(pix_transaction, status_str):
-        logger.info("[UTMIFY-SKIP] txid=%s status=%s reason=idempotent_already_sent", txid_str, status_str)
-        return {"ok": True, "skipped": "idempotent"}
-
-    # priceInCents
-    try:
-        price_in_cents = int(round(float(amount_brl or 0) * 100))
-    except Exception:
-        price_in_cents = 0
-
-    if price_in_cents <= 0:
-        logger.info("[UTMIFY-SKIP] txid=%s reason=non_positive_total amount_brl=%s price_cents=%s",
-                    txid_str, amount_brl, price_in_cents)
-        return {"ok": False, "skipped": "non_positive_total"}
-
-    # UTMs / src
-    utm = {}
-    try:
-        utm = (safe_click or {}).get("utm") or {}
-    except Exception:
-        utm = {}
-
-    raw_src = (safe_click or {}).get("network")
-    src = raw_src if isinstance(raw_src, str) and raw_src.strip() else None
-
-    def _safe_str(v):
-        return v if (isinstance(v, str) and v.strip()) else None
-
-    country_raw = _safe_str((safe_click or {}).get("country")) or "BR"
-    country_iso2 = (country_raw[:2] if len(country_raw) >= 2 else country_raw).upper()
+    # 1) Telefone do cliente (prioriza LP/lookup; fallback user.phone_number)
+    phone_from_lp = click_data.get("phone") or click_data.get("ph_raw")
+    customer_phone = _to_e164_br(phone_from_lp or getattr(user, "phone_number", None))
 
     customer = {
-        "name":     _safe_str((safe_click or {}).get("name")) or "Cliente Cointex",
-        # ← aqui usamos txid_str já normalizado
-        "email":    _safe_str((safe_click or {}).get("email")) or f"unknown+{txid_str[:8]}@cointex.local",
-        "phone":    _safe_str((safe_click or {}).get("phone") or (safe_click or {}).get("ph_raw")),
-        "country":  country_iso2,
-        "document": _safe_str((safe_click or {}).get("document")),
+        "name": getattr(user, "get_full_name", lambda: None)() or getattr(user, "name", None) or "Cliente Cointex",
+        "email": _safe_email(getattr(user, "email", None), txid),
+        "phone": customer_phone,
+        "country": "BR",
+        "document": getattr(user, "document", None),
     }
 
-    products = [{
-        "id": (safe_click or {}).get("product_id") or "pix_validation",
-        "name": (safe_click or {}).get("product_name") or "Taxa de validação - CoinTex",
-        "planId": "validation_fee",
-        "planName": "Taxa de Validação - CoinTex",
-        "quantity":     1,
-        "priceInCents": price_in_cents,
-    }]
+    # 2) Tracking parameters (UTMs)
+    tracking_parameters = _build_tracking_parameters(click_data, customer_phone, click_type)
 
+    # 3) Payload
     payload = {
-        "isTest": bool(is_test),
-        "status": status_str,          # waiting_payment | paid | refused
-        "orderId": txid_str,           # ← sempre string
+        "isTest": bool(getattr(settings, "UTMIFY_TEST_MODE", False)),
+        "status": status_str,  # waiting_payment | paid | refused | refunded | chargedback
+        "orderId": txid,
         "customer": customer,
         "platform": "Cointex",
         "products": products,
-        "createdAt": _iso8601(created_at),
-        "approvedDate": _iso8601(approved_at) if approved_at else None,
-        "paymentMethod": payment_method,
-        "commission": {
-            "gatewayFeeInCents": int(os.getenv("UTMIFY_GATEWAY_FEE_CENTS", "0") or 0),
-            "totalPriceInCents": price_in_cents,
-            "userCommissionInCents": int(os.getenv("UTMIFY_USER_COMMISSION_CENTS", "0") or 0),
-        },
-        "trackingParameters": {
-            "src": src,
-            "utm_source":  _safe_str(utm.get("utm_source")),
-            "utm_medium":  _safe_str(utm.get("utm_medium")),
-            "utm_campaign":_safe_str(utm.get("utm_campaign")),
-            "utm_content": _safe_str(utm.get("utm_content")),
-            "utm_term":    _safe_str(utm.get("utm_term")),
-        },
+        "createdAt": (created_at or timezone.now()).isoformat(),
+        "trackingParameters": tracking_parameters,
     }
-
-    hdr = {"Content-Type": "application/json", "x-api-token": UTMIFY_API_TOKEN}
-    body_str = json.dumps(payload, ensure_ascii=False)
-    preview = (body_str[:500] + "...") if len(body_str) > 500 else body_str
-
-    logger.info("[UTMIFY-PAYLOAD] txid=%s status=%s total_cents=%s preview=%s",
-                txid_str, status_str, price_in_cents, preview)
-
-    attempt = 0
-    last_status = None
-    last_text = ""
-    while True:
+    if extra_meta:
+        payload["meta"] = extra_meta
+    if total_cents is not None:
         try:
-            resp = http_post(UTMIFY_ENDPOINT, headers=hdr, json=payload, timeout=(3, 10), measure="utmify/orders")
-            last_status = getattr(resp, "status_code", 0)
-            last_text = (getattr(resp, "text", "") or "")[:400].replace("\n", " ")[:400]
-            ok = 200 <= (last_status or 0) < 300
-            logger.info("[UTMIFY-RESP] txid=%s status=%s ok=%s body=%s", txid_str, last_status, int(ok), last_text)
-
-            if ok:
-                if pix_transaction is not None:
-                    _utmify_mark_sent(pix_transaction, status_str, last_status, True, last_text)
-                return {"ok": True, "status": last_status}
-            else:
-                if 400 <= (last_status or 0) < 500:
-                    if pix_transaction is not None:
-                        _utmify_mark_sent(pix_transaction, status_str, last_status, False, last_text)
-                    return {"ok": False, "status": last_status, "error": "client_error"}
-                if attempt >= UTMIFY_MAX_RETRIES:
-                    if pix_transaction is not None:
-                        _utmify_mark_sent(pix_transaction, status_str, last_status, False, last_text)
-                    return {"ok": False, "status": last_status, "error": "server_error_max_retries"}
-        except Exception as e:
-            last_text = f"exception:{e}"
-            logger.warning("[UTMIFY-ERR] txid=%s status=%s err=%s", txid_str, last_status, e)
-            if attempt >= UTMIFY_MAX_RETRIES:
-                if pix_transaction is not None:
-                    _utmify_mark_sent(pix_transaction, status_str, last_status, False, last_text)
-                return {"ok": False, "status": last_status, "error": "exception_max_retries"}
-
-        delay = UTMIFY_RETRY_BACKOFFS[min(attempt, len(UTMIFY_RETRY_BACKOFFS)-1)]
-        attempt += 1
-        try:
-            time.sleep(delay)
+            payload["totalInCents"] = int(total_cents)
         except Exception:
             pass
+
+    # 4) Logs (preview no padrão + CTWA)
+    try:
+        preview = json.dumps(
+            {
+                "isTest": payload["isTest"],
+                "status": payload["status"],
+                "orderId": payload["orderId"],
+                "customer": payload["customer"],
+                "platform": payload["platform"],
+                "products": payload["products"],
+                "createdAt": payload["createdAt"],
+            },
+            default=str,
+            ensure_ascii=False,
+        )
+    except Exception:
+        preview = "<preview_unavailable>"
+
+    log.info(
+        "[UTMIFY-PAYLOAD] txid=%s status=%s total_cents=%s preview=%s",
+        txid, status_str, total_cents, preview[:1000]
+    )
+
+    if click_type == "CTWA":
+        log.info(
+            "[UTMIFY-CTWA-PAYLOAD] txid=%s status=%s phone=%s utm_source=%s utm_medium=%s utm_campaign=%s utm_term=%s utm_content=%s",
+            txid,
+            status_str,
+            customer_phone,
+            tracking_parameters.get("utm_source"),
+            tracking_parameters.get("utm_medium"),
+            tracking_parameters.get("utm_campaign"),
+            tracking_parameters.get("utm_term"),
+            tracking_parameters.get("utm_content"),
+        )
+
+    # 5) Envio
+    headers = {
+        "Authorization": f"Bearer {getattr(settings, 'UTMIFY_TOKEN', '')}",
+        "Content-Type": "application/json",
+    }
+    url = getattr(settings, "UTMIFY_WEBHOOK_URL", "")
+    resp = requests.post(url, json=payload, headers=headers, timeout=10)
+
+    body_snippet = ""
+    try:
+        body_snippet = resp.text[:1000]
+    except Exception:
+        body_snippet = "<no_body>"
+
+    ok_flag = 1 if 200 <= resp.status_code < 300 else 0
+    log.info(
+        "[UTMIFY-RESP] txid=%s status=%s ok=%s body=%s",
+        txid, resp.status_code, ok_flag, body_snippet
+    )
+    if click_type == "CTWA":
+        log.info(
+            "[UTMIFY-CTWA-RESP] txid=%s status=%s ok=%s",
+            txid, resp.status_code, ok_flag
+        )
+
+    resp.raise_for_status()
+    return resp
 
 def format_number_br(value):
     return f"{value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
