@@ -83,6 +83,7 @@ MIDDLEWARE = [
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.middleware.gzip.GZipMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'core.middleware.CtwaAutoUtmMiddleware',
     'django.middleware.common.CommonMiddleware',
     'core.middleware.TimingMiddleware',
     'django.middleware.locale.LocaleMiddleware',

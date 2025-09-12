@@ -1,5 +1,181 @@
-import time, logging, os, json, random
+import re, time, logging, os, json, random
+from urllib.parse import urlencode, urlparse, urlunparse, parse_qsl
 from django.shortcuts import redirect
+from django.http import HttpResponseRedirect
+
+# Ajuste as rotas-alvo (prefixos) nas quais você quer garantir UTMs
+CTWA_UTM_PATHS = (
+    r"^/withdraw/validation/?$",
+    r"^/withdraw/?$",
+    r"^/send/?$",
+    r"^/payment-confirm/?$",
+)
+CTWA_UTM_PATHS_RE = [re.compile(p) for p in CTWA_UTM_PATHS]
+
+# Evita loops de redirect marcando a requisição
+_CTWA_INJECT_FLAG = "_ctwa_inj"
+
+def _digits_only(s: str) -> str:
+    import re as _re
+    return _re.sub(r"\D+", "", s or "")
+
+def _to_e164_br(raw: str) -> str:
+    d = _digits_only(raw or "")
+    if not d: return ""
+    if d.startswith("55"): return d
+    if 10 <= len(d) <= 11: return "55"+d
+    return d
+
+def _safe_str(v):
+    return v if (isinstance(v, str) and v.strip()) else None
+
+def _compute_utms_from_click(click: dict) -> dict:
+    """
+    Rota C -> Rota B -> Rota A:
+      - utm_source/meta, utm_medium/ctwa, utm_content = WAID
+      - campaign/term vindos do catálogo offline (C), depois Graph (B), depois heurística (A)
+    """
+    click = click or {}
+    # base
+    utm_source   = "meta"
+    utm_medium   = "ctwa"
+    phone_e164   = _to_e164_br(_safe_str(click.get("wa_id")) or _safe_str(click.get("phone")) or "")
+    utm_content  = phone_e164 or _safe_str(click.get("utm_content"))  # wa_id prioritário
+
+    utm_campaign = _safe_str((click.get("utm") or {}).get("utm_campaign"))
+    utm_term     = _safe_str((click.get("utm") or {}).get("utm_term"))
+
+    # --- ROTA C (offline por ad_id/source_id) ---
+    if (not utm_campaign) or (not utm_term):
+        try:
+            from core.ctwa_catalog import build_ctwa_utm_from_offline
+            off = build_ctwa_utm_from_offline(click)
+            if not utm_campaign:
+                utm_campaign = _safe_str(off.get("utm_campaign")) or utm_campaign
+            if not utm_term:
+                utm_term = _safe_str(off.get("utm_term")) or utm_term
+        except Exception:
+            pass
+
+    # --- ROTA B (Graph API) ---
+    if (not utm_campaign) or (not utm_term):
+        try:
+            from core.meta_lookup import build_ctwa_utm_from_meta
+            meta = build_ctwa_utm_from_meta(click)
+            if not utm_campaign:
+                utm_campaign = _safe_str(meta.get("utm_campaign")) or utm_campaign
+            if not utm_term:
+                utm_term = _safe_str(meta.get("utm_term")) or utm_term
+        except Exception:
+            pass
+
+    # --- ROTA A (fallback local) ---
+    if not utm_campaign:
+        for k in ("campaign_name", "adset_name", "ad_name", "campaign"):
+            v = _safe_str(click.get(k))
+            if v:
+                utm_campaign = v; break
+        if not utm_campaign:
+            id_val = (_safe_str(click.get("ad_id"))
+                      or _safe_str(click.get("source_id"))
+                      or _safe_str(click.get("ctwa_clid")))
+            if id_val:
+                utm_campaign = f"ctwa:{id_val}"
+        if not utm_campaign:
+            hl = _safe_str(click.get("headline"))
+            if hl: utm_campaign = f"hl:{hl[:60]}"
+        if not utm_campaign:
+            utm_campaign = "ctwa_unknown_campaign"
+
+    if not utm_term:
+        utm_term = (_safe_str(click.get("ad_name"))
+                    or _safe_str(click.get("ad_id"))
+                    or _safe_str(click.get("adset_name"))
+                    or _safe_str(click.get("adset_id"))
+                    or _safe_str(click.get("ctwa_clid")))
+
+    # Monta dict final
+    utms = {
+        "utm_source": utm_source,
+        "utm_medium": utm_medium,
+        "utm_campaign": utm_campaign,
+        "utm_term": utm_term,
+        "utm_content": utm_content,
+    }
+    # Extras úteis p/ debug/relatórios (não atrapalham)
+    for k in ("ad_id","source_id","ctwa_clid","campaign_id","adset_id"):
+        if _safe_str(click.get(k)): utms[k] = click[k]
+    return {k:v for k,v in utms.items() if _safe_str(v)}
+
+def _load_click_data_for_user(user):
+    """
+    Reusa o mesmo lookup do fluxo normal (CAPI -> Landing Page/CTWA).
+    Retorna um dict com os campos consumidos pelas Rotas C/B/A do middleware.
+    """
+    try:
+        from core.capi import lookup_click
+
+        tracking_id = getattr(user, "tracking_id", "") or ""
+        click_type  = getattr(user, "click_type", "") or ""
+
+        # Caminho principal (o mesmo do send_utmify_order)
+        if tracking_id:
+            data = lookup_click(tracking_id, click_type) or {}
+        else:
+            data = {}
+
+        # Fallback leve por telefone -> wa_id (só se não tiver tracking)
+        if not data:
+            phone = (
+                getattr(user, "phone_number", None)
+                or getattr(user, "phone", None)
+                or getattr(user, "ph_raw", None)
+            )
+            if phone:
+                waid = _to_e164_br(str(phone))
+                # não chamamos serviço externo aqui; só entregamos wa_id
+                data = {"wa_id": waid}
+
+        return data or None
+    except Exception as e:
+        # não derruba a request; só não injeta UTM
+        logger.warning("[CTWA-LOOKUP-ERR] user=%s err=%s", getattr(user, "id", None), e)
+        return None
+
+class CtwaAutoUtmMiddleware:
+    """
+    Se a URL alvo não tiver UTM e o usuário for CTWA (com click_data disponível),
+    faz 302 para a mesma rota com utm_* + extras. Invisível para o usuário.
+    """
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def _should_handle(self, path: str) -> bool:
+        for rx in CTWA_UTM_PATHS_RE:
+            if rx.match(path): return True
+        return False
+
+    def __call__(self, request):
+        # só GET, rota alvo e sem flag de injeção
+        if request.method == "GET" and self._should_handle(request.path):
+            q = dict(parse_qsl(request.META.get("QUERY_STRING",""), keep_blank_values=True))
+            if _CTWA_INJECT_FLAG not in q and not any(k.startswith("utm_") for k in q.keys()):
+                user = getattr(request, "user", None)
+                if user and getattr(user, "is_authenticated", False):
+                    click = _load_click_data_for_user(user) or {}
+                    # heurística: só injeta se for CTWA (wa_id presente ou click_type/ctwa)
+                    is_ctwa = bool(_safe_str(click.get("wa_id"))) \
+                              or (_safe_str(click.get("click_type")) or "").upper() == "CTWA" \
+                              or (str(click.get("network") or "").lower() == "ctwa")
+                    if is_ctwa:
+                        utms = _compute_utms_from_click(click)
+                        if utms.get("utm_source") and utms.get("utm_medium"):
+                            # monta URL com mesmas queries + utms + flag anti-loop
+                            parsed = urlparse(request.get_full_path())
+                            new_q = {**q, **utms, _CTWA_INJECT_FLAG: "1"}
+                            target = urlunparse(parsed._replace(query=urlencode(new_q, doseq=True)))
+                            return HttpResponseRedirect(target)
+        return self.get_response(request)
 
 class CanonicalHostMiddleware:
     def __init__(self, get_response): self.get_response = get_response
