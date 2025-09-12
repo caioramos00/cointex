@@ -25,12 +25,15 @@ from django.urls import reverse
 from django.core.cache import cache
 from django_redis import get_redis_connection
 from requests.exceptions import RequestException
+
+from core.meta_lookup import build_ctwa_utm_from_meta
 from payments.service import get_active_adapter, get_active_provider
 from utils.http import http_get, http_post
 from utils.pix_cache import get_cached_pix, set_cached_pix, with_user_pix_lock
 from accounts.models import CustomUser, UserProfile, Wallet, Transaction, Notification, PixTransaction
 from .capi import lookup_click
 from .forms import SendForm, WithdrawForm
+
 
 logger = logging.getLogger(__name__)
 
@@ -114,10 +117,8 @@ def send_utmify_order(*, status_str: str, txid: str, amount_brl: float,
             return ""
         if d.startswith("55"):
             return d
-        # Se veio só DDD+numero (10-11 dígitos), prefixa 55.
         if 10 <= len(d) <= 11:
             return "55" + d
-        # Caso já esteja internacional de outro país ou tamanho atípico, retorna como dígitos.
         return d
 
     # --- Normalizações/hardening ---
@@ -165,13 +166,12 @@ def send_utmify_order(*, status_str: str, txid: str, amount_brl: float,
     customer = {
         "name":     _safe_str((safe_click or {}).get("name")) or "Cliente Cointex",
         "email":    _safe_str((safe_click or {}).get("email")) or f"unknown+{txid_str[:8]}@cointex.local",
-        "phone":    phone_e164 or None,  # << agora garantimos E.164 se vier
+        "phone":    phone_e164 or None,
         "country":  country_iso2,
         "document": _safe_str((safe_click or {}).get("document")),
     }
 
     # ----- UTMs / trackingParameters -----
-    # Mantém tudo que já vinha, e aplica defaults/garantia apenas para CTWA.
     utm_source   = _safe_str(utm.get("utm_source"))
     utm_medium   = _safe_str(utm.get("utm_medium"))
     utm_campaign = _safe_str(utm.get("utm_campaign"))
@@ -183,13 +183,22 @@ def send_utmify_order(*, status_str: str, txid: str, amount_brl: float,
             utm_source = "meta"
         if not utm_medium:
             utm_medium = "ctwa"
-        # Crítico para funil WhatsApp: utm_content = telefone (E.164) se vier vazio
         if not utm_content and phone_e164:
             utm_content = phone_e164
 
+        # -------- ROTA B (Graph API) --------
+        if (not utm_campaign) or (not utm_term):
+            try:
+                _b = build_ctwa_utm_from_meta(safe_click or {})
+                if not utm_campaign:
+                    utm_campaign = _safe_str(_b.get("utm_campaign")) or utm_campaign
+                if not utm_term:
+                    utm_term = _safe_str(_b.get("utm_term")) or utm_term
+            except Exception as _e:
+                logger.warning("[META-LOOKUP-WARN] txid=%s err=%s", txid_str, _e)
+        # ------------------------------------
+
         # -------------------- ROTA A (fallback local) --------------------
-        # Preenche utm_campaign/utm_term a partir dos campos CTWA salvos na Landing
-        # (sem depender de UTMs no payload da Meta).
         if not utm_campaign:
             # 1) nomes amigáveis, se existirem
             for k in ("campaign_name", "adset_name", "ad_name", "campaign"):
@@ -197,7 +206,7 @@ def send_utmify_order(*, status_str: str, txid: str, amount_brl: float,
                 if v:
                     utm_campaign = v
                     break
-            # 2) IDs legíveis (ad_id / source_id / ctwa_clid)
+            # 2) IDs legíveis
             if not utm_campaign:
                 id_val = (_safe_str((safe_click or {}).get("ad_id"))
                           or _safe_str((safe_click or {}).get("source_id"))
