@@ -330,6 +330,10 @@ def send_utmify_order(
             ok = 200 <= (last_status or 0) < 300
 
             logger.info("[UTMIFY-RESP] txid=%s status=%s ok=%s body=%s", txid_str, last_status, int(ok), last_text)
+            if is_ctwa:
+                logger.info("[UTMIFY-CTWA-RESP] txid=%s status=%s ok=%s body=%s",
+                            txid_str, last_status, int(ok), last_text)
+
             if ok:
                 if pix_transaction is not None:
                     _utmify_mark_sent(pix_transaction, status_str, last_status, True, last_text)
@@ -346,6 +350,10 @@ def send_utmify_order(
         except Exception as e:
             last_text = f"exception:{e}"
             logger.warning("[UTMIFY-ERR] txid=%s status=%s err=%s", txid_str, last_status, e)
+            if is_ctwa:
+                logger.info("[UTMIFY-CTWA-RESP] txid=%s status=%s ok=0 body=%s",
+                            txid_str, last_status, last_text)
+
             if attempt >= UTMIFY_MAX_RETRIES:
                 if pix_transaction is not None:
                     _utmify_mark_sent(pix_transaction, status_str, last_status, False, last_text)
