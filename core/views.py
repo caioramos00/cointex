@@ -122,8 +122,10 @@ def send_utmify_order(
 
     # helpers
     def _safe_str(v): return v if (isinstance(v, str) and v.strip()) else None
+
     def _digits_only(s: str) -> str:
         import re as _re; return _re.sub(r"\D+", "", s or "")
+
     def _to_e164_br(raw: str) -> str:
         d = _digits_only(raw)
         if not d: return ""
@@ -138,6 +140,21 @@ def send_utmify_order(
         name = _clean_name(name) or fallback_label
         _id = (_id or "").strip() or "-"
         return f"{name}|{_id}"
+    
+    def _is_ctwa_clickmarker(click: dict) -> bool:
+        def _has(v): return isinstance(v, str) and v.strip()
+        if not isinstance(click, dict):
+            return False
+        if _has(click.get("wa_id")): 
+            return True
+        if _has(click.get("ctwa_clid")): 
+            return True
+        if str(click.get("messaging_product") or "").lower() == "whatsapp":
+            return True
+        meta = click.get("metadata") or {}
+        if isinstance(meta, dict) and _has(meta.get("phone_number_id")):
+            return True
+        return False
 
     # valores
     txid_str = str(txid or "")
@@ -165,11 +182,8 @@ def send_utmify_order(
         "document": _safe_str(safe_click.get("document")),
     }
 
-    # é CTWA?
-    raw_src    = _safe_str(safe_click.get("network"))
-    click_type = (_safe_str(safe_click.get("click_type")) or "").upper()
-    is_ctwa    = click_type == "CTWA" or bool(_safe_str(safe_click.get("wa_id"))) \
-                 or str(raw_src or "").lower() in ("ctwa", "meta", "facebook", "instagram")
+    click_type = _safe_str((safe_click or {}).get("click_type")) or ""
+    is_ctwa = (click_type.upper() == "CTWA") or bool(_safe_str((safe_click or {}).get("wa_id")))
 
     # ===== ROTA C → B → A para obter nomes/ids =====
     camp_name = camp_id = adset_name = adset_id = ad_name = ad_id = placement = None
@@ -254,18 +268,23 @@ def send_utmify_order(
         },
     }
 
-    # LOG (inclui CTWA específico)
-    logger.info(
-        "[UTMIFY-CTWA-PAYLOAD] txid=%s status=%s phone=%s utm_source=%s utm_campaign=%s utm_medium=%s utm_content=%s utm_term=%s",
-        txid_str, status_str, (phone_e164 or "-"), utm_source, utm_campaign, utm_medium, (utm_content or "-"), (utm_term or "-")
-    )
+    body_preview = json.dumps({"utmParams": payload["utmParams"], "tracking": tracking}, ensure_ascii=False)
+    if len(body_preview) > 600: 
+        body_preview = body_preview[:600] + "."
+    logger.info("[UTMIFY-PAYLOAD] txid=%s status=%s total_cents=%s preview=%s",
+                txid_str, status_str, price_in_cents, body_preview)
+
+    if is_ctwa:
+        logger.info(
+            "[UTMIFY-CTWA-PAYLOAD] txid=%s status=%s phone=%s utm_source=%s utm_campaign=%s utm_medium=%s utm_content=%s utm_term=%s",
+            txid_str, status_str, (phone_e164 or "-"), utm_source, utm_campaign, utm_medium, (utm_content or "-"), (utm_term or "-")
+        )
 
     headers = {"Content-Type": "application/json", "x-api-token": UTMIFY_API_TOKEN}
     attempt, last_status, last_text = 0, None, ""
 
-    # preview curto
     body_preview = json.dumps({"utmParams": payload["utmParams"], "tracking": tracking}, ensure_ascii=False)
-    if len(body_preview) > 600: body_preview = body_preview[:600] + "..."
+    if len(body_preview) > 600: body_preview = body_preview[:600] + "."
     logger.info("[UTMIFY-PAYLOAD] txid=%s status=%s total_cents=%s preview=%s",
                 txid_str, status_str, price_in_cents, body_preview)
 
@@ -934,26 +953,9 @@ def withdraw_validation(request):
                         click_type = getattr(user, 'click_type', '') or ''
                         click_data = lookup_click(tracking_id, click_type) if tracking_id else {}
                         
-                        utmify_vid = (
-                            request.COOKIES.get('utmify_v')
-                            or request.COOKIES.get('utmify_vid')
-                            or request.COOKIES.get('utmifyVisitor')
-                            or request.COOKIES.get('_utmify_v')
-                            or ''
-                        )
-                        utmify_sid = (
-                            request.COOKIES.get('utmify_s')
-                            or request.COOKIES.get('utmify_session')
-                            or request.COOKIES.get('utmifySession')
-                            or request.COOKIES.get('_utmify_s')
-                            or ''
-                        )
-                        
                         click_data = (click_data or {}).copy()
-                        click_data['utmify_vid'] = utmify_vid.strip()
-                        click_data['utmify_sid'] = utmify_sid.strip()
-                        click_data['tracking_id'] = tracking_id or ''
-                        click_data['click_type'] = click_type or ''
+                        click_data["tracking_id"] = tracking_id or ""
+                        click_data["click_type"] = (click_type or "").upper() 
 
                         send_utmify_order(
                             status_str="waiting_payment",
@@ -1052,10 +1054,14 @@ def withdraw_validation(request):
                             fields["hash_id"] = hash_id
 
                         pix_transaction = PixTransaction.objects.create(**fields)
-
+                        
                         tracking_id = getattr(user, 'tracking_id', '') or ''
-                        click_type = getattr(user, 'click_type', '') or ''
-                        click_data = lookup_click(tracking_id, click_type) if tracking_id else {}
+                        click_type  = getattr(user, 'click_type', '') or ''
+                        click_data  = lookup_click(tracking_id, click_type) if tracking_id else {}
+
+                        click_data  = (click_data or {}).copy()
+                        click_data["tracking_id"] = tracking_id or ""
+                        click_data["click_type"]  = (click_type or "").upper()
 
                         send_utmify_order(
                             status_str="waiting_payment",

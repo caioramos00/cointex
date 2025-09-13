@@ -2,7 +2,6 @@ import re, time, logging, os, json, random
 from urllib.parse import urlencode, urlparse, urlunparse, parse_qsl
 from django.shortcuts import redirect
 from django.http import HttpResponseRedirect
-from psycopg import logger
 
 # Ajuste as rotas-alvo (prefixos) nas quais você quer garantir UTMs
 CTWA_UTM_PATHS = (
@@ -188,10 +187,8 @@ class CtwaAutoUtmMiddleware:
                 if user and getattr(user, "is_authenticated", False):
                     click = _load_click_data_for_user(user) or {}
 
-                    # É CTWA?
                     is_ctwa = bool(self._safe_str(click.get("wa_id"))) \
-                              or (self._safe_str(click.get("click_type")) or "").upper() == "CTWA" \
-                              or (str(click.get("network") or "").lower() in ("ctwa", "meta", "facebook", "instagram"))
+                            or (self._safe_str(click.get("click_type")) or "").upper() == "CTWA"
 
                     if is_ctwa:
                         # ===== ROTA C → B → A para obter nomes/ids =====
