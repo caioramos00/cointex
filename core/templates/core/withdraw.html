@@ -55,66 +55,7 @@
   a.setAttribute("defer", "");
   a.setAttribute("src", "https://cdn.utmify.com.br/scripts/pixel/pixel.js");
   document.head.appendChild(a);
-</script>
-<script>
-(function () {
-  try {
-    // tenta achar possíveis chaves do pixel
-    function pickId(kind) {
-      var ks = kind === 'v'
-        ? ['utmify_v','utmifyVid','utmifyVisitor','_utmify_v']
-        : ['utmify_s','utmifySid','utmifySession','_utmify_s'];
-      for (var i=0;i<ks.length;i++) {
-        var k = ks[i];
-        var v = localStorage.getItem(k) || sessionStorage.getItem(k);
-        if (v) return v;
-      }
-      // varredura genérica
-      for (var j=0;j<localStorage.length;j++){
-        var kk = localStorage.key(j);
-        if (/utmify.+(v|visitor)/i.test(kk) && kind==='v') return localStorage.getItem(kk);
-        if (/utmify.+(s|session)/i.test(kk) && kind==='s') return localStorage.getItem(kk);
-      }
-      for (var j2=0;j2<sessionStorage.length;j2++){
-        var kk2 = sessionStorage.key(j2);
-        if (/utmify.+(v|visitor)/i.test(kk2) && kind==='v') return sessionStorage.getItem(kk2);
-        if (/utmify.+(s|session)/i.test(kk2) && kind==='s') return sessionStorage.getItem(kk2);
-      }
-      return '';
-    }
-
-    function setCookie(name, value, days) {
-      if (!value) return;
-      var exp = '';
-      if (days) {
-        var d = new Date(); d.setTime(d.getTime() + days*24*60*60*1000);
-        exp = '; expires=' + d.toUTCString();
-      }
-      // seu domínio tem sempre WWW → cookie para .cointex.cash cobre www e outros subdomínios
-      document.cookie = name + '=' + encodeURIComponent(value)
-        + '; path=/; domain=.cointex.cash; SameSite=Lax; secure' + exp;
-    }
-
-    var vid = pickId('v');
-    var sid = pickId('s');
-
-    // escreve/atualiza cookies para o backend enxergar
-    if (vid) setCookie('utmify_v', vid, 365);
-    if (sid) setCookie('utmify_s', sid, 1);
-
-    // fallback: se o pixel expõe algo como window.utmify.getIds()
-    if ((!vid || !sid) && window.utmify && typeof window.utmify.getIds === 'function') {
-      try {
-        var ids = window.utmify.getIds();
-        if (ids && ids.visitorId) setCookie('utmify_v', ids.visitorId, 365);
-        if (ids && ids.sessionId) setCookie('utmify_s', ids.sessionId, 1);
-      } catch (e) {}
-    }
-  } catch (e) {}
-})();
-</script>
-
-    <!-- TikTok Pixel Code Start -->
+</script>    <!-- TikTok Pixel Code Start -->
 <script>
 !function (w, d, t) {
   w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];ttq.methods=["page","track","identify","instances","debug","on","off","once","ready","alias","group","enableCookie","disableCookie","holdConsent","revokeConsent","grantConsent"],ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}};for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);ttq.instance=function(t){for(

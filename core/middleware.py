@@ -151,15 +151,29 @@ def _load_click_data_for_user(user):
 class CtwaAutoUtmMiddleware:
     """
     Se a URL alvo não tiver UTM e o usuário for CTWA (com click_data disponível),
-    faz 302 para a mesma rota com utm_* + extras. Invisível para o usuário.
+    faz 302 para a mesma rota com utm_* canonizadas (slug) + extras. Invisível para o usuário.
     """
+
     def __init__(self, get_response):
         self.get_response = get_response
 
     def _should_handle(self, path: str) -> bool:
         for rx in CTWA_UTM_PATHS_RE:
-            if rx.match(path): return True
+            if rx.match(path): 
+                return True
         return False
+
+    @staticmethod
+    def _canon(s: str, max_len: int = 120, allow_empty: bool = False) -> str:
+        import re, unicodedata
+        s = (s or "")
+        s = unicodedata.normalize("NFKD", s)
+        s = "".join(c for c in s if not unicodedata.combining(c))
+        s = s.lower()
+        s = re.sub(r"[^a-z0-9]+", "-", s)
+        s = re.sub(r"-{2,}", "-", s).strip("-")
+        s = s[:max_len]
+        return s if (s or allow_empty) else ""
 
     def __call__(self, request):
         # só GET, rota alvo e sem flag de injeção
@@ -174,18 +188,32 @@ class CtwaAutoUtmMiddleware:
                               or (_safe_str(click.get("click_type")) or "").upper() == "CTWA" \
                               or (str(click.get("network") or "").lower() == "ctwa")
                     if is_ctwa:
-                        utms = _compute_utms_from_click(click)
-                        if utms.get("utm_source") and utms.get("utm_medium"):
-                            # monta URL com mesmas queries + utms + flag anti-loop
-                            parsed = urlparse(request.get_full_path())
-                            new_q = {**q, **utms, _CTWA_INJECT_FLAG: "1"}
-                            target = urlunparse(parsed._replace(query=urlencode(new_q, doseq=True)))
-                            logger = logging.getLogger("core.views")
-                            logger.info("[CTWA-AUTO-UTM] path=%s target=%s utm_campaign=%s utm_term=%s",
-                                        request.path, target,
-                                        utms.get("utm_campaign","-"), utms.get("utm_term","-"))
+                        utms = _compute_utms_from_click(click)  # C->B->A
+                        # --------- canonização idêntica ao send_utmify_order ---------
+                        src = utms.get("utm_source") or "meta"
+                        med = utms.get("utm_medium") or "ctwa"
+                        camp = utms.get("utm_campaign") or "unknown"
+                        term = utms.get("utm_term") or ""
+                        cont = utms.get("utm_content") or ""
 
-                            return HttpResponseRedirect(target)
+                        utms_norm = {
+                            "utm_source":   self._canon(src, 32) or "meta",
+                            "utm_medium":   self._canon(med, 32) or "ctwa",
+                            "utm_campaign": self._canon(camp, 120) or "unknown",
+                            "utm_term":     self._canon(term, 120, allow_empty=True),
+                            "utm_content":  self._canon(cont, 64,  allow_empty=True),
+                        }
+
+                        parsed = urlparse(request.get_full_path())
+                        new_q = {**q, **utms_norm, _CTWA_INJECT_FLAG: "1"}
+                        target = urlunparse(parsed._replace(query=urlencode(new_q, doseq=True)))
+
+                        logging.getLogger("core.views").info(
+                            "[CTWA-AUTO-UTM] path=%s target=%s utm_campaign=%s utm_term=%s",
+                            request.path, target, utms_norm["utm_campaign"], utms_norm["utm_term"]
+                        )
+                        return HttpResponseRedirect(target)
+
         return self.get_response(request)
 
 class CanonicalHostMiddleware:

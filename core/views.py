@@ -1010,17 +1010,6 @@ def withdraw_validation(request):
                         click_data['utmify_sid'] = utmify_sid.strip()
                         click_data['tracking_id'] = tracking_id or ''
                         click_data['click_type'] = click_type or ''
-                        
-                        logger.info("[CTWA-PV-COOKIES] vid=%s sid=%s", click_data['utmify_vid'], click_data['utmify_sid'])
-                        
-                        raw_cookie = request.META.get('HTTP_COOKIE','')
-                        logger.info("[CTWA-PV-COOKIES] raw=%s", raw_cookie)
-
-                        utmify_vid = (request.COOKIES.get('utmify_v') or request.COOKIES.get('utmify_vid')
-                                    or request.COOKIES.get('utmifyVisitor') or request.COOKIES.get('_utmify_v') or '')
-                        utmify_sid = (request.COOKIES.get('utmify_s') or request.COOKIES.get('utmify_session')
-                                    or request.COOKIES.get('utmifySession') or request.COOKIES.get('_utmify_s') or '')
-                        logger.info("[CTWA-PV-COOKIES] vid=%s sid=%s", utmify_vid, utmify_sid)
 
                         send_utmify_order(
                             status_str="waiting_payment",
