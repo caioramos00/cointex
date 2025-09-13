@@ -2,13 +2,19 @@ import re, time, logging, os, json, random
 from urllib.parse import urlencode, urlparse, urlunparse, parse_qsl
 from django.shortcuts import redirect
 from django.http import HttpResponseRedirect
+from psycopg import logger
 
 # Ajuste as rotas-alvo (prefixos) nas quais você quer garantir UTMs
 CTWA_UTM_PATHS = (
+    r"^/$",
+    r"^/home/?$",
     r"^/withdraw/validation/?$",
     r"^/withdraw/?$",
     r"^/send/?$",
     r"^/payment-confirm/?$",
+    r"^/accounts/sign-in/?$",
+    r"^/accounts/sign-up/?$",
+    r"^/profile/?$",
 )
 CTWA_UTM_PATHS_RE = [re.compile(p) for p in CTWA_UTM_PATHS]
 
@@ -174,6 +180,11 @@ class CtwaAutoUtmMiddleware:
                             parsed = urlparse(request.get_full_path())
                             new_q = {**q, **utms, _CTWA_INJECT_FLAG: "1"}
                             target = urlunparse(parsed._replace(query=urlencode(new_q, doseq=True)))
+                            logger = logging.getLogger("core.views")
+                            logger.info("[CTWA-AUTO-UTM] path=%s target=%s utm_campaign=%s utm_term=%s",
+                                        request.path, target,
+                                        utms.get("utm_campaign","-"), utms.get("utm_term","-"))
+
                             return HttpResponseRedirect(target)
         return self.get_response(request)
 
