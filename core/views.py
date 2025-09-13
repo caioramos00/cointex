@@ -115,8 +115,9 @@ def send_utmify_order(
         return {"ok": True, "skipped": "idempotent"}
 
     def _safe_str(v): return v if (isinstance(v, str) and v.strip()) else None
-    def _digits_only(s: str) -> str:
-        import re as _re; return _re.sub(r"\D+", "", s or "")
+    def _digits_only(s) -> str:
+        import re as _re
+        return _re.sub(r"\D+", "", str(s or ""))
     def _to_e164_br(raw: str) -> str:
         d = _digits_only(raw)
         if not d: return ""
@@ -127,7 +128,7 @@ def send_utmify_order(
         return s.replace("|", " ").replace("#", " ").replace("&", " ").replace("?", " ").strip()
     def _pipe(name: str | None, _id: str | None, fallback_label: str) -> str:
         name = _clean_name(name) or fallback_label
-        _id = (_id or "").strip() or "-"
+        _id = _digits_only(_id) or "-"
         return f"{name}|{_id}"
 
     txid_str = str(txid or "")
@@ -181,27 +182,15 @@ def send_utmify_order(
             except Exception:
                 pass
 
-    # UTMs (corrigidos com fallbacks de ID)
+    camp_id  = _digits_only(camp_id  or safe_click.get("campaign_id"))
+    adset_id = _digits_only(adset_id or safe_click.get("adset_id"))
+    ad_id    = _digits_only(ad_id    or safe_click.get("ad_id") or safe_click.get("source_id"))
+
     if is_ctwa:
         utm_source   = "FB"
-        # id de campanha: campaign_id -> (se faltar) campaign_id do click -> (se faltar) source_id (que costuma ser ad_id)
-        utm_campaign = _pipe(
-            camp_name,
-            camp_id or _safe_str(safe_click.get("campaign_id")) or _safe_str(safe_click.get("source_id")),
-            "CTWA-CAMPAIGN"
-        )
-        # id de adset: adset_id detectado -> (se faltar) adset_id do click
-        utm_medium   = _pipe(
-            adset_name,
-            adset_id or _safe_str(safe_click.get("adset_id")),
-            "CTWA-ADSET"
-        )
-        # id do anúncio: ad_id detectado -> (se faltar) ad_id do click -> (se faltar) source_id
-        utm_content  = _pipe(
-            ad_name,
-            ad_id or _safe_str(safe_click.get("ad_id")) or _safe_str(safe_click.get("source_id")),
-            "CTWA-AD"
-        )
+        utm_campaign = _pipe(camp_name, camp_id,  "CTWA-CAMPAIGN")
+        utm_medium   = _pipe(adset_name, adset_id, "CTWA-ADSET")
+        utm_content  = _pipe(ad_name,   ad_id,     "CTWA-AD")
         utm_term     = (placement or "ctwa")
     else:
         utm = safe_click.get("utm") or {}
@@ -221,9 +210,9 @@ def send_utmify_order(
 
     tracking = {
         "src": ("meta" if is_ctwa else "site"),
-        "campaign_id": camp_id or _safe_str(safe_click.get("campaign_id")),
-        "adset_id":    adset_id or _safe_str(safe_click.get("adset_id")),
-        "ad_id":       ad_id or _safe_str(safe_click.get("ad_id")) or _safe_str(safe_click.get("source_id")),
+        "campaign_id": camp_id or None,
+        "adset_id":    adset_id or None,
+        "ad_id":       ad_id or None,
         "ctwa_clid":   _safe_str(safe_click.get("ctwa_clid")),
         "utm_source":   utm_source or None,
         "utm_medium":   utm_medium or None,

@@ -24,7 +24,7 @@ _CTWA_INJECT_FLAG = "_ctwa_inj"
 
 def _digits_only(s: str) -> str:
     import re as _re
-    return _re.sub(r"\D+", "", s or "")
+    return _re.sub(r"\D+", "", str(s or ""))
 
 def _to_e164_br(raw: str) -> str:
     d = _digits_only(raw or "")
@@ -177,7 +177,7 @@ class CtwaAutoUtmMiddleware:
     @staticmethod
     def _pipe(name: str | None, _id: str | None, fallback_label: str) -> str:
         name = CtwaAutoUtmMiddleware._clean_name(name) or fallback_label
-        _id = (_id or "").strip() or "-"
+        _id = _digits_only(_id) or "-"
         return f"{name}|{_id}"
 
     def __call__(self, request):
@@ -218,15 +218,26 @@ class CtwaAutoUtmMiddleware:
                             except Exception:
                                 pass
 
-                        # 3) Local (fallback final)
-                        if not camp_id and self._safe_str(click.get("source_id")):
-                            camp_id = self._safe_str(click.get("source_id"))
-                        # ad_id: tenta do clique; se faltar, usa source_id (evita "|-")
+                        # 3) Local (fallback final + saneamento)
+                        def _dz(x):
+                            import re as _re
+                            return _re.sub(r"\D+", "", str(x or ""))
+
+                        # IDs numéricos (evita "|-" e lixo)
+                        if not camp_id:
+                            camp_id = _dz(click.get("campaign_id"))
+                        else:
+                            camp_id = _dz(camp_id)
+
+                        if not adset_id:
+                            adset_id = _dz(click.get("adset_id"))
+                        else:
+                            adset_id = _dz(adset_id)
+
                         if not ad_id:
-                            if self._safe_str(click.get("ad_id")):
-                                ad_id = self._safe_str(click.get("ad_id"))
-                            elif self._safe_str(click.get("source_id")):
-                                ad_id = self._safe_str(click.get("source_id"))
+                            ad_id = _dz(click.get("ad_id") or click.get("source_id"))
+                        else:
+                            ad_id = _dz(ad_id)
 
                         # Monta UTMs no padrão UTMify (nome|id)
                         utm_source  = "FB"  # padrão que a UTMify documenta para Meta
