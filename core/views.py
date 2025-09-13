@@ -89,10 +89,19 @@ def _iso8601(dt):
     except Exception:
         return None
 
-def send_utmify_order(*, status_str: str, txid: str, amount_brl: float,
-                      click_data: dict, created_at, approved_at=None,
-                      payment_method: str = "pix", is_test: bool = False,
-                      pix_transaction=None):
+def send_utmify_order(
+    *, 
+    status_str: str, 
+    txid: str, 
+    amount_brl: float,
+    click_data: dict, 
+    created_at, 
+    approved_at=None,
+    payment_method: str = "pix", 
+    is_test: bool = False,
+    pix_transaction=None
+):
+    # ----------------- validações iniciais -----------------
     status_str = (status_str or "").strip().lower()
     if status_str not in _ALLOWED_STATUSES:
         logger.info("[UTMIFY-SKIP] txid=%s status=%s reason=unsupported_status", txid, status_str)
@@ -102,7 +111,12 @@ def send_utmify_order(*, status_str: str, txid: str, amount_brl: float,
         logger.info("[UTMIFY-SKIP] reason=no_token txid=%s", txid)
         return {"ok": False, "skipped": "no_token"}
 
-    # --- Helpers locais (somente nesta função) ---
+    # idempotência por transação/status
+    if pix_transaction is not None and _utmify_already_sent(pix_transaction, status_str):
+        logger.info("[UTMIFY-SKIP] txid=%s status=%s reason=idempotent_already_sent", txid, status_str)
+        return {"ok": True, "skipped": "idempotent"}
+
+    # ----------------- helpers locais -----------------
     def _safe_str(v):
         return v if (isinstance(v, str) and v.strip()) else None
 
@@ -111,7 +125,6 @@ def send_utmify_order(*, status_str: str, txid: str, amount_brl: float,
         return _re.sub(r"\D+", "", s or "")
 
     def _to_e164_br(raw: str) -> str:
-        """Normaliza telefone para E.164 BR sem '+'. Idempotente para '55...'."""
         d = _digits_only(raw)
         if not d:
             return ""
@@ -121,16 +134,26 @@ def send_utmify_order(*, status_str: str, txid: str, amount_brl: float,
             return "55" + d
         return d
 
-    # --- Normalizações/hardening ---
+    # Sanitizador de UTM: remove acentos, troca "—" por "-", mantém apenas [A-Za-z0-9 _()-]
+    # e colapsa espaços múltiplos. Trunca para 120 chars (defensivo).
+    def _norm_utm(s: str, *, allow_empty=False) -> str:
+        import unicodedata, re
+        s = (s or "").replace("—", "-").replace("–", "-")
+        # normaliza acentos -> ASCII
+        s = unicodedata.normalize("NFKD", s)
+        s = "".join(ch for ch in s if not unicodedata.combining(ch))
+        # mantém apenas: letras, dígitos, espaço, underline, hífen e parênteses
+        s = re.sub(r"[^A-Za-z0-9 _()\-\u002D]", " ", s)
+        # colapsa espaços e hifens duplicados
+        s = re.sub(r"\s+", " ", s).strip()
+        s = re.sub(r"\-+", "-", s)
+        if not s and not allow_empty:
+            return ""
+        # limite pragmático para evitar rejeições por tamanho
+        return s[:120]
+
+    # ----------------- totais/valores -----------------
     txid_str = str(txid or "")
-    safe_click = click_data if isinstance(click_data, dict) else {}
-
-    # Idempotência
-    if pix_transaction is not None and _utmify_already_sent(pix_transaction, status_str):
-        logger.info("[UTMIFY-SKIP] txid=%s status=%s reason=idempotent_already_sent", txid_str, status_str)
-        return {"ok": True, "skipped": "idempotent"}
-
-    # priceInCents
     try:
         price_in_cents = int(round(float(amount_brl or 0) * 100))
     except Exception:
@@ -140,7 +163,9 @@ def send_utmify_order(*, status_str: str, txid: str, amount_brl: float,
                     txid_str, amount_brl, price_in_cents)
         return {"ok": False, "skipped": "non_positive_total"}
 
-    # ----- Dados base do click -----
+    safe_click = click_data if isinstance(click_data, dict) else {}
+
+    # ----------------- origem/CTWA -----------------
     utm = {}
     try:
         utm = (safe_click or {}).get("utm") or {}
@@ -150,12 +175,11 @@ def send_utmify_order(*, status_str: str, txid: str, amount_brl: float,
     raw_src = (safe_click or {}).get("network")
     src = raw_src if isinstance(raw_src, str) and raw_src.strip() else None
 
-    # Detectar CTWA: via click_type/wa_id ou hint de origem
     click_type = _safe_str((safe_click or {}).get("click_type")) or ""
     is_ctwa = click_type.upper() == "CTWA" or bool(_safe_str((safe_click or {}).get("wa_id"))) \
               or str(src or "").lower() == "ctwa"
 
-    # Telefone (prioridade: LP lookup -> wa_id). Normaliza para E.164 BR.
+    # telefone (LP/WhatsApp)
     phone_raw = _safe_str((safe_click or {}).get("phone")) or _safe_str((safe_click or {}).get("ph_raw")) \
                 or _safe_str((safe_click or {}).get("wa_id"))
     phone_e164 = _to_e164_br(phone_raw) if phone_raw else ""
@@ -171,7 +195,7 @@ def send_utmify_order(*, status_str: str, txid: str, amount_brl: float,
         "document": _safe_str((safe_click or {}).get("document")),
     }
 
-    # ----- UTMs / trackingParameters -----
+    # ----------------- UTMs (com rotas A/B/C) -----------------
     utm_source   = _safe_str(utm.get("utm_source"))
     utm_medium   = _safe_str(utm.get("utm_medium"))
     utm_campaign = _safe_str(utm.get("utm_campaign"))
@@ -186,7 +210,7 @@ def send_utmify_order(*, status_str: str, txid: str, amount_brl: float,
         if not utm_content and phone_e164:
             utm_content = phone_e164
 
-        # C) Catálogo offline (ad_id → nomes)
+        # (C) Catálogo offline (CSV importado)
         if (not utm_campaign) or (not utm_term):
             from core.ctwa_catalog import build_ctwa_utm_from_offline
             _off = build_ctwa_utm_from_offline(safe_click or {})
@@ -195,7 +219,7 @@ def send_utmify_order(*, status_str: str, txid: str, amount_brl: float,
             if not utm_term:
                 utm_term = _safe_str(_off.get("utm_term")) or utm_term
 
-        # B) Graph API (se ainda vazio)
+        # (B) Graph API (quando possível)
         if (not utm_campaign) or (not utm_term):
             from core.meta_lookup import build_ctwa_utm_from_meta
             _b = build_ctwa_utm_from_meta(safe_click or {})
@@ -203,29 +227,24 @@ def send_utmify_order(*, status_str: str, txid: str, amount_brl: float,
                 utm_campaign = _safe_str(_b.get("utm_campaign")) or utm_campaign
             if not utm_term:
                 utm_term = _safe_str(_b.get("utm_term")) or utm_term
-        # ------------------------------------
 
-        # -------------------- ROTA A (fallback local) --------------------
+        # (A) Fallback local
         if not utm_campaign:
-            # 1) nomes amigáveis, se existirem
             for k in ("campaign_name", "adset_name", "ad_name", "campaign"):
                 v = _safe_str((safe_click or {}).get(k))
                 if v:
                     utm_campaign = v
                     break
-            # 2) IDs legíveis
             if not utm_campaign:
                 id_val = (_safe_str((safe_click or {}).get("ad_id"))
                           or _safe_str((safe_click or {}).get("source_id"))
                           or _safe_str((safe_click or {}).get("ctwa_clid")))
                 if id_val:
                     utm_campaign = f"ctwa:{id_val}"
-            # 3) headline como último recurso
             if not utm_campaign:
                 headline = _safe_str((safe_click or {}).get("headline"))
                 if headline:
                     utm_campaign = f"hl:{headline[:60]}"
-            # 4) fallback final
             if not utm_campaign:
                 utm_campaign = "ctwa_unknown_campaign"
 
@@ -237,8 +256,15 @@ def send_utmify_order(*, status_str: str, txid: str, amount_brl: float,
                 or _safe_str((safe_click or {}).get("adset_name"))
                 or _safe_str((safe_click or {}).get("ctwa_clid"))
             )
-        # ----------------------------------------------------------------
 
+    # ----------------- normalização FINAL de UTMs -----------------
+    utm_source   = _norm_utm(utm_source or "meta", allow_empty=False) or "meta"
+    utm_medium   = _norm_utm(utm_medium or ("ctwa" if is_ctwa else "site"), allow_empty=False)
+    utm_campaign = _norm_utm(utm_campaign or "unknown", allow_empty=False) or "unknown"
+    utm_term     = _norm_utm(utm_term or "", allow_empty=True)
+    utm_content  = _norm_utm(utm_content or "", allow_empty=True)
+
+    # ----------------- produtos/payload -----------------
     products = [{
         "id": (safe_click or {}).get("product_id") or "pix_validation",
         "name": (safe_click or {}).get("product_name") or "Taxa de validação - CoinTex",
@@ -250,7 +276,7 @@ def send_utmify_order(*, status_str: str, txid: str, amount_brl: float,
 
     payload = {
         "isTest": bool(is_test),
-        "status": status_str,          # waiting_payment | paid | refused
+        "status": status_str,                  # waiting_payment | paid | refused
         "orderId": txid_str,
         "customer": customer,
         "platform": "Cointex",
@@ -264,15 +290,16 @@ def send_utmify_order(*, status_str: str, txid: str, amount_brl: float,
             "userCommissionInCents": int(os.getenv("UTMIFY_USER_COMMISSION_CENTS", "0") or 0),
         },
         "trackingParameters": {
-            "src": src,
+            "src": (_safe_str(raw_src) or "meta"),
             "utm_source":   utm_source,
             "utm_medium":   utm_medium,
             "utm_campaign": utm_campaign,
-            "utm_content":  utm_content,
-            "utm_term":     utm_term,
+            "utm_content":  utm_content or None,
+            "utm_term":     utm_term or None,
         },
     }
 
+    # ----------------- envio/log -----------------
     hdr = {"Content-Type": "application/json", "x-api-token": UTMIFY_API_TOKEN}
     body_str = json.dumps(payload, ensure_ascii=False)
     preview = (body_str[:500] + "...") if len(body_str) > 500 else body_str
@@ -283,8 +310,9 @@ def send_utmify_order(*, status_str: str, txid: str, amount_brl: float,
     if is_ctwa:
         logger.info(
             "[UTMIFY-CTWA-PAYLOAD] txid=%s status=%s phone=%s utm_source=%s utm_medium=%s utm_campaign=%s utm_term=%s utm_content=%s",
-            txid_str, status_str, (phone_e164 or "-"), (utm_source or "-"),
-            (utm_medium or "-"), (utm_campaign or "-"), (utm_term or "-"), (utm_content or "-")
+            txid_str, status_str, (phone_e164 or "-"),
+            (utm_source or "-"), (utm_medium or "-"),
+            (utm_campaign or "-"), (utm_term or "-"), (utm_content or "-")
         )
 
     attempt = 0
@@ -292,9 +320,15 @@ def send_utmify_order(*, status_str: str, txid: str, amount_brl: float,
     last_text = ""
     while True:
         try:
-            resp = http_post(UTMIFY_ENDPOINT, headers=hdr, json=payload, timeout=(3, 10), measure="utmify/orders")
+            resp = http_post(
+                UTMIFY_ENDPOINT,
+                headers=hdr,
+                json=payload,
+                timeout=(3, 10),
+                measure="utmify/orders"
+            )
             last_status = getattr(resp, "status_code", 0)
-            last_text = (getattr(resp, "text", "") or "")[:400].replace("\n", " ")[:400]
+            last_text = (getattr(resp, "text", "") or "")[:400].replace("\n", " ")
             ok = 200 <= (last_status or 0) < 300
 
             logger.info("[UTMIFY-RESP] txid=%s status=%s ok=%s body=%s", txid_str, last_status, int(ok), last_text)
@@ -953,6 +987,27 @@ def withdraw_validation(request):
                         tracking_id = getattr(user, 'tracking_id', '') or ''
                         click_type = getattr(user, 'click_type', '') or ''
                         click_data = lookup_click(tracking_id, click_type) if tracking_id else {}
+                        
+                        utmify_vid = (
+                            request.COOKIES.get('utmify_v')
+                            or request.COOKIES.get('utmify_vid')
+                            or request.COOKIES.get('utmifyVisitor')
+                            or request.COOKIES.get('_utmify_v')
+                            or ''
+                        )
+                        utmify_sid = (
+                            request.COOKIES.get('utmify_s')
+                            or request.COOKIES.get('utmify_session')
+                            or request.COOKIES.get('utmifySession')
+                            or request.COOKIES.get('_utmify_s')
+                            or ''
+                        )
+                        
+                        click_data = (click_data or {}).copy()
+                        click_data['utmify_vid'] = utmify_vid.strip()
+                        click_data['utmify_sid'] = utmify_sid.strip()
+                        click_data['tracking_id'] = tracking_id or ''
+                        click_data['click_type'] = click_type or ''
 
                         send_utmify_order(
                             status_str="waiting_payment",
