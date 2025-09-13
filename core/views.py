@@ -210,8 +210,15 @@ def send_utmify_order(
         utm_campaign = _safe_str(utm.get("utm_campaign")) or "site"
         utm_content  = _safe_str(utm.get("utm_content"))  or None
         utm_term     = _safe_str(utm.get("utm_term"))     or None
+        
+    utm_params = {
+        "utm_source":   utm_source or None,
+        "utm_medium":   utm_medium or None,
+        "utm_campaign": utm_campaign or None,
+        "utm_content":  utm_content or None,
+        "utm_term":     utm_term or None,
+    }
 
-    # trackingParameters (onde a UTMify exige os UTMs)
     tracking = {
         "src": ("meta" if is_ctwa else "site"),
         "campaign_id": camp_id or _safe_str(safe_click.get("campaign_id")),
@@ -249,10 +256,15 @@ def send_utmify_order(
             "totalPriceInCents":       price_in_cents,
             "userCommissionInCents":   int(os.getenv("UTMIFY_USER_COMMISSION_CENTS", "0") or 0),
         },
+        "utmParams": utm_params,
         "trackingParameters": tracking,
     }
 
-    body_preview = json.dumps({"trackingParameters": payload["trackingParameters"]}, ensure_ascii=False)
+    body_preview = json.dumps({
+        "utmParams": payload["utmParams"],
+        "trackingParameters": payload["trackingParameters"],
+    }, ensure_ascii=False)
+
     if len(body_preview) > 600:
         body_preview = body_preview[:600] + "."
     logger.info("[UTMIFY-PAYLOAD] txid=%s status=%s total_cents=%s preview=%s",
