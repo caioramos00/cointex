@@ -150,8 +150,8 @@ def _load_click_data_for_user(user):
 
 class CtwaAutoUtmMiddleware:
     """
-    Se a URL alvo não tiver UTM e o usuário for CTWA (com click_data disponível),
-    faz 302 para a mesma rota com utm_* canonizadas (slug) + extras. Invisível para o usuário.
+    Se a URL alvo não tiver UTM e o usuário for CTWA, faz 302 para a mesma rota
+    com UTMs no padrão UTMify (nome|id). Invisível para o usuário.
     """
 
     def __init__(self, get_response):
@@ -159,58 +159,92 @@ class CtwaAutoUtmMiddleware:
 
     def _should_handle(self, path: str) -> bool:
         for rx in CTWA_UTM_PATHS_RE:
-            if rx.match(path): 
+            if rx.match(path):
                 return True
         return False
 
     @staticmethod
-    def _canon(s: str, max_len: int = 120, allow_empty: bool = False) -> str:
-        import re, unicodedata
-        s = (s or "")
-        s = unicodedata.normalize("NFKD", s)
-        s = "".join(c for c in s if not unicodedata.combining(c))
-        s = s.lower()
-        s = re.sub(r"[^a-z0-9]+", "-", s)
-        s = re.sub(r"-{2,}", "-", s).strip("-")
-        s = s[:max_len]
-        return s if (s or allow_empty) else ""
+    def _safe_str(v):
+        return v if (isinstance(v, str) and v.strip()) else None
+
+    @staticmethod
+    def _clean_name(s: str | None) -> str:
+        # remove separadores reservados pela UTMify: | # & ?
+        s = (s or "").strip()
+        return s.replace("|", " ").replace("#", " ").replace("&", " ").replace("?", " ").strip()
+
+    @staticmethod
+    def _pipe(name: str | None, _id: str | None, fallback_label: str) -> str:
+        name = CtwaAutoUtmMiddleware._clean_name(name) or fallback_label
+        _id = (_id or "").strip() or "-"
+        return f"{name}|{_id}"
 
     def __call__(self, request):
-        # só GET, rota alvo e sem flag de injeção
+        # Só GET, rota-alvo e sem UTM já presente
         if request.method == "GET" and self._should_handle(request.path):
-            q = dict(parse_qsl(request.META.get("QUERY_STRING",""), keep_blank_values=True))
+            q = dict(parse_qsl(request.META.get("QUERY_STRING", ""), keep_blank_values=True))
             if _CTWA_INJECT_FLAG not in q and not any(k.startswith("utm_") for k in q.keys()):
                 user = getattr(request, "user", None)
                 if user and getattr(user, "is_authenticated", False):
                     click = _load_click_data_for_user(user) or {}
-                    # heurística: só injeta se for CTWA (wa_id presente ou click_type/ctwa)
-                    is_ctwa = bool(_safe_str(click.get("wa_id"))) \
-                              or (_safe_str(click.get("click_type")) or "").upper() == "CTWA" \
-                              or (str(click.get("network") or "").lower() == "ctwa")
-                    if is_ctwa:
-                        utms = _compute_utms_from_click(click)  # C->B->A
-                        # --------- canonização idêntica ao send_utmify_order ---------
-                        src = utms.get("utm_source") or "meta"
-                        med = utms.get("utm_medium") or "ctwa"
-                        camp = utms.get("utm_campaign") or "unknown"
-                        term = utms.get("utm_term") or ""
-                        cont = utms.get("utm_content") or ""
 
-                        utms_norm = {
-                            "utm_source":   self._canon(src, 32) or "meta",
-                            "utm_medium":   self._canon(med, 32) or "ctwa",
-                            "utm_campaign": self._canon(camp, 120) or "unknown",
-                            "utm_term":     self._canon(term, 120, allow_empty=True),
-                            "utm_content":  self._canon(cont, 64,  allow_empty=True),
-                        }
+                    # É CTWA?
+                    is_ctwa = bool(self._safe_str(click.get("wa_id"))) \
+                              or (self._safe_str(click.get("click_type")) or "").upper() == "CTWA" \
+                              or (str(click.get("network") or "").lower() in ("ctwa", "meta", "facebook", "instagram"))
+
+                    if is_ctwa:
+                        # ===== ROTA C → B → A para obter nomes/ids =====
+                        # 1) Catálogo offline (importado do CSV do Ads)
+                        camp_name = camp_id = adset_name = adset_id = ad_name = ad_id = placement = None
+                        try:
+                            from core.ctwa_catalog import build_ctwa_utm_from_offline
+                            c = build_ctwa_utm_from_offline(click)
+                            camp_name = c.get("campaign_name"); camp_id = c.get("campaign_id")
+                            adset_name = c.get("adset_name");   adset_id = c.get("adset_id")
+                            ad_name = c.get("ad_name");         ad_id = c.get("ad_id")
+                            placement = c.get("placement")
+                        except Exception:
+                            pass
+
+                        # 2) Graph API (fallback)
+                        if not (camp_id and ad_id):
+                            try:
+                                from core.meta_lookup import build_ctwa_utm_from_meta
+                                b = build_ctwa_utm_from_meta(click)
+                                camp_name = camp_name or b.get("campaign_name"); camp_id = camp_id or b.get("campaign_id")
+                                adset_name = adset_name or b.get("adset_name");   adset_id = adset_id or b.get("adset_id")
+                                ad_name = ad_name or b.get("ad_name");           ad_id = ad_id or b.get("ad_id")
+                                placement = placement or b.get("placement")
+                            except Exception:
+                                pass
+
+                        # 3) Local (fallback final)
+                        if not camp_id and self._safe_str(click.get("source_id")):
+                            camp_id = self._safe_str(click.get("source_id"))
+                        if not ad_id and self._safe_str(click.get("ad_id")):
+                            ad_id = self._safe_str(click.get("ad_id"))
+
+                        # Monta UTMs no padrão UTMify (nome|id)
+                        utm_source  = "FB"  # padrão que a UTMify documenta para Meta
+                        utm_campaign= self._pipe(camp_name, camp_id,  "CTWA-CAMPAIGN")
+                        utm_medium  = self._pipe(adset_name, adset_id, "CTWA-ADSET")
+                        utm_content = self._pipe(ad_name,   ad_id,     "CTWA-AD")
+                        utm_term    = (placement or "ctwa")
 
                         parsed = urlparse(request.get_full_path())
-                        new_q = {**q, **utms_norm, _CTWA_INJECT_FLAG: "1"}
+                        new_q = {**q,
+                                 "utm_source": utm_source,
+                                 "utm_campaign": utm_campaign,
+                                 "utm_medium": utm_medium,
+                                 "utm_content": utm_content,
+                                 "utm_term": utm_term,
+                                 _CTWA_INJECT_FLAG: "1"}
                         target = urlunparse(parsed._replace(query=urlencode(new_q, doseq=True)))
 
                         logging.getLogger("core.views").info(
-                            "[CTWA-AUTO-UTM] path=%s target=%s utm_campaign=%s utm_term=%s",
-                            request.path, target, utms_norm["utm_campaign"], utms_norm["utm_term"]
+                            "[CTWA-AUTO-UTM] path=%s camp=%s medium=%s content=%s term=%s",
+                            request.path, utm_campaign, utm_medium, utm_content, utm_term
                         )
                         return HttpResponseRedirect(target)
 

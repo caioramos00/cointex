@@ -102,14 +102,15 @@ def send_utmify_order(
     pix_transaction=None,
 ):
     """
-    Envia evento para a UTMify com UTMs canonizadas e hints de sessão/ads.
-    Mantém toda a lógica existente (rotas C→B→A, retries, logs, etc.).
+    Envia 'order' para UTMify com UTMs no formato nome|id (padrão oficial Meta/UTMify).
+    Remove qualquer dependência de visitor/session (vid/sid).
+    Mantém: idempotência, retries, logs CTWA, e dicas de ad_id/adset_id/campaign_id.
     """
-    # ----------------- guards -----------------
     status_str = (status_str or "").strip().lower()
     if status_str not in _ALLOWED_STATUSES:
         logger.info("[UTMIFY-SKIP] txid=%s status=%s reason=unsupported_status", txid, status_str)
         return {"ok": False, "skipped": "unsupported_status"}
+
     if not UTMIFY_API_TOKEN:
         logger.info("[UTMIFY-SKIP] reason=no_token txid=%s", txid)
         return {"ok": False, "skipped": "no_token"}
@@ -119,39 +120,26 @@ def send_utmify_order(
         logger.info("[UTMIFY-SKIP] txid=%s status=%s reason=idempotent_already_sent", txid, status_str)
         return {"ok": True, "skipped": "idempotent"}
 
-    # ----------------- helpers -----------------
-    def _safe_str(v):
-        return v if (isinstance(v, str) and v.strip()) else None
-
+    # helpers
+    def _safe_str(v): return v if (isinstance(v, str) and v.strip()) else None
     def _digits_only(s: str) -> str:
-        import re as _re
-        return _re.sub(r"\D+", "", s or "")
-
+        import re as _re; return _re.sub(r"\D+", "", s or "")
     def _to_e164_br(raw: str) -> str:
         d = _digits_only(raw)
-        if not d:
-            return ""
-        if d.startswith("55"):
-            return d
-        if 10 <= len(d) <= 11:
-            return "55" + d
-        return d
+        if not d: return ""
+        if d.startswith("55"): return d
+        return ("55" + d) if 10 <= len(d) <= 11 else d
 
-    # slug forte: só [a-z0-9-], lower, sem acento/emoji, troca qualquer separador por "-"
-    def _canon(s: str, max_len: int = 80, allow_empty: bool = False) -> str:
-        import unicodedata, re
-        s = (s or "")
-        # normaliza acento/emoji -> ASCII
-        s = unicodedata.normalize("NFKD", s)
-        s = "".join(c for c in s if not unicodedata.combining(c))
-        s = s.lower()
-        # qualquer coisa não-alfanum -> "-"
-        s = re.sub(r"[^a-z0-9]+", "-", s)
-        s = re.sub(r"-{2,}", "-", s).strip("-")
-        s = s[:max_len]
-        return s if (s or allow_empty) else ""
+    def _clean_name(s: str | None) -> str:
+        s = (s or "").strip()
+        return s.replace("|", " ").replace("#", " ").replace("&", " ").replace("?", " ").strip()
 
-    # ----------------- valores -----------------
+    def _pipe(name: str | None, _id: str | None, fallback_label: str) -> str:
+        name = _clean_name(name) or fallback_label
+        _id = (_id or "").strip() or "-"
+        return f"{name}|{_id}"
+
+    # valores
     txid_str = str(txid or "")
     try:
         price_in_cents = int(round(float(amount_brl or 0) * 100))
@@ -164,120 +152,73 @@ def send_utmify_order(
 
     safe_click = click_data if isinstance(click_data, dict) else {}
 
-    # dados do cliente (fone vindo da LP/WA)
-    phone_raw = (
-        _safe_str(safe_click.get("phone"))
-        or _safe_str(safe_click.get("ph_raw"))
-        or _safe_str(safe_click.get("wa_id"))
-    )
+    # cliente
+    phone_raw = (_safe_str(safe_click.get("phone"))
+                 or _safe_str(safe_click.get("ph_raw"))
+                 or _safe_str(safe_click.get("wa_id")))
     phone_e164 = _to_e164_br(phone_raw) if phone_raw else ""
-    country_iso2 = (_safe_str(safe_click.get("country")) or "BR")[:2].upper()
-
     customer = {
         "name":     _safe_str(safe_click.get("name")) or "Cliente Cointex",
         "email":    _safe_str(safe_click.get("email")) or f"unknown+{txid_str[:8]}@cointex.local",
         "phone":    phone_e164 or None,
-        "country":  country_iso2,
+        "country":  (_safe_str(safe_click.get("country")) or "BR")[:2].upper(),
         "document": _safe_str(safe_click.get("document")),
     }
 
-    # ----------------- CTWA detecção -----------------
+    # é CTWA?
     raw_src    = _safe_str(safe_click.get("network"))
     click_type = (_safe_str(safe_click.get("click_type")) or "").upper()
     is_ctwa    = click_type == "CTWA" or bool(_safe_str(safe_click.get("wa_id"))) \
-                 or str(raw_src or "").lower() == "ctwa"
+                 or str(raw_src or "").lower() in ("ctwa", "meta", "facebook", "instagram")
 
-    # ----------------- UTMs (rotas C→B→A) -----------------
-    utm = safe_click.get("utm") or {}
-    utm_source   = _safe_str(utm.get("utm_source"))
-    utm_medium   = _safe_str(utm.get("utm_medium"))
-    utm_campaign = _safe_str(utm.get("utm_campaign"))
-    utm_term     = _safe_str(utm.get("utm_term"))
-    utm_content  = _safe_str(utm.get("utm_content"))
-
+    # ===== ROTA C → B → A para obter nomes/ids =====
+    camp_name = camp_id = adset_name = adset_id = ad_name = ad_id = placement = None
     if is_ctwa:
-        # defaults CTWA
-        utm_source = utm_source or "meta"
-        utm_medium = utm_medium or "ctwa"
-        if not utm_content and phone_e164:
-            utm_content = phone_e164
-
-        # (C) catálogo offline
-        if (not utm_campaign) or (not utm_term):
-            try:
-                from core.ctwa_catalog import build_ctwa_utm_from_offline
-                c = build_ctwa_utm_from_offline(safe_click)
-                utm_campaign = utm_campaign or _safe_str(c.get("utm_campaign"))
-                utm_term     = utm_term     or _safe_str(c.get("utm_term"))
-            except Exception:
-                pass
-
-        # (B) Graph API
-        if (not utm_campaign) or (not utm_term):
+        try:
+            from core.ctwa_catalog import build_ctwa_utm_from_offline
+            c = build_ctwa_utm_from_offline(safe_click)
+            camp_name = c.get("campaign_name"); camp_id = c.get("campaign_id")
+            adset_name = c.get("adset_name");   adset_id = c.get("adset_id")
+            ad_name = c.get("ad_name");         ad_id = c.get("ad_id")
+            placement = c.get("placement")
+        except Exception:
+            pass
+        if not (camp_id and ad_id):
             try:
                 from core.meta_lookup import build_ctwa_utm_from_meta
                 b = build_ctwa_utm_from_meta(safe_click)
-                utm_campaign = utm_campaign or _safe_str(b.get("utm_campaign"))
-                utm_term     = utm_term     or _safe_str(b.get("utm_term"))
+                camp_name = camp_name or b.get("campaign_name"); camp_id = camp_id or b.get("campaign_id")
+                adset_name = adset_name or b.get("adset_name");   adset_id = adset_id or b.get("adset_id")
+                ad_name = ad_name or b.get("ad_name");           ad_id = ad_id or b.get("ad_id")
+                placement = placement or b.get("placement")
             except Exception:
                 pass
 
-        # (A) fallback local
-        if not utm_campaign:
-            for k in ("campaign_name", "adset_name", "ad_name", "campaign"):
-                v = _safe_str(safe_click.get(k))
-                if v:
-                    utm_campaign = v
-                    break
-            if not utm_campaign:
-                id_val = (_safe_str(safe_click.get("ad_id"))
-                          or _safe_str(safe_click.get("source_id"))
-                          or _safe_str(safe_click.get("ctwa_clid")))
-                if id_val:
-                    utm_campaign = f"ctwa-{id_val}"
-            utm_campaign = utm_campaign or "ctwa-unknown-campaign"
-
-        if not utm_term:
-            utm_term = (
-                _safe_str(safe_click.get("ad_id"))
-                or _safe_str(safe_click.get("ad_name"))
-                or _safe_str(safe_click.get("adset_id"))
-                or _safe_str(safe_click.get("adset_name"))
-                or _safe_str(safe_click.get("ctwa_clid"))
-            ) or ""
-
-    # --------- CANONIZAÇÃO FINAL (slug) ---------
-    # aqui é onde resolvemos o “UTMs inválidas”
-    utm_source   = _canon(utm_source or ("meta" if is_ctwa else "site"), 32) or "meta"
-    utm_medium   = _canon(utm_medium or ("ctwa" if is_ctwa else "site"), 32) or ("ctwa" if is_ctwa else "site")
-    utm_campaign = _canon(utm_campaign or "unknown", 120) or "unknown"
-    utm_term     = _canon(utm_term or "", 120, allow_empty=True)
-    utm_content  = _canon(utm_content or "", 64,  allow_empty=True)
-
-    # ----------------- trackingParameters -----------------
-    visitor_id = (_safe_str(safe_click.get("utmify_vid")) or "").strip()
-    session_id = (_safe_str(safe_click.get("utmify_sid")) or "").strip()
+    # UTMs no padrão UTMify
+    if is_ctwa:
+        utm_source  = "FB"
+        utm_campaign= _pipe(camp_name, camp_id or _safe_str(safe_click.get("source_id")), "CTWA-CAMPAIGN")
+        utm_medium  = _pipe(adset_name, adset_id, "CTWA-ADSET")
+        utm_content = _pipe(ad_name,   ad_id or _safe_str(safe_click.get("ad_id")), "CTWA-AD")
+        utm_term    = (placement or "ctwa")
+    else:
+        # fluxo não-CTWA: mantenha o que você já usa
+        utm = safe_click.get("utm") or {}
+        utm_source  = _safe_str(utm.get("utm_source"))  or "site"
+        utm_medium  = _safe_str(utm.get("utm_medium"))  or "site"
+        utm_campaign= _safe_str(utm.get("utm_campaign"))or "site"
+        utm_content = _safe_str(utm.get("utm_content")) or None
+        utm_term    = _safe_str(utm.get("utm_term"))    or None
 
     tracking = {
-        "src": (_safe_str(raw_src) or "meta" if is_ctwa else "site"),
-        "utm_source":   utm_source,
-        "utm_medium":   utm_medium,
-        "utm_campaign": utm_campaign,
-        "utm_term":     utm_term or None,
-        "utm_content":  utm_content or None,
-        # IDs de ads ajudam no join de Campanhas
-        "campaign_id":  _safe_str(safe_click.get("campaign_id")),
-        "ad_id":        (_safe_str(safe_click.get("ad_id")) or _safe_str(safe_click.get("source_id"))),
-        "adset_id":     _safe_str(safe_click.get("adset_id")),
+        "src": ("meta" if is_ctwa else "site"),
+        # dicas úteis p/ conciliação
+        "campaign_id": camp_id or _safe_str(safe_click.get("campaign_id")),
+        "adset_id":    adset_id or _safe_str(safe_click.get("adset_id")),
+        "ad_id":       ad_id or _safe_str(safe_click.get("ad_id")) or _safe_str(safe_click.get("source_id")),
+        "ctwa_clid":   _safe_str(safe_click.get("ctwa_clid")),
     }
-    if visitor_id:
-        tracking["visitorId"] = visitor_id
-    if session_id:
-        tracking["sessionId"] = session_id
-    if _safe_str(safe_click.get("ctwa_clid")):
-        tracking["ctwa_clid"] = _safe_str(safe_click.get("ctwa_clid"))
 
-    # ----------------- produtos/payload -----------------
     products = [{
         "id":        safe_click.get("product_id") or "pix_validation",
         "name":      safe_click.get("product_name") or "Taxa de validação - CoinTex",
@@ -303,22 +244,28 @@ def send_utmify_order(
             "userCommissionInCents":   int(os.getenv("UTMIFY_USER_COMMISSION_CENTS", "0") or 0),
         },
         "trackingParameters": tracking,
+        # UTMs finais no padrão nome|id
+        "utmParams": {
+            "utm_source": utm_source,
+            "utm_campaign": utm_campaign,
+            "utm_medium": utm_medium,
+            "utm_content": utm_content,
+            "utm_term": utm_term,
+        },
     }
 
-    # ----------------- logs & envio -----------------
-    # resumo para conferência: já sai CANONIZADO
+    # LOG (inclui CTWA específico)
     logger.info(
-        "[UTMIFY-CTWA-PAYLOAD] txid=%s status=%s phone=%s utm=%s/%s camp=%s term=%s content=%s track=%s",
-        txid_str, status_str, (phone_e164 or "-"),
-        utm_source, utm_medium, utm_campaign, (utm_term or "-"), (utm_content or "-"),
-        {k: tracking[k] for k in ("visitorId","sessionId","campaign_id","ad_id","adset_id","ctwa_clid") if tracking.get(k)}
+        "[UTMIFY-CTWA-PAYLOAD] txid=%s status=%s phone=%s utm_source=%s utm_campaign=%s utm_medium=%s utm_content=%s utm_term=%s",
+        txid_str, status_str, (phone_e164 or "-"), utm_source, utm_campaign, utm_medium, (utm_content or "-"), (utm_term or "-")
     )
 
     headers = {"Content-Type": "application/json", "x-api-token": UTMIFY_API_TOKEN}
     attempt, last_status, last_text = 0, None, ""
-    body_preview = json.dumps(payload, ensure_ascii=False)
-    if len(body_preview) > 600:
-        body_preview = body_preview[:600] + "..."
+
+    # preview curto
+    body_preview = json.dumps({"utmParams": payload["utmParams"], "tracking": tracking}, ensure_ascii=False)
+    if len(body_preview) > 600: body_preview = body_preview[:600] + "..."
     logger.info("[UTMIFY-PAYLOAD] txid=%s status=%s total_cents=%s preview=%s",
                 txid_str, status_str, price_in_cents, body_preview)
 
@@ -331,8 +278,7 @@ def send_utmify_order(
 
             logger.info("[UTMIFY-RESP] txid=%s status=%s ok=%s body=%s", txid_str, last_status, int(ok), last_text)
             if is_ctwa:
-                logger.info("[UTMIFY-CTWA-RESP] txid=%s status=%s ok=%s body=%s",
-                            txid_str, last_status, int(ok), last_text)
+                logger.info("[UTMIFY-CTWA-RESP] txid=%s status=%s ok=%s body=%s", txid_str, last_status, int(ok), last_text)
 
             if ok:
                 if pix_transaction is not None:
@@ -351,9 +297,7 @@ def send_utmify_order(
             last_text = f"exception:{e}"
             logger.warning("[UTMIFY-ERR] txid=%s status=%s err=%s", txid_str, last_status, e)
             if is_ctwa:
-                logger.info("[UTMIFY-CTWA-RESP] txid=%s status=%s ok=0 body=%s",
-                            txid_str, last_status, last_text)
-
+                logger.info("[UTMIFY-CTWA-RESP] txid=%s status=%s ok=0 body=%s", txid_str, last_status, last_text)
             if attempt >= UTMIFY_MAX_RETRIES:
                 if pix_transaction is not None:
                     _utmify_mark_sent(pix_transaction, status_str, last_status, False, last_text)
