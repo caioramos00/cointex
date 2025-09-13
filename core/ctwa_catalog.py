@@ -1,7 +1,6 @@
-import csv
+import csv, os, logging
 import io
 import re
-import logging
 from typing import Optional, Dict
 
 from core.models import CtwaAdCatalog
@@ -39,22 +38,6 @@ def import_ctwa_csv_file(file_obj) -> int:
 
     Retorna a quantidade de anúncios importados/atualizados.
     """
-    import csv, io, re, logging
-    from core.models import CtwaAdCatalog
-
-    log = logging.getLogger(__name__)
-    DIGITS = re.compile(r"\D+")
-
-    def _digits_only(s):
-        return DIGITS.sub("", str(s or ""))
-
-    def _get_first(row, *keys):
-        for k in keys:
-            if k in row and str(row[k]).strip():
-                return str(row[k]).strip()
-        return None
-
-    # --- leitura + detecção de encoding ---
     raw = file_obj.read()
     if isinstance(raw, bytes):
         # Detecta UTF-16 por BOM
@@ -68,20 +51,20 @@ def import_ctwa_csv_file(file_obj) -> int:
         text = str(raw)
 
     # --- detecção simples de delimitador ---
-    delim = ","
     counts = {",": text.count(","), ";": text.count(";"), "\t": text.count("\t"), "|": text.count("|")}
     delim = max(counts, key=counts.get)
     log.info("[CTWA-CATALOG-IMPORT] delimiter=%r counts=%s", delim, counts)
 
     reader = csv.DictReader(io.StringIO(text), delimiter=delim)
 
-    # Variações de cabeçalhos (EN/PT)
+    # Mapeamento de cabeçalhos (EN/PT)
     AD_ID_KEYS          = ("ad_id", "Ad ID", "ID do anúncio", "Anúncio ID", "ID do Anúncio")
     AD_NAME_KEYS        = ("ad_name", "Ad Name", "Nome do anúncio", "Nome do Anúncio")
     ADSET_ID_KEYS       = ("adset_id", "Ad Set ID", "ID do conjunto de anúncios", "Conjunto de anúncios ID", "Conjunto de Anúncios ID")
     ADSET_NAME_KEYS     = ("adset_name", "Ad Set Name", "Nome do conjunto de anúncios", "Nome do Conjunto de Anúncios")
     CAMPAIGN_ID_KEYS    = ("campaign_id", "Campaign ID", "ID da campanha", "Campanha ID", "ID da Campanha")
     CAMPAIGN_NAME_KEYS  = ("campaign_name", "Campaign Name", "Nome da campanha", "Nome da Campanha")
+    PLACEMENT_KEYS      = ("placement", "Placement", "Posicionamento")
 
     count = 0
     for i, row in enumerate(reader, 1):
@@ -95,6 +78,7 @@ def import_ctwa_csv_file(file_obj) -> int:
         adset_name     = _get_first(row, *ADSET_NAME_KEYS)
         campaign_id    = _digits_only(_get_first(row, *CAMPAIGN_ID_KEYS))
         campaign_name  = _get_first(row, *CAMPAIGN_NAME_KEYS)
+        placement      = _get_first(row, *PLACEMENT_KEYS)
 
         CtwaAdCatalog.objects.update_or_create(
             ad_id=ad_id,
@@ -104,6 +88,7 @@ def import_ctwa_csv_file(file_obj) -> int:
                 "adset_name": adset_name,
                 "campaign_id": campaign_id or None,
                 "campaign_name": campaign_name,
+                "placement": placement,
             },
         )
         count += 1
@@ -119,7 +104,7 @@ def resolve_ctwa_campaign_names_offline(click_data: dict) -> Dict[str, Optional[
 
     Retorna possivelmente parcial:
       {
-        'ad_id','ad_name','adset_id','adset_name','campaign_id','campaign_name'
+        'ad_id','ad_name','adset_id','adset_name','campaign_id','campaign_name','placement'
       }
     """
     ad_id = (click_data or {}).get("ad_id") or (click_data or {}).get("source_id")
@@ -129,7 +114,7 @@ def resolve_ctwa_campaign_names_offline(click_data: dict) -> Dict[str, Optional[
 
     rec = (
         CtwaAdCatalog.objects.filter(pk=ad_id)
-        .values("ad_id", "ad_name", "adset_id", "adset_name", "campaign_id", "campaign_name")
+        .values("ad_id", "ad_name", "adset_id", "adset_name", "campaign_id", "campaign_name", "placement")
         .first()
     )
     return rec or {}
@@ -143,6 +128,7 @@ def build_ctwa_utm_from_offline(click_data: dict) -> dict:
     Regras:
       - utm_campaign: campaign_name (se houver) senão campaign:<campaign_id>
       - utm_term: ad_name (ou ad_id) senão adset_name (ou adset_id)
+      - utm_term pode incluir placement se existir
     """
     names = resolve_ctwa_campaign_names_offline(click_data)
     if not names:
@@ -157,6 +143,9 @@ def build_ctwa_utm_from_offline(click_data: dict) -> dict:
         or names.get("adset_name")
         or names.get("adset_id")
     )
+
+    if names.get("placement"):
+        utm_term = f"{utm_term or ''}-{names['placement']}"
 
     out = {}
     if utm_campaign:
