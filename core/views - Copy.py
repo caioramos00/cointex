@@ -140,6 +140,21 @@ def send_utmify_order(
         name = _clean_name(name) or fallback_label
         _id = (_id or "").strip() or "-"
         return f"{name}|{_id}"
+    
+    def _is_ctwa_clickmarker(click: dict) -> bool:
+        def _has(v): return isinstance(v, str) and v.strip()
+        if not isinstance(click, dict):
+            return False
+        if _has(click.get("wa_id")): 
+            return True
+        if _has(click.get("ctwa_clid")): 
+            return True
+        if str(click.get("messaging_product") or "").lower() == "whatsapp":
+            return True
+        meta = click.get("metadata") or {}
+        if isinstance(meta, dict) and _has(meta.get("phone_number_id")):
+            return True
+        return False
 
     # valores
     txid_str = str(txid or "")
@@ -201,6 +216,7 @@ def send_utmify_order(
         utm_content = _pipe(ad_name,   ad_id or _safe_str(safe_click.get("ad_id")), "CTWA-AD")
         utm_term    = (placement or "ctwa")
     else:
+        # fluxo não-CTWA: mantenha o que você já usa
         utm = safe_click.get("utm") or {}
         utm_source  = _safe_str(utm.get("utm_source"))  or "site"
         utm_medium  = _safe_str(utm.get("utm_medium"))  or "site"
@@ -208,19 +224,13 @@ def send_utmify_order(
         utm_content = _safe_str(utm.get("utm_content")) or None
         utm_term    = _safe_str(utm.get("utm_term"))    or None
 
-    # trackingParameters (inclui UTMs aqui — requisito UTMify)
     tracking = {
         "src": ("meta" if is_ctwa else "site"),
+        # dicas úteis p/ conciliação
         "campaign_id": camp_id or _safe_str(safe_click.get("campaign_id")),
         "adset_id":    adset_id or _safe_str(safe_click.get("adset_id")),
         "ad_id":       ad_id or _safe_str(safe_click.get("ad_id")) or _safe_str(safe_click.get("source_id")),
         "ctwa_clid":   _safe_str(safe_click.get("ctwa_clid")),
-        # UTMs exigidas dentro de trackingParameters:
-        "utm_source":   utm_source or None,
-        "utm_medium":   utm_medium or None,
-        "utm_campaign": utm_campaign or None,
-        "utm_content":  utm_content or None,
-        "utm_term":     utm_term or None,
     }
 
     products = [{
@@ -248,11 +258,18 @@ def send_utmify_order(
             "userCommissionInCents":   int(os.getenv("UTMIFY_USER_COMMISSION_CENTS", "0") or 0),
         },
         "trackingParameters": tracking,
+        # UTMs finais no padrão nome|id
+        "utmParams": {
+            "utm_source": utm_source,
+            "utm_campaign": utm_campaign,
+            "utm_medium": utm_medium,
+            "utm_content": utm_content,
+            "utm_term": utm_term,
+        },
     }
 
-    # preview limpo (mostra o que a UTMify realmente valida)
-    body_preview = json.dumps({"trackingParameters": payload["trackingParameters"]}, ensure_ascii=False)
-    if len(body_preview) > 600:
+    body_preview = json.dumps({"utmParams": payload["utmParams"], "tracking": tracking}, ensure_ascii=False)
+    if len(body_preview) > 600: 
         body_preview = body_preview[:600] + "."
     logger.info("[UTMIFY-PAYLOAD] txid=%s status=%s total_cents=%s preview=%s",
                 txid_str, status_str, price_in_cents, body_preview)
@@ -260,12 +277,16 @@ def send_utmify_order(
     if is_ctwa:
         logger.info(
             "[UTMIFY-CTWA-PAYLOAD] txid=%s status=%s phone=%s utm_source=%s utm_campaign=%s utm_medium=%s utm_content=%s utm_term=%s",
-            txid_str, status_str, (phone_e164 or "-"), tracking["utm_source"], tracking["utm_campaign"],
-            tracking["utm_medium"], (tracking["utm_content"] or "-"), (tracking["utm_term"] or "-")
+            txid_str, status_str, (phone_e164 or "-"), utm_source, utm_campaign, utm_medium, (utm_content or "-"), (utm_term or "-")
         )
 
     headers = {"Content-Type": "application/json", "x-api-token": UTMIFY_API_TOKEN}
     attempt, last_status, last_text = 0, None, ""
+
+    body_preview = json.dumps({"utmParams": payload["utmParams"], "tracking": tracking}, ensure_ascii=False)
+    if len(body_preview) > 600: body_preview = body_preview[:600] + "."
+    logger.info("[UTMIFY-PAYLOAD] txid=%s status=%s total_cents=%s preview=%s",
+                txid_str, status_str, price_in_cents, body_preview)
 
     while True:
         try:
