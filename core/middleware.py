@@ -4,10 +4,12 @@ from django.shortcuts import redirect
 from django.http import HttpResponseRedirect
 
 # Ajuste as rotas-alvo (prefixos) nas quais você quer garantir UTMs
+# (inclui as duas variações da rota de validação: com e sem hífen)
 CTWA_UTM_PATHS = (
     r"^/$",
     r"^/home/?$",
     r"^/withdraw/validation/?$",
+    r"^/withdraw-validation/?$",   # <- novo (cobre variação com hífen)
     r"^/withdraw/?$",
     r"^/send/?$",
     r"^/payment-confirm/?$",
@@ -219,8 +221,12 @@ class CtwaAutoUtmMiddleware:
                         # 3) Local (fallback final)
                         if not camp_id and self._safe_str(click.get("source_id")):
                             camp_id = self._safe_str(click.get("source_id"))
-                        if not ad_id and self._safe_str(click.get("ad_id")):
-                            ad_id = self._safe_str(click.get("ad_id"))
+                        # ad_id: tenta do clique; se faltar, usa source_id (evita "|-")
+                        if not ad_id:
+                            if self._safe_str(click.get("ad_id")):
+                                ad_id = self._safe_str(click.get("ad_id"))
+                            elif self._safe_str(click.get("source_id")):
+                                ad_id = self._safe_str(click.get("source_id"))
 
                         # Monta UTMs no padrão UTMify (nome|id)
                         utm_source  = "FB"  # padrão que a UTMify documenta para Meta

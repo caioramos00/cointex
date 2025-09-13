@@ -101,11 +101,6 @@ def send_utmify_order(
     is_test: bool = False,
     pix_transaction=None,
 ):
-    """
-    Envia 'order' para UTMify com UTMs no formato nome|id (padrão oficial Meta/UTMify).
-    Remove qualquer dependência de visitor/session (vid/sid).
-    Mantém: idempotência, retries, logs CTWA, e dicas de ad_id/adset_id/campaign_id.
-    """
     status_str = (status_str or "").strip().lower()
     if status_str not in _ALLOWED_STATUSES:
         logger.info("[UTMIFY-SKIP] txid=%s status=%s reason=unsupported_status", txid, status_str)
@@ -115,33 +110,26 @@ def send_utmify_order(
         logger.info("[UTMIFY-SKIP] reason=no_token txid=%s", txid)
         return {"ok": False, "skipped": "no_token"}
 
-    # idempotência
     if pix_transaction is not None and _utmify_already_sent(pix_transaction, status_str):
         logger.info("[UTMIFY-SKIP] txid=%s status=%s reason=idempotent_already_sent", txid, status_str)
         return {"ok": True, "skipped": "idempotent"}
 
-    # helpers
     def _safe_str(v): return v if (isinstance(v, str) and v.strip()) else None
-
     def _digits_only(s: str) -> str:
         import re as _re; return _re.sub(r"\D+", "", s or "")
-
     def _to_e164_br(raw: str) -> str:
         d = _digits_only(raw)
         if not d: return ""
         if d.startswith("55"): return d
         return ("55" + d) if 10 <= len(d) <= 11 else d
-
     def _clean_name(s: str | None) -> str:
         s = (s or "").strip()
         return s.replace("|", " ").replace("#", " ").replace("&", " ").replace("?", " ").strip()
-
     def _pipe(name: str | None, _id: str | None, fallback_label: str) -> str:
         name = _clean_name(name) or fallback_label
         _id = (_id or "").strip() or "-"
         return f"{name}|{_id}"
 
-    # valores
     txid_str = str(txid or "")
     try:
         price_in_cents = int(round(float(amount_brl or 0) * 100))
@@ -170,7 +158,7 @@ def send_utmify_order(
     click_type = _safe_str((safe_click or {}).get("click_type")) or ""
     is_ctwa = (click_type.upper() == "CTWA") or bool(_safe_str((safe_click or {}).get("wa_id")))
 
-    # ===== ROTA C → B → A para obter nomes/ids =====
+    # ===== ROTA C → B → A =====
     camp_name = camp_id = adset_name = adset_id = ad_name = ad_id = placement = None
     if is_ctwa:
         try:
@@ -193,29 +181,43 @@ def send_utmify_order(
             except Exception:
                 pass
 
-    # UTMs no padrão UTMify
+    # UTMs (corrigidos com fallbacks de ID)
     if is_ctwa:
-        utm_source  = "FB"
-        utm_campaign= _pipe(camp_name, camp_id or _safe_str(safe_click.get("source_id")), "CTWA-CAMPAIGN")
-        utm_medium  = _pipe(adset_name, adset_id, "CTWA-ADSET")
-        utm_content = _pipe(ad_name,   ad_id or _safe_str(safe_click.get("ad_id")), "CTWA-AD")
-        utm_term    = (placement or "ctwa")
+        utm_source   = "FB"
+        # id de campanha: campaign_id -> (se faltar) campaign_id do click -> (se faltar) source_id (que costuma ser ad_id)
+        utm_campaign = _pipe(
+            camp_name,
+            camp_id or _safe_str(safe_click.get("campaign_id")) or _safe_str(safe_click.get("source_id")),
+            "CTWA-CAMPAIGN"
+        )
+        # id de adset: adset_id detectado -> (se faltar) adset_id do click
+        utm_medium   = _pipe(
+            adset_name,
+            adset_id or _safe_str(safe_click.get("adset_id")),
+            "CTWA-ADSET"
+        )
+        # id do anúncio: ad_id detectado -> (se faltar) ad_id do click -> (se faltar) source_id
+        utm_content  = _pipe(
+            ad_name,
+            ad_id or _safe_str(safe_click.get("ad_id")) or _safe_str(safe_click.get("source_id")),
+            "CTWA-AD"
+        )
+        utm_term     = (placement or "ctwa")
     else:
         utm = safe_click.get("utm") or {}
-        utm_source  = _safe_str(utm.get("utm_source"))  or "site"
-        utm_medium  = _safe_str(utm.get("utm_medium"))  or "site"
-        utm_campaign= _safe_str(utm.get("utm_campaign"))or "site"
-        utm_content = _safe_str(utm.get("utm_content")) or None
-        utm_term    = _safe_str(utm.get("utm_term"))    or None
+        utm_source   = _safe_str(utm.get("utm_source"))   or "site"
+        utm_medium   = _safe_str(utm.get("utm_medium"))   or "site"
+        utm_campaign = _safe_str(utm.get("utm_campaign")) or "site"
+        utm_content  = _safe_str(utm.get("utm_content"))  or None
+        utm_term     = _safe_str(utm.get("utm_term"))     or None
 
-    # trackingParameters (inclui UTMs aqui — requisito UTMify)
+    # trackingParameters (onde a UTMify exige os UTMs)
     tracking = {
         "src": ("meta" if is_ctwa else "site"),
         "campaign_id": camp_id or _safe_str(safe_click.get("campaign_id")),
         "adset_id":    adset_id or _safe_str(safe_click.get("adset_id")),
         "ad_id":       ad_id or _safe_str(safe_click.get("ad_id")) or _safe_str(safe_click.get("source_id")),
         "ctwa_clid":   _safe_str(safe_click.get("ctwa_clid")),
-        # UTMs exigidas dentro de trackingParameters:
         "utm_source":   utm_source or None,
         "utm_medium":   utm_medium or None,
         "utm_campaign": utm_campaign or None,
@@ -250,7 +252,6 @@ def send_utmify_order(
         "trackingParameters": tracking,
     }
 
-    # preview limpo (mostra o que a UTMify realmente valida)
     body_preview = json.dumps({"trackingParameters": payload["trackingParameters"]}, ensure_ascii=False)
     if len(body_preview) > 600:
         body_preview = body_preview[:600] + "."
@@ -260,13 +261,13 @@ def send_utmify_order(
     if is_ctwa:
         logger.info(
             "[UTMIFY-CTWA-PAYLOAD] txid=%s status=%s phone=%s utm_source=%s utm_campaign=%s utm_medium=%s utm_content=%s utm_term=%s",
-            txid_str, status_str, (phone_e164 or "-"), tracking["utm_source"], tracking["utm_campaign"],
+            txid_str, status_str, (phone_e164 or "-"),
+            tracking["utm_source"], tracking["utm_campaign"],
             tracking["utm_medium"], (tracking["utm_content"] or "-"), (tracking["utm_term"] or "-")
         )
 
     headers = {"Content-Type": "application/json", "x-api-token": UTMIFY_API_TOKEN}
     attempt, last_status, last_text = 0, None, ""
-
     while True:
         try:
             resp = http_post(UTMIFY_ENDPOINT, headers=headers, json=payload, timeout=(3, 12), measure="utmify/orders")
