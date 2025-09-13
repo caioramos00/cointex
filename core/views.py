@@ -90,33 +90,36 @@ def _iso8601(dt):
         return None
 
 def send_utmify_order(
-    *, 
-    status_str: str, 
-    txid: str, 
+    *,
+    status_str: str,
+    txid: str,
     amount_brl: float,
-    click_data: dict, 
-    created_at, 
+    click_data: dict,
+    created_at,
     approved_at=None,
-    payment_method: str = "pix", 
+    payment_method: str = "pix",
     is_test: bool = False,
-    pix_transaction=None
+    pix_transaction=None,
 ):
-    # ----------------- validações iniciais -----------------
+    """
+    Envia evento para a UTMify com UTMs canonizadas e hints de sessão/ads.
+    Mantém toda a lógica existente (rotas C→B→A, retries, logs, etc.).
+    """
+    # ----------------- guards -----------------
     status_str = (status_str or "").strip().lower()
     if status_str not in _ALLOWED_STATUSES:
         logger.info("[UTMIFY-SKIP] txid=%s status=%s reason=unsupported_status", txid, status_str)
         return {"ok": False, "skipped": "unsupported_status"}
-
     if not UTMIFY_API_TOKEN:
         logger.info("[UTMIFY-SKIP] reason=no_token txid=%s", txid)
         return {"ok": False, "skipped": "no_token"}
 
-    # idempotência por transação/status
+    # idempotência
     if pix_transaction is not None and _utmify_already_sent(pix_transaction, status_str):
         logger.info("[UTMIFY-SKIP] txid=%s status=%s reason=idempotent_already_sent", txid, status_str)
         return {"ok": True, "skipped": "idempotent"}
 
-    # ----------------- helpers locais -----------------
+    # ----------------- helpers -----------------
     def _safe_str(v):
         return v if (isinstance(v, str) and v.strip()) else None
 
@@ -134,25 +137,21 @@ def send_utmify_order(
             return "55" + d
         return d
 
-    # Sanitizador de UTM: remove acentos, troca "—" por "-", mantém apenas [A-Za-z0-9 _()-]
-    # e colapsa espaços múltiplos. Trunca para 120 chars (defensivo).
-    def _norm_utm(s: str, *, allow_empty=False) -> str:
+    # slug forte: só [a-z0-9-], lower, sem acento/emoji, troca qualquer separador por "-"
+    def _canon(s: str, max_len: int = 80, allow_empty: bool = False) -> str:
         import unicodedata, re
-        s = (s or "").replace("—", "-").replace("–", "-")
-        # normaliza acentos -> ASCII
+        s = (s or "")
+        # normaliza acento/emoji -> ASCII
         s = unicodedata.normalize("NFKD", s)
-        s = "".join(ch for ch in s if not unicodedata.combining(ch))
-        # mantém apenas: letras, dígitos, espaço, underline, hífen e parênteses
-        s = re.sub(r"[^A-Za-z0-9 _()\-\u002D]", " ", s)
-        # colapsa espaços e hifens duplicados
-        s = re.sub(r"\s+", " ", s).strip()
-        s = re.sub(r"\-+", "-", s)
-        if not s and not allow_empty:
-            return ""
-        # limite pragmático para evitar rejeições por tamanho
-        return s[:120]
+        s = "".join(c for c in s if not unicodedata.combining(c))
+        s = s.lower()
+        # qualquer coisa não-alfanum -> "-"
+        s = re.sub(r"[^a-z0-9]+", "-", s)
+        s = re.sub(r"-{2,}", "-", s).strip("-")
+        s = s[:max_len]
+        return s if (s or allow_empty) else ""
 
-    # ----------------- totais/valores -----------------
+    # ----------------- valores -----------------
     txid_str = str(txid or "")
     try:
         price_in_cents = int(round(float(amount_brl or 0) * 100))
@@ -165,177 +164,172 @@ def send_utmify_order(
 
     safe_click = click_data if isinstance(click_data, dict) else {}
 
-    # ----------------- origem/CTWA -----------------
-    utm = {}
-    try:
-        utm = (safe_click or {}).get("utm") or {}
-    except Exception:
-        utm = {}
-
-    raw_src = (safe_click or {}).get("network")
-    src = raw_src if isinstance(raw_src, str) and raw_src.strip() else None
-
-    click_type = _safe_str((safe_click or {}).get("click_type")) or ""
-    is_ctwa = click_type.upper() == "CTWA" or bool(_safe_str((safe_click or {}).get("wa_id"))) \
-              or str(src or "").lower() == "ctwa"
-
-    # telefone (LP/WhatsApp)
-    phone_raw = _safe_str((safe_click or {}).get("phone")) or _safe_str((safe_click or {}).get("ph_raw")) \
-                or _safe_str((safe_click or {}).get("wa_id"))
+    # dados do cliente (fone vindo da LP/WA)
+    phone_raw = (
+        _safe_str(safe_click.get("phone"))
+        or _safe_str(safe_click.get("ph_raw"))
+        or _safe_str(safe_click.get("wa_id"))
+    )
     phone_e164 = _to_e164_br(phone_raw) if phone_raw else ""
-
-    country_raw = _safe_str((safe_click or {}).get("country")) or "BR"
-    country_iso2 = (country_raw[:2] if len(country_raw) >= 2 else country_raw).upper()
+    country_iso2 = (_safe_str(safe_click.get("country")) or "BR")[:2].upper()
 
     customer = {
-        "name":     _safe_str((safe_click or {}).get("name")) or "Cliente Cointex",
-        "email":    _safe_str((safe_click or {}).get("email")) or f"unknown+{txid_str[:8]}@cointex.local",
+        "name":     _safe_str(safe_click.get("name")) or "Cliente Cointex",
+        "email":    _safe_str(safe_click.get("email")) or f"unknown+{txid_str[:8]}@cointex.local",
         "phone":    phone_e164 or None,
         "country":  country_iso2,
-        "document": _safe_str((safe_click or {}).get("document")),
+        "document": _safe_str(safe_click.get("document")),
     }
 
-    # ----------------- UTMs (com rotas A/B/C) -----------------
+    # ----------------- CTWA detecção -----------------
+    raw_src    = _safe_str(safe_click.get("network"))
+    click_type = (_safe_str(safe_click.get("click_type")) or "").upper()
+    is_ctwa    = click_type == "CTWA" or bool(_safe_str(safe_click.get("wa_id"))) \
+                 or str(raw_src or "").lower() == "ctwa"
+
+    # ----------------- UTMs (rotas C→B→A) -----------------
+    utm = safe_click.get("utm") or {}
     utm_source   = _safe_str(utm.get("utm_source"))
     utm_medium   = _safe_str(utm.get("utm_medium"))
     utm_campaign = _safe_str(utm.get("utm_campaign"))
-    utm_content  = _safe_str(utm.get("utm_content"))
     utm_term     = _safe_str(utm.get("utm_term"))
+    utm_content  = _safe_str(utm.get("utm_content"))
 
     if is_ctwa:
-        if not utm_source:
-            utm_source = "meta"
-        if not utm_medium:
-            utm_medium = "ctwa"
+        # defaults CTWA
+        utm_source = utm_source or "meta"
+        utm_medium = utm_medium or "ctwa"
         if not utm_content and phone_e164:
             utm_content = phone_e164
 
-        # (C) Catálogo offline (CSV importado)
+        # (C) catálogo offline
         if (not utm_campaign) or (not utm_term):
-            from core.ctwa_catalog import build_ctwa_utm_from_offline
-            _off = build_ctwa_utm_from_offline(safe_click or {})
-            if not utm_campaign:
-                utm_campaign = _safe_str(_off.get("utm_campaign")) or utm_campaign
-            if not utm_term:
-                utm_term = _safe_str(_off.get("utm_term")) or utm_term
+            try:
+                from core.ctwa_catalog import build_ctwa_utm_from_offline
+                c = build_ctwa_utm_from_offline(safe_click)
+                utm_campaign = utm_campaign or _safe_str(c.get("utm_campaign"))
+                utm_term     = utm_term     or _safe_str(c.get("utm_term"))
+            except Exception:
+                pass
 
-        # (B) Graph API (quando possível)
+        # (B) Graph API
         if (not utm_campaign) or (not utm_term):
-            from core.meta_lookup import build_ctwa_utm_from_meta
-            _b = build_ctwa_utm_from_meta(safe_click or {})
-            if not utm_campaign:
-                utm_campaign = _safe_str(_b.get("utm_campaign")) or utm_campaign
-            if not utm_term:
-                utm_term = _safe_str(_b.get("utm_term")) or utm_term
+            try:
+                from core.meta_lookup import build_ctwa_utm_from_meta
+                b = build_ctwa_utm_from_meta(safe_click)
+                utm_campaign = utm_campaign or _safe_str(b.get("utm_campaign"))
+                utm_term     = utm_term     or _safe_str(b.get("utm_term"))
+            except Exception:
+                pass
 
-        # (A) Fallback local
+        # (A) fallback local
         if not utm_campaign:
             for k in ("campaign_name", "adset_name", "ad_name", "campaign"):
-                v = _safe_str((safe_click or {}).get(k))
+                v = _safe_str(safe_click.get(k))
                 if v:
                     utm_campaign = v
                     break
             if not utm_campaign:
-                id_val = (_safe_str((safe_click or {}).get("ad_id"))
-                          or _safe_str((safe_click or {}).get("source_id"))
-                          or _safe_str((safe_click or {}).get("ctwa_clid")))
+                id_val = (_safe_str(safe_click.get("ad_id"))
+                          or _safe_str(safe_click.get("source_id"))
+                          or _safe_str(safe_click.get("ctwa_clid")))
                 if id_val:
-                    utm_campaign = f"ctwa:{id_val}"
-            if not utm_campaign:
-                headline = _safe_str((safe_click or {}).get("headline"))
-                if headline:
-                    utm_campaign = f"hl:{headline[:60]}"
-            if not utm_campaign:
-                utm_campaign = "ctwa_unknown_campaign"
+                    utm_campaign = f"ctwa-{id_val}"
+            utm_campaign = utm_campaign or "ctwa-unknown-campaign"
 
         if not utm_term:
             utm_term = (
-                _safe_str((safe_click or {}).get("ad_id"))
-                or _safe_str((safe_click or {}).get("ad_name"))
-                or _safe_str((safe_click or {}).get("adset_id"))
-                or _safe_str((safe_click or {}).get("adset_name"))
-                or _safe_str((safe_click or {}).get("ctwa_clid"))
-            )
+                _safe_str(safe_click.get("ad_id"))
+                or _safe_str(safe_click.get("ad_name"))
+                or _safe_str(safe_click.get("adset_id"))
+                or _safe_str(safe_click.get("adset_name"))
+                or _safe_str(safe_click.get("ctwa_clid"))
+            ) or ""
 
-    # ----------------- normalização FINAL de UTMs -----------------
-    utm_source   = _norm_utm(utm_source or "meta", allow_empty=False) or "meta"
-    utm_medium   = _norm_utm(utm_medium or ("ctwa" if is_ctwa else "site"), allow_empty=False)
-    utm_campaign = _norm_utm(utm_campaign or "unknown", allow_empty=False) or "unknown"
-    utm_term     = _norm_utm(utm_term or "", allow_empty=True)
-    utm_content  = _norm_utm(utm_content or "", allow_empty=True)
+    # --------- CANONIZAÇÃO FINAL (slug) ---------
+    # aqui é onde resolvemos o “UTMs inválidas”
+    utm_source   = _canon(utm_source or ("meta" if is_ctwa else "site"), 32) or "meta"
+    utm_medium   = _canon(utm_medium or ("ctwa" if is_ctwa else "site"), 32) or ("ctwa" if is_ctwa else "site")
+    utm_campaign = _canon(utm_campaign or "unknown", 120) or "unknown"
+    utm_term     = _canon(utm_term or "", 120, allow_empty=True)
+    utm_content  = _canon(utm_content or "", 64,  allow_empty=True)
+
+    # ----------------- trackingParameters -----------------
+    visitor_id = (_safe_str(safe_click.get("utmify_vid")) or "").strip()
+    session_id = (_safe_str(safe_click.get("utmify_sid")) or "").strip()
+
+    tracking = {
+        "src": (_safe_str(raw_src) or "meta" if is_ctwa else "site"),
+        "utm_source":   utm_source,
+        "utm_medium":   utm_medium,
+        "utm_campaign": utm_campaign,
+        "utm_term":     utm_term or None,
+        "utm_content":  utm_content or None,
+        # IDs de ads ajudam no join de Campanhas
+        "campaign_id":  _safe_str(safe_click.get("campaign_id")),
+        "ad_id":        (_safe_str(safe_click.get("ad_id")) or _safe_str(safe_click.get("source_id"))),
+        "adset_id":     _safe_str(safe_click.get("adset_id")),
+    }
+    if visitor_id:
+        tracking["visitorId"] = visitor_id
+    if session_id:
+        tracking["sessionId"] = session_id
+    if _safe_str(safe_click.get("ctwa_clid")):
+        tracking["ctwa_clid"] = _safe_str(safe_click.get("ctwa_clid"))
 
     # ----------------- produtos/payload -----------------
     products = [{
-        "id": (safe_click or {}).get("product_id") or "pix_validation",
-        "name": (safe_click or {}).get("product_name") or "Taxa de validação - CoinTex",
-        "planId": "validation_fee",
-        "planName": "Taxa de Validação - CoinTex",
-        "quantity":     1,
+        "id":        safe_click.get("product_id") or "pix_validation",
+        "name":      safe_click.get("product_name") or "Taxa de validação - CoinTex",
+        "planId":    "validation_fee",
+        "planName":  "Taxa de Validação - CoinTex",
+        "quantity":  1,
         "priceInCents": price_in_cents,
     }]
 
     payload = {
-        "isTest": bool(is_test),
-        "status": status_str,                  # waiting_payment | paid | refused
-        "orderId": txid_str,
-        "customer": customer,
-        "platform": "Cointex",
-        "products": products,
-        "createdAt": _iso8601(created_at),
-        "approvedDate": _iso8601(approved_at) if approved_at else None,
+        "isTest":        bool(is_test),
+        "status":        status_str,
+        "orderId":       txid_str,
+        "customer":      customer,
+        "platform":      "Cointex",
+        "products":      products,
+        "createdAt":     _iso8601(created_at),
+        "approvedDate":  _iso8601(approved_at) if approved_at else None,
         "paymentMethod": payment_method,
         "commission": {
-            "gatewayFeeInCents": int(os.getenv("UTMIFY_GATEWAY_FEE_CENTS", "0") or 0),
-            "totalPriceInCents": price_in_cents,
-            "userCommissionInCents": int(os.getenv("UTMIFY_USER_COMMISSION_CENTS", "0") or 0),
+            "gatewayFeeInCents":       int(os.getenv("UTMIFY_GATEWAY_FEE_CENTS", "0") or 0),
+            "totalPriceInCents":       price_in_cents,
+            "userCommissionInCents":   int(os.getenv("UTMIFY_USER_COMMISSION_CENTS", "0") or 0),
         },
-        "trackingParameters": {
-            "src": (_safe_str(raw_src) or "meta"),
-            "utm_source":   utm_source,
-            "utm_medium":   utm_medium,
-            "utm_campaign": utm_campaign,
-            "utm_content":  utm_content or None,
-            "utm_term":     utm_term or None,
-        },
+        "trackingParameters": tracking,
     }
 
-    # ----------------- envio/log -----------------
-    hdr = {"Content-Type": "application/json", "x-api-token": UTMIFY_API_TOKEN}
-    body_str = json.dumps(payload, ensure_ascii=False)
-    preview = (body_str[:500] + "...") if len(body_str) > 500 else body_str
+    # ----------------- logs & envio -----------------
+    # resumo para conferência: já sai CANONIZADO
+    logger.info(
+        "[UTMIFY-CTWA-PAYLOAD] txid=%s status=%s phone=%s utm=%s/%s camp=%s term=%s content=%s track=%s",
+        txid_str, status_str, (phone_e164 or "-"),
+        utm_source, utm_medium, utm_campaign, (utm_term or "-"), (utm_content or "-"),
+        {k: tracking[k] for k in ("visitorId","sessionId","campaign_id","ad_id","adset_id","ctwa_clid") if tracking.get(k)}
+    )
 
+    headers = {"Content-Type": "application/json", "x-api-token": UTMIFY_API_TOKEN}
+    attempt, last_status, last_text = 0, None, ""
+    body_preview = json.dumps(payload, ensure_ascii=False)
+    if len(body_preview) > 600:
+        body_preview = body_preview[:600] + "..."
     logger.info("[UTMIFY-PAYLOAD] txid=%s status=%s total_cents=%s preview=%s",
-                txid_str, status_str, price_in_cents, preview)
+                txid_str, status_str, price_in_cents, body_preview)
 
-    if is_ctwa:
-        logger.info(
-            "[UTMIFY-CTWA-PAYLOAD] txid=%s status=%s phone=%s utm_source=%s utm_medium=%s utm_campaign=%s utm_term=%s utm_content=%s",
-            txid_str, status_str, (phone_e164 or "-"),
-            (utm_source or "-"), (utm_medium or "-"),
-            (utm_campaign or "-"), (utm_term or "-"), (utm_content or "-")
-        )
-
-    attempt = 0
-    last_status = None
-    last_text = ""
     while True:
         try:
-            resp = http_post(
-                UTMIFY_ENDPOINT,
-                headers=hdr,
-                json=payload,
-                timeout=(3, 10),
-                measure="utmify/orders"
-            )
+            resp = http_post(UTMIFY_ENDPOINT, headers=headers, json=payload, timeout=(3, 12), measure="utmify/orders")
             last_status = getattr(resp, "status_code", 0)
-            last_text = (getattr(resp, "text", "") or "")[:400].replace("\n", " ")
+            last_text   = (getattr(resp, "text", "") or "")[:400].replace("\n", " ")
             ok = 200 <= (last_status or 0) < 300
 
             logger.info("[UTMIFY-RESP] txid=%s status=%s ok=%s body=%s", txid_str, last_status, int(ok), last_text)
-            if is_ctwa:
-                logger.info("[UTMIFY-CTWA-RESP] txid=%s status=%s ok=%s body=%s",
-                            txid_str, last_status, int(ok), last_text)
-
             if ok:
                 if pix_transaction is not None:
                     _utmify_mark_sent(pix_transaction, status_str, last_status, True, last_text)
@@ -357,7 +351,7 @@ def send_utmify_order(
                     _utmify_mark_sent(pix_transaction, status_str, last_status, False, last_text)
                 return {"ok": False, "status": last_status, "error": "exception_max_retries"}
 
-        delay = UTMIFY_RETRY_BACKOFFS[min(attempt, len(UTMIFY_RETRY_BACKOFFS)-1)]
+        delay = UTMIFY_RETRY_BACKOFFS[min(attempt, len(UTMIFY_RETRY_BACKOFFS) - 1)]
         attempt += 1
         try:
             time.sleep(delay)
