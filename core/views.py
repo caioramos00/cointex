@@ -27,6 +27,7 @@ from django_redis import get_redis_connection
 from requests.exceptions import RequestException
 
 from core.meta_lookup import build_ctwa_utm_from_meta
+from core.middleware import _safe_str
 from payments.service import get_active_adapter, get_active_provider
 from utils.http import http_get, http_post
 from utils.pix_cache import get_cached_pix, set_cached_pix, with_user_pix_lock
@@ -115,17 +116,23 @@ def send_utmify_order(
         return {"ok": True, "skipped": "idempotent"}
 
     def _safe_str(v): return v if (isinstance(v, str) and v.strip()) else None
+
     def _digits_only(s) -> str:
         import re as _re
         return _re.sub(r"\D+", "", str(s or ""))
+
     def _to_e164_br(raw: str) -> str:
         d = _digits_only(raw)
-        if not d: return ""
-        if d.startswith("55"): return d
+        if not d:
+            return ""
+        if d.startswith("55"):
+            return d
         return ("55" + d) if 10 <= len(d) <= 11 else d
+
     def _clean_name(s: str | None) -> str:
         s = (s or "").strip()
         return s.replace("|", " ").replace("#", " ").replace("&", " ").replace("?", " ").strip()
+
     def _pipe(name: str | None, _id: str | None, fallback_label: str) -> str:
         name = _clean_name(name) or fallback_label
         _id = _digits_only(_id) or "-"
@@ -143,7 +150,7 @@ def send_utmify_order(
 
     safe_click = click_data if isinstance(click_data, dict) else {}
 
-    # cliente
+    # ------- Cliente -------
     phone_raw = (_safe_str(safe_click.get("phone"))
                  or _safe_str(safe_click.get("ph_raw"))
                  or _safe_str(safe_click.get("wa_id")))
@@ -158,8 +165,9 @@ def send_utmify_order(
 
     click_type = _safe_str((safe_click or {}).get("click_type")) or ""
     is_ctwa = (click_type.upper() == "CTWA") or bool(_safe_str((safe_click or {}).get("wa_id")))
+    lp_extra_tracking = {}  # metadados de diagnóstico para LP
 
-    # ===== ROTA C → B → A =====
+    # ===== ROTA C → B → A (CTWA) =====
     camp_name = camp_id = adset_name = adset_id = ad_name = ad_id = placement = None
     if is_ctwa:
         try:
@@ -186,6 +194,7 @@ def send_utmify_order(
     adset_id = _digits_only(adset_id or safe_click.get("adset_id"))
     ad_id    = _digits_only(ad_id    or safe_click.get("ad_id") or safe_click.get("source_id"))
 
+    # ------- UTM building -------
     if is_ctwa:
         utm_source   = "FB"
         utm_campaign = _pipe(camp_name, camp_id,  "CTWA-CAMPAIGN")
@@ -194,12 +203,81 @@ def send_utmify_order(
         utm_term     = (placement or "ctwa")
     else:
         utm = safe_click.get("utm") or {}
-        utm_source   = _safe_str(utm.get("utm_source"))   or "site"
-        utm_medium   = _safe_str(utm.get("utm_medium"))   or "site"
-        utm_campaign = _safe_str(utm.get("utm_campaign")) or "site"
-        utm_content  = _safe_str(utm.get("utm_content"))  or None
-        utm_term     = _safe_str(utm.get("utm_term"))     or None
-        
+
+        # capturas originais só para diagnóstico/auditoria
+        orig_src = _safe_str(utm.get("utm_source")) or ""
+        orig_med = _safe_str(utm.get("utm_medium")) or ""
+        orig_cam = _safe_str(utm.get("utm_campaign")) or ""
+        orig_cnt = _safe_str(utm.get("utm_content")) or ""
+        orig_trm = _safe_str(utm.get("utm_term")) or ""
+
+        # 1) O que vier explícito do clique
+        utm_source   = orig_src or None
+        utm_medium   = orig_med or None
+        utm_campaign = orig_cam or None
+        utm_content  = orig_cnt or None
+        utm_term     = orig_trm or None
+
+        # 2) Heurísticas de LP para preencher válidos no padrão "nome|id"
+        from urllib.parse import urlparse
+
+        def _host(u: str) -> str:
+            try:
+                return (urlparse(u).hostname or "").lower()
+            except Exception:
+                return ""
+
+        def _route(u: str) -> str:
+            try:
+                p = (urlparse(u).path or "/").strip("/")
+                return p or "root"
+            except Exception:
+                return "root"
+
+        page_url = _safe_str(safe_click.get("page_url") or safe_click.get("source_url") or safe_click.get("landing_url"))
+        ref      = _safe_str(safe_click.get("referrer") or (safe_click.get("context") or {}).get("referrer"))
+        domain   = _host(ref) or "direct"
+        route    = _route(page_url)
+
+        # ID numérico para o lado direito do pipe
+        lp_id = _digits_only(safe_click.get("tracking_id")) or _digits_only(txid_str) or str(int(time.time()))
+
+        # Diagnóstico: originais inválidos?
+        _bad_source   = (not orig_src) or (orig_src.lower() == "site")
+        _bad_medium   = (not orig_med) or (orig_med.lower() == "site") or ("|" not in orig_med)
+        _bad_campaign = (not orig_cam) or (orig_cam.lower() == "site") or ("|" not in orig_cam)
+
+        # Correções
+        if not utm_source or utm_source.lower() == "site":
+            utm_source = "LP"
+
+        if (not utm_campaign) or (utm_campaign.lower() == "site") or ("|" not in utm_campaign):
+            utm_campaign = _pipe(f"LP {route}", lp_id, "LP-CAMPAIGN")
+
+        if (not utm_medium) or (utm_medium.lower() == "site") or ("|" not in utm_medium):
+            ref_id = _digits_only(safe_click.get("fbclid") or safe_click.get("gclid")) or lp_id
+            utm_medium = _pipe(f"LP-REF {domain}", ref_id, "LP-REF")
+
+        if (not utm_content) or (utm_content.lower() == "site"):
+            utm_content = f"{route}|{txid_str[:6]}"
+
+        if not utm_term:
+            utm_term = domain
+
+        lp_fallback_used = int(_bad_source or _bad_medium or _bad_campaign)
+        if lp_fallback_used:
+            logger.info(
+                "[UTMIFY-LP-FALLBACK] txid=%s route=%s ref=%s utm_source=%s utm_campaign=%s utm_medium=%s utm_content=%s utm_term=%s",
+                txid_str, route, domain, utm_source, utm_campaign, utm_medium, (utm_content or "-"), (utm_term or "-")
+            )
+
+        # Metadados extras para diagnóstico (não impactam a UTMify)
+        lp_extra_tracking = {
+            "utm_fallback": lp_fallback_used,
+            "lp_route": route,
+            "lp_ref": domain,
+        }
+
     utm_params = {
         "utm_source":   utm_source or None,
         "utm_medium":   utm_medium or None,
@@ -209,7 +287,7 @@ def send_utmify_order(
     }
 
     tracking = {
-        "src": ("meta" if is_ctwa else "site"),
+        "src": ("meta" if is_ctwa else "lp"),
         "campaign_id": camp_id or None,
         "adset_id":    adset_id or None,
         "ad_id":       ad_id or None,
@@ -220,6 +298,8 @@ def send_utmify_order(
         "utm_content":  utm_content or None,
         "utm_term":     utm_term or None,
     }
+    if lp_extra_tracking:
+        tracking.update(lp_extra_tracking)
 
     products = [{
         "id":        safe_click.get("product_id") or "pix_validation",
@@ -241,9 +321,9 @@ def send_utmify_order(
         "approvedDate":  _iso8601(approved_at) if approved_at else None,
         "paymentMethod": payment_method,
         "commission": {
-            "gatewayFeeInCents":       int(os.getenv("UTMIFY_GATEWAY_FEE_CENTS", "0") or 0),
-            "totalPriceInCents":       price_in_cents,
-            "userCommissionInCents":   int(os.getenv("UTMIFY_USER_COMMISSION_CENTS", "0") or 0),
+            "gatewayFeeInCents":     UTMIFY_GATEWAY_FEE_CENTS,
+            "totalPriceInCents":     price_in_cents,
+            "userCommissionInCents": UTMIFY_USER_COMMISSION_CENTS,
         },
         "utmParams": utm_params,
         "trackingParameters": tracking,
@@ -253,7 +333,6 @@ def send_utmify_order(
         "utmParams": payload["utmParams"],
         "trackingParameters": payload["trackingParameters"],
     }, ensure_ascii=False)
-
     if len(body_preview) > 600:
         body_preview = body_preview[:600] + "."
     logger.info("[UTMIFY-PAYLOAD] txid=%s status=%s total_cents=%s preview=%s",
@@ -263,6 +342,13 @@ def send_utmify_order(
         logger.info(
             "[UTMIFY-CTWA-PAYLOAD] txid=%s status=%s phone=%s utm_source=%s utm_campaign=%s utm_medium=%s utm_content=%s utm_term=%s",
             txid_str, status_str, (phone_e164 or "-"),
+            tracking["utm_source"], tracking["utm_campaign"],
+            tracking["utm_medium"], (tracking["utm_content"] or "-"), (tracking["utm_term"] or "-")
+        )
+    else:
+        logger.info(
+            "[UTMIFY-LP-PAYLOAD] txid=%s status=%s utm_source=%s utm_campaign=%s utm_medium=%s utm_content=%s utm_term=%s",
+            txid_str, status_str,
             tracking["utm_source"], tracking["utm_campaign"],
             tracking["utm_medium"], (tracking["utm_content"] or "-"), (tracking["utm_term"] or "-")
         )
