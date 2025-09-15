@@ -86,7 +86,7 @@ def generate_system_phone() -> str:
     number = "9" + "".join(str(random.randint(0, 9)) for _ in range(8))
     return f"+55{ddd}{number}"
 
-EMAIL_PROVIDERS = getattr(settings, "SYSTEM_EMAIL_PROVIDERS", ["gmail.com", "outlook.com"])
+EMAIL_PROVIDERS = getattr(settings, "SYSTEM_EMAIL_PROVIDERS", ["gmail.com", "outlook.com", "icloud.com"])
 
 def generate_system_email(user) -> str:
     """
