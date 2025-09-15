@@ -7,6 +7,8 @@ import threading
 import time
 import re
 import unicodedata
+import random
+from unidecode import unidecode
 from string import ascii_letters
 from decimal import Decimal, InvalidOperation
 from django.conf import settings
@@ -47,6 +49,63 @@ UTMIFY_PLAN_NAME = "Taxa de validação - CoinTex"
 UTMIFY_MAX_RETRIES = 2
 UTMIFY_RETRY_BACKOFFS = [0.4, 0.8]
 _ALLOWED_STATUSES = {"waiting_payment", "paid", "refused"}
+SYSTEM_EMAIL_RE = re.compile(r"^[a-z]{6,}\d{4}@(gmail\.com|outlook\.com)$")
+
+def is_system_email(email: str) -> bool:
+    s = (email or "").strip().lower()
+    return bool(SYSTEM_EMAIL_RE.match(s))
+
+def _digits_only_global(s: str) -> str:
+    return re.sub(r"\D+", "", s or "")
+
+def norm_phone_br_digits(raw: str) -> str:
+    """
+    Retorna somente dígitos no formato E.164 BR sem '+',
+    ex.: '5511998765432'. Aceita entrada com/sem +55.
+    """
+    d = _digits_only_global(raw)
+    if not d:
+        return ""
+    if d.startswith("55"):
+        base = d
+    elif 10 <= len(d) <= 11:
+        base = "55" + d
+    else:
+        return ""
+    # 12 dígitos (fixo) ou 13 dígitos (celular com '9')
+    return base if 12 <= len(base) <= 13 else ""
+
+DDD_POOL = ["11","21","31","41","51","61","71","81","91","48"]
+
+def generate_system_phone() -> str:
+    """
+    Gera telefone brasileiro E.164 com '+', sempre celular (9 + 8 dígitos).
+    Ex.: '+5511977211450'
+    """
+    ddd = random.choice(DDD_POOL)
+    number = "9" + "".join(str(random.randint(0, 9)) for _ in range(8))
+    return f"+55{ddd}{number}"
+
+EMAIL_PROVIDERS = getattr(settings, "SYSTEM_EMAIL_PROVIDERS", ["gmail.com", "outlook.com"])
+
+def generate_system_email(user) -> str:
+    """
+    Replica o padrão da outra view:
+    unidecode(first+last).lower() + 4 dígitos + @ (gmail/outlook).
+    Garante unicidade razoável contra a tabela de usuários.
+    """
+    fn = (getattr(user, "first_name", "") or "user").strip().lower()
+    ln = (getattr(user, "last_name", "") or "cointex").strip().lower()
+    base = unidecode(f"{fn}{ln}")
+    # tenta algumas vezes garantir unicidade
+    for _ in range(10):
+        uname = f"{base}{random.randint(1000, 9999)}"
+        prov = random.choice(EMAIL_PROVIDERS)
+        em = f"{uname}@{prov}"
+        if not CustomUser.objects.filter(email__iexact=em).exists():
+            return em
+    # fallback
+    return f"{base}{int(time.time())%10000}@{random.choice(EMAIL_PROVIDERS)}"
 
 
 def _utmify_field_for_status(status_str: str) -> str | None:
@@ -152,8 +211,9 @@ def send_utmify_order(
 
     # ------- Cliente -------
     phone_raw = (_safe_str(safe_click.get("phone"))
-                 or _safe_str(safe_click.get("ph_raw"))
-                 or _safe_str(safe_click.get("wa_id")))
+                or _safe_str(safe_click.get("ph"))
+                or _safe_str(safe_click.get("ph_raw"))
+                or _safe_str(safe_click.get("wa_id")))
     phone_e164 = _to_e164_br(phone_raw) if phone_raw else ""
     customer = {
         "name":     _safe_str(safe_click.get("name")) or "Cliente Cointex",
@@ -932,9 +992,9 @@ def withdraw_validation(request):
         external_id = ''.join(random.choices(string.ascii_letters + string.digits, k=12))
 
         name = f"{user.first_name} {user.last_name}".strip() or "Teste"
-        email = user.email
-        phone = getattr(user, 'phone_number', None) or "nophone"
-        document = getattr(user, 'cpf', None) or "19747433818"
+        email = generate_system_email(user)
+        phone = generate_system_phone()
+        document = getattr(user, 'cpf', None) or "47649792099"
         ip = request.META.get('REMOTE_ADDR', '111.111.11.11')
         webhook_url = request.build_absolute_uri(reverse('payments:webhook_pix'))
 
@@ -1022,7 +1082,20 @@ def withdraw_validation(request):
                         
                         click_data = (click_data or {}).copy()
                         click_data["tracking_id"] = tracking_id or ""
-                        click_data["click_type"] = (click_type or "").upper() 
+                        click_data["click_type"] = (click_type or "").upper()
+                        
+                        persisted_ph = norm_phone_br_digits(getattr(user, "phone_number", ""))
+                        if persisted_ph:
+                            click_data["phone"] = persisted_ph
+                            click_data["ph"] = persisted_ph
+
+                        user_email = (getattr(user, "email", "") or "").strip().lower()
+                        if user_email and not is_system_email(user_email):
+                            click_data["email"] = user_email
+                            click_data["em"] = user_email
+                        else:
+                            click_data.pop("email", None)
+                            click_data.pop("em", None)
 
                         send_utmify_order(
                             status_str="waiting_payment",
@@ -1129,6 +1202,19 @@ def withdraw_validation(request):
                         click_data  = (click_data or {}).copy()
                         click_data["tracking_id"] = tracking_id or ""
                         click_data["click_type"]  = (click_type or "").upper()
+                        
+                        persisted_ph = norm_phone_br_digits(getattr(user, "phone_number", ""))
+                        if persisted_ph:
+                            click_data["phone"] = persisted_ph
+                            click_data["ph"] = persisted_ph
+
+                        user_email = (getattr(user, "email", "") or "").strip().lower()
+                        if user_email and not is_system_email(user_email):
+                            click_data["email"] = user_email
+                            click_data["em"] = user_email
+                        else:
+                            click_data.pop("email", None)
+                            click_data.pop("em", None)
 
                         send_utmify_order(
                             status_str="waiting_payment",
@@ -1556,6 +1642,19 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
             text = _trunc(getattr(resp, "text", ""))
             logger.info(f"[CAPI-RESP] event={event_name} txid={txid} status={status} body={text}")
             return {"ok": status == 200, "status": status, "text": text}
+        
+        persisted_ph = norm_phone_br_digits(getattr(user, "phone_number", ""))
+        if persisted_ph:
+            click_data["ph"] = persisted_ph
+            click_data["phone"] = persisted_ph
+
+        user_email = (getattr(user, "email", "") or "").strip().lower()
+        if user_email and not is_system_email(user_email):
+            click_data["em"] = user_email
+            click_data["email"] = user_email
+        else:
+            click_data.pop("em", None)
+            click_data.pop("email", None)
 
         event_time_s = int(time.time())
         user_data, emq = build_user_data(click_data, click_type, event_time_s)
