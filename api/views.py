@@ -94,10 +94,23 @@ def generate_date_of_birth():
 def create_user_api(request):
     try:
         if random.random() < LOG_SAMPLE:
-            logger.info("create_user_api payload=%s", dict(request.data))
+            masked = phone_number[:4] + '****' + phone_number[-3:] if phone_number else None
+            logger.info("create_user_api payload(tid=%s, click_type=%s, phone=%s)", tid, click_type, masked)
 
         tid = request.data.get('tid')
-        click_type = request.data.get('click_type', 'Orgânico')  # Novo: Recebe tipo de clique, default 'Orgânico'
+        click_type = request.data.get('click_type', 'Orgânico')
+        phone_raw = request.data.get('phone') or request.data.get('phone_number')
+
+        def normalize_phone(s: str | None) -> str | None:
+            if not s:
+                return None
+            s = str(s).strip()
+            # mantém '+' se já vier em E.164; caso contrário, remove não-dígitos e prefixa '+'
+            if s.startswith('+'):
+                return s
+            import re as _re
+            digits = _re.sub(r'\D', '', s)
+            return f'+{digits}' if digits else None
 
         # Selecionar nome e gênero (gênero não usado, mas mantido para compatibilidade)
         first_name, _ = random.choice(FIRST_NAMES)
@@ -115,7 +128,7 @@ def create_user_api(request):
         # Gerar outros campos required
         cpf = generate_cpf()
         date_of_birth = generate_date_of_birth()
-        phone_number = random.choice(PHONE_NUMBERS)
+        phone_number = normalize_phone(phone_raw) or random.choice(PHONE_NUMBERS)
 
         # Criar usuário (sem username, pois opcional; add tracking_id e click_type)
         user = CustomUser.objects.create_user(
