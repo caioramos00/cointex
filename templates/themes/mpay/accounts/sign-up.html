@@ -22,7 +22,7 @@
 
 <body class="mpay-theme auth-body">
   <div class="auth-header">
-    <a href="{% url 'accounts:login' %}"><i class="back-btn" data-feather="arrow-left"></i></a>
+    <a href="{% url 'core:views' %}"><i class="back-btn" data-feather="arrow-left"></i></a>
     <img class="img-fluid img" src="{% themed_static 'images/authentication/6.svg' %}" alt="Cadastro" />
     <div class="auth-content">
       <div>
@@ -40,32 +40,26 @@
         <label for="id_first_name" class="form-label">Nome</label>
         <div class="form-input">{{ form.first_name }}</div>
       </div>
-
       <div class="form-group">
         <label for="id_last_name" class="form-label">Sobrenome</label>
         <div class="form-input">{{ form.last_name }}</div>
       </div>
-
       <div class="form-group">
         <label for="id_email" class="form-label">E-mail</label>
         <div class="form-input">{{ form.email }}</div>
       </div>
-
       <div class="form-group">
         <label for="date_of_birth" class="form-label">Data de nascimento</label>
         <div class="form-input">{{ form.date_of_birth }}</div>
       </div>
-
       <div class="form-group">
         <label for="cpf" class="form-label">CPF</label>
         <div class="form-input">{{ form.cpf }}</div>
       </div>
-
       <div class="form-group">
         <label for="phone_number" class="form-label">Telefone</label>
         <div class="form-input">{{ form.phone_number }}</div>
       </div>
-
       <div class="form-group">
         <label for="id_password1" class="form-label">Senha</label>
         <div class="form-input box-auth-pass">
@@ -73,7 +67,6 @@
           <span class="show-pass"><i class="icon-view"></i><i class="icon-view-hide"></i></span>
         </div>
       </div>
-
       <div class="form-group">
         <label for="id_password2" class="form-label">Confirmar senha</label>
         <div class="form-input box-auth-pass">
@@ -93,9 +86,7 @@
 
       <button type="submit" class="btn theme-btn mt-3">Criar conta</button>
 
-      <h4 class="signup">Já tem uma conta?
-        <a href="{% url 'accounts:login' %}"> Entrar</a>
-      </h4>
+      <h4 class="signup">Já tem uma conta? <a href="{% url 'accounts:login' %}">Entrar</a></h4>
     </div>
   </form>
 

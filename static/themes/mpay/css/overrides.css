@@ -1,13 +1,15 @@
-/* Escopo do tema MPay apenas nessas telas */
-.mpay-theme .theme-form .form-group { display:block !important; }
+/* Escopo apenas nas telas MPay */
+.mpay-theme .theme-form .form-group { display:block !important; margin-bottom: 18px; }
 .mpay-theme .theme-form .form-label{
   display:block !important;
   margin-bottom:.5rem !important;
-  color:#8E8E8E !important;            /* cor correta dos rótulos (não roxo) */
-  font-weight:600;
+  color:#7E8B97 !important;        /* label cinza do MPay */
+  font-size:14px !important;
+  font-weight:600 !important;
+  line-height:1.2;
 }
 
-/* Inputs 100% e visual do tema */
+/* Inputs no visual MPay */
 .mpay-theme .theme-form .form-input,
 .mpay-theme .theme-form .form-control{
   width:100% !important;
@@ -17,15 +19,27 @@
 .mpay-theme .theme-form .form-control{
   height:48px !important;
   border-radius:12px !important;
+  background:#F3F4F6 !important;
+  border:1px solid #E7E8EC !important;
+  padding:12px 16px !important;
+  color:#1F1F1F !important;         /* texto do input não roxo */
+}
+.mpay-theme .theme-form .form-control::placeholder{
+  color:#9AA0A6 !important;
+  opacity:1;
 }
 
-/* Checkbox custom do tema (independente do CSS legado) */
+/* Cabeçalho igual ao tema */
+.mpay-theme .auth-header h2{ color:#FFFFFF !important; font-weight:800 !important; }
+.mpay-theme .auth-header h4{ color:#E9D9FF !important; font-weight:600 !important; }
+
+/* Lembrar-me (checkbox custom do MPay) */
 .mpay-theme .theme-form .form-check{ position:relative; }
 .mpay-theme .theme-form .checkbox_animated{
   position:absolute; opacity:0; width:0; height:0; left:0; top:0;
 }
 .mpay-theme .theme-form .form-check-label{
-  position:relative; padding-left:28px; cursor:pointer; color:#9AA0A6;
+  position:relative; padding-left:28px; cursor:pointer; color:#9AA0A6 !important;
 }
 .mpay-theme .theme-form .form-check-label:before{
   content:""; position:absolute; left:0; top:2px; width:18px; height:18px;
@@ -39,5 +53,8 @@
   border-left:2px solid #fff; border-bottom:2px solid #fff; transform:rotate(-45deg);
 }
 
-/* Botões */
+/* Botão ocupa a largura como no MPay */
 .mpay-theme .theme-form .btn{ width:100% !important; }
+
+/* Link de ação em roxo do tema */
+.mpay-theme a.forgot{ color:#6C2CF9 !important; font-weight:600; }
