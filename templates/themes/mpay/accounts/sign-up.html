@@ -158,7 +158,7 @@
         <label for="date_of_birth" class="form-label">Data de nascimento</label>
         <div class="form-input">
           {# garantimos o id esperado pelo IMask: 'date_of_birth' #}
-          {{ form.date_of_birth.as_widget(attrs={'id': 'date_of_birth'}) }}
+            {{ form.date_of_birth }}
         </div>
         {% if form.date_of_birth.errors %}
           <small class="text-danger d-block mt-1">
@@ -172,7 +172,7 @@
         <label for="cpf" class="form-label">CPF</label>
         <div class="form-input">
           {# garantimos o id esperado pelo IMask: 'cpf' #}
-          {{ form.cpf.as_widget(attrs={'id': 'cpf'}) }}
+          {{ form.cpf }}
         </div>
         {% if form.cpf.errors %}
           <small class="text-danger d-block mt-1">
@@ -199,7 +199,7 @@
         <label for="phone_number" class="form-label">Telefone</label>
         <div class="form-input">
           {# garantimos o id esperado pelo IMask: 'phone_number' #}
-          {{ form.phone_number.as_widget(attrs={'id': 'phone_number'}) }}
+          {{ form.phone_number }}
         </div>
         {% if form.phone_number.errors %}
           <small class="text-danger d-block mt-1">
