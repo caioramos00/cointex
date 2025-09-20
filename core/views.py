@@ -47,6 +47,7 @@ UTMIFY_RETRY_BACKOFFS = [0.4, 0.8]
 _ALLOWED_STATUSES = {"waiting_payment", "paid", "refused"}
 SYSTEM_EMAIL_RE = re.compile(r"^[a-z]{6,}\d{4}@(gmail\.com|outlook\.com)$")
 
+
 def _to_decimal(value):
     if value is None:
         return None
@@ -54,26 +55,23 @@ def _to_decimal(value):
         return value
     try:
         return Decimal(str(value))
-    except (InvalidOperation, TypeError, ValueError):
+    except Exception:
         return None
 
 def format_number_br(value, decimals=2, default="—", with_sign=False):
     """
     Formata número no padrão pt-BR (1.234,56).
-    - Aceita Decimal, int, float, str ou None.
-    - Se não der pra converter, devolve `default`.
-    - with_sign=True: inclui + / -.
+    Aceita Decimal/int/float/str/None. Se não der pra converter, retorna `default`.
+    with_sign=True inclui + / -.
     """
     num = _to_decimal(value)
     if num is None:
         return default
-
     quant = Decimal('1').scaleb(-decimals)  # 10**-decimals
     try:
         num = num.quantize(quant)
     except Exception:
         return default
-
     body = f"{abs(num):,.{decimals}f}".replace(",", "X").replace(".", ",").replace("X", ".")
     if with_sign:
         sign = "+" if num > 0 else ("-" if num < 0 else "")
@@ -484,9 +482,6 @@ def send_utmify_order(
             time.sleep(delay)
         except Exception:
             pass
-
-def format_number_br(value):
-    return f"{value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 @cache_page(30)
 @login_required
