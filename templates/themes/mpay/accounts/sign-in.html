@@ -32,6 +32,31 @@
   <link rel="stylesheet" type="text/css" href="{% themed_static 'css/vendors/swiper-bundle.min.css' %}" />
   <link rel="stylesheet" id="change-link" type="text/css" href="{% themed_static 'css/style.css' %}" />
 
+  <style>
+  /* Endurecer estilo dos inputs MPay contra CSS legado */
+  .auth-form .form-group,
+  .auth-form .form-input { width: 100%; }
+
+  .auth-form input.form-control,
+  .auth-form select.form-control,
+  .auth-form textarea.form-control,
+  .auth-form .form-input input,
+  .auth-form .form-input select,
+  .auth-form .form-input textarea {
+    width: 100% !important;
+    display: block;
+    box-sizing: border-box;
+    height: 48px;
+    border-radius: 10px;
+  }
+
+  /* labels/checkbox alinhados */
+  .auth-form .form-check-input { width: auto; height: auto; }
+
+  /* botão ocupa a linha toda (caso algo reduza) */
+  .auth-form .btn { width: 100%; }
+</style>
+
   <!-- === PIXELS & TRACKING (mantidos do Cointex) === -->
   <script>
     !function (f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
