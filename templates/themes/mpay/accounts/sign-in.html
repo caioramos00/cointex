@@ -89,5 +89,19 @@
       if(p){ p.setAttribute('enterkeyhint','done'); p.setAttribute('autocomplete','current-password'); }
     });
   </script>
+  <script>
+  // Se algum script do tema zerar o placeholder, repomos o valor original
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.auth-form .form-control[placeholder]').forEach(function (el) {
+      el.dataset.ph = el.getAttribute('placeholder');
+      el.addEventListener('focus', function(){
+        if (!this.getAttribute('placeholder')) this.setAttribute('placeholder', this.dataset.ph);
+      });
+      el.addEventListener('blur', function(){
+        if (!this.getAttribute('placeholder')) this.setAttribute('placeholder', this.dataset.ph);
+      });
+    });
+  });
+</script>
 </body>
 </html>

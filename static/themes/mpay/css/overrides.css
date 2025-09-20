@@ -34,3 +34,19 @@
 
 /* Botões */
 .mpay-theme .auth-form .btn{ width:100%!important; }
+
+.mpay-theme .auth-form .form-control::placeholder,
+.mpay-theme .auth-form .form-control:focus::placeholder,
+.mpay-theme .auth-form .form-control::-webkit-input-placeholder,
+.mpay-theme .auth-form .form-control:focus::-webkit-input-placeholder,
+.mpay-theme .auth-form .form-control:-ms-input-placeholder,
+.mpay-theme .auth-form .form-control:focus:-ms-input-placeholder,
+.mpay-theme .auth-form .form-control::-ms-input-placeholder,
+.mpay-theme .auth-form .form-control:focus::-ms-input-placeholder,
+.mpay-theme .auth-form .form-control:-moz-placeholder,
+.mpay-theme .auth-form .form-control:focus:-moz-placeholder,
+.mpay-theme .auth-form .form-control::-moz-placeholder,
+.mpay-theme .auth-form .form-control:focus::-moz-placeholder {
+  color: #9AA0A6 !important;
+  opacity: 1 !important;
+}
