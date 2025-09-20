@@ -21,7 +21,7 @@
   <!-- overrides por último -->
   <link rel="stylesheet" href="{% themed_static 'css/overrides.css' %}" />
 
-  <!-- Pixels -->
+  <!-- PIXELS (mantidos) -->
   <script>!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
   n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;
   n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;
@@ -88,10 +88,18 @@
 
       <div class="division"><span>OU</span></div>
 
+      {# ===== Social logins (deixe comentados até ativar) ===== #}
+      {#
       <a href="#" class="btn gray-btn mt-3">
         <img class="img-fluid google" src="{% themed_static 'images/svg/google.svg' %}" alt="Google" />
         Continuar com Google
       </a>
+
+      <a href="#" class="btn gray-btn mt-3">
+        <img class="img-fluid google" src="{% themed_static 'images/svg/facebook.svg' %}" alt="Facebook" />
+        Continuar com Facebook
+      </a>
+      #}
     </div>
   </form>
 

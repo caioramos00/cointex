@@ -1,15 +1,16 @@
-/* ===== Overrides fiéis ao MPay (escopo só no MPay) ===== */
+/* ===== Overrides fiéis ao MPay e isolados no tema ===== */
 
-.mpay-theme .auth-form .form-group { 
-  display: block !important; 
-  margin-bottom: 18px !important; 
+/* Espaçamento básico dos grupos */
+.mpay-theme .auth-form .form-group {
+  display: block !important;
+  margin-bottom: 18px !important;
 }
 
-/* Label cinza, tipografia do tema (evita roxo) */
+/* Rótulos MAIS ESCUROS (cinza médio do tema) */
 .mpay-theme .auth-form .form-group > .form-label {
   display: block !important;
   margin-bottom: .5rem !important;
-  color: #7E8B97 !important;     /* cor do MPay */
+  color: #4B5563 !important;        /* mais escuro que antes */
   font-size: 14px !important;
   font-weight: 600 !important;
   line-height: 1.2 !important;
@@ -22,41 +23,50 @@
   max-width: none !important;
   box-sizing: border-box !important;
 }
-
 .mpay-theme .auth-form .form-control {
   height: 48px !important;
   border-radius: 12px !important;
   background: #F3F4F6 !important;
   border: 1px solid #E7E8EC !important;
   padding: 12px 16px !important;
-  color: #1F1F1F !important;
+  color: #1F2937 !important;        /* texto do input mais escuro */
 }
 .mpay-theme .auth-form .form-control::placeholder {
   color: #9AA0A6 !important;
   opacity: 1 !important;
 }
 
-/* Checkbox padrão Bootstrap (igual ao HTML do tema) */
+/* ===== Alinhamento dos checkboxes (login e termos) ===== */
+.mpay-theme .auth-form .remember-option .form-check,
+.mpay-theme .auth-form .terms-check .form-check {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
 .mpay-theme .auth-form .form-check-input {
   position: static !important;
   opacity: 1 !important;
   width: 18px !important;
   height: 18px !important;
-  margin-right: 8px !important;
-  accent-color: #6C2CF9 !important;  /* roxo do tema quando marcado */
+  margin: 0 !important;             /* remove deslocamento vertical */
+  accent-color: #6C2CF9 !important; /* roxo do tema quando marcado */
+  flex: 0 0 auto;
 }
+
 .mpay-theme .auth-form .form-check-label {
-  color: #9AA0A6 !important;
+  margin: 0 !important;
+  color: #6B7280 !important;        /* cinza legível */
   font-weight: 500 !important;
 }
 
 /* Link auxiliar em roxo do tema */
-.mpay-theme a.forgot { 
-  color: #6C2CF9 !important; 
-  font-weight: 600 !important; 
+.mpay-theme a.forgot {
+  color: #6C2CF9 !important;
+  font-weight: 600 !important;
 }
 
-/* Botão preencher largura, seguindo o MPay */
-.mpay-theme .auth-form .btn { 
-  width: 100% !important; 
+/* Botões ocupam toda a largura (igual ao demo) */
+.mpay-theme .auth-form .btn {
+  width: 100% !important;
 }
