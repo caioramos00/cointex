@@ -1,34 +1,35 @@
-/* Isolar todos os ajustes dentro do tema */
-.mpay-theme .form-control {
+/* Escopo isolado do tema MPay */
+.mpay-theme .theme-form .form-group {
+  display: block !important;              /* nada de grid/flex 2 colunas */
+  grid-template-columns: none !important;
+}
+
+.mpay-theme .theme-form .form-label {
+  display: block !important;              /* label acima do input */
   width: 100% !important;
+  margin-bottom: .5rem !important;
+}
+
+.mpay-theme .theme-form .form-input {
+  width: 100% !important;
+  max-width: none !important;
+}
+
+.mpay-theme .theme-form .form-input .form-control,
+.mpay-theme .theme-form .form-control {
+  width: 100% !important;
+  max-width: none !important;
   display: block !important;
   box-sizing: border-box !important;
   height: 48px !important;
   border-radius: 12px !important;
 }
 
-/* pais não podem “encolher” os inputs */
-.mpay-theme .auth-form .form-group,
-.mpay-theme .auth-form .form-input {
-  width: 100% !important;
-  max-width: none !important;
-}
-
-/* grid/colunas antigas não devem afetar */
-.mpay-theme .auth-form [class*="col-"],
-.mpay-theme .auth-form .row {
-  float: none !important;
-  width: 100% !important;
-  max-width: none !important;
-}
-
-/* checkbox no tamanho natural */
-.mpay-theme .auth-form .form-check-input {
+/* checkbox e botão */
+.mpay-theme .theme-form .form-check-input {
   width: auto !important;
   height: auto !important;
 }
-
-/* botão sempre 100% no contexto do form */
-.mpay-theme .auth-form .btn {
+.mpay-theme .theme-form .btn {
   width: 100% !important;
 }

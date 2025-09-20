@@ -6,33 +6,29 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, viewport-fit=cover" />
   <title>Entrar — MPay</title>
 
-  <!-- verificação Meta (mantido) -->
   <meta name="facebook-domain-verification" content="73hwg7lythnnqtl0mtlqdgyewx6h3z" />
 
-  <!-- Ícones -->
   <link rel="icon" href="{% themed_static 'images/logo/favicon.png' %}" type="image/png" />
   <link rel="apple-touch-icon" href="{% themed_static 'images/logo/favicon.png' %}" />
 
-  <!-- fontes Google (opcional) -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Lato:wght@100;300;400;700;900&display=swap" rel="stylesheet" />
 
-  <!-- CSS MPay -->
-  <link rel="stylesheet" id="rtl-link" type="text/css" href="{% themed_static 'css/vendors/bootstrap.min.css' %}" />
-  <link rel="stylesheet" type="text/css" href="{% themed_static 'css/vendors/swiper-bundle.min.css' %}" />
-  <link rel="stylesheet" id="change-link" type="text/css" href="{% themed_static 'css/style.css' %}" />
+  <!-- CSS do tema -->
+  <link rel="stylesheet" href="{% themed_static 'css/vendors/bootstrap.min.css' %}" />
+  <link rel="stylesheet" href="{% themed_static 'css/vendors/swiper-bundle.min.css' %}" />
+  <link rel="stylesheet" href="{% themed_static 'css/style.css' %}" />
+  <!-- Nosso override por último -->
+  <link rel="stylesheet" href="{% themed_static 'css/overrides.css' %}" />
 
-  <!-- === PIXELS & TRACKING (mantidos) === -->
+  <!-- PIXELS (mantidos) -->
   <script>
-    !function (f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
     n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
     n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
     t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
-    fbq('init','1414661506543941');
-    fbq('init','24796423593276136');
-    fbq('init','780359434541574');
-    fbq('track','PageView');
+    fbq('init','1414661506543941'); fbq('init','24796423593276136'); fbq('init','780359434541574'); fbq('track','PageView');
   </script>
   <noscript>
     <img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=1414661506543941&ev=PageView&noscript=1"/>
@@ -40,39 +36,28 @@
     <img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=780359434541574&ev=PageView&noscript=1"/>
   </noscript>
 
-  <!-- UTMify -->
-  <script
-    src="https://cdn.utmify.com.br/scripts/utms/latest.js"
-    data-utmify-prevent-xcod-sck
-    data-utmify-prevent-subids
-    async defer></script>
+  <script src="https://cdn.utmify.com.br/scripts/utms/latest.js" data-utmify-prevent-xcod-sck data-utmify-prevent-subids async defer></script>
   <script>
-    window.pixelId = "68c4b6df444a2a1e6ba9ed17";
-    var a = document.createElement("script");
-    a.setAttribute("async",""); a.setAttribute("defer","");
-    a.setAttribute("src","https://cdn.utmify.com.br/scripts/pixel/pixel.js");
-    document.head.appendChild(a);
+    window.pixelId="68c4b6df444a2a1e6ba9ed17";
+    var a=document.createElement("script");a.async=1;a.defer=1;a.src="https://cdn.utmify.com.br/scripts/pixel/pixel.js";document.head.appendChild(a);
   </script>
 
-  <!-- TikTok Pixel -->
   <script>
-  !function (w,d,t){w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];
+  !function(w,d,t){w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];
   ttq.methods=["page","track","identify","instances","debug","on","off","once","ready","alias","group","enableCookie","disableCookie","holdConsent","revokeConsent","grantConsent"];
-  ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}};for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);
+  ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e].concat([].slice.call(arguments,0)))}};for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);
   ttq.instance=function(t){for(var e=ttq._i[t]||[],n=0;n<ttq.methods.length;n++)ttq.setAndDefer(e,ttq.methods[n]);return e};
   ttq.load=function(e,n){var r="https://analytics.tiktok.com/i18n/pixel/events.js",o=n&&n.partner;
   ttq._i=ttq._i||{},ttq._i[e]=[],ttq._t=ttq._t||{},ttq._t[e]=+new Date,ttq._o=ttq._o||{},ttq._o[e]=n||{};
-  n=document.createElement("script");n.type="text/javascript";n.async=!0;n.src=r+"?sdkid="+e+"&lib="+t;
-  e=document.getElementsByTagName("script")[0];e.parentNode.insertBefore(n,e)};
-  ttq.load('D31KIHJC77U0B8UM6JJG'); ttq.page();
+  n=d.createElement("script");n.type="text/javascript";n.async=!0;n.src=r+"?sdkid="+e+"&lib="+t;
+  e=d.getElementsByTagName("script")[0];e.parentNode.insertBefore(n,e)};ttq.load('D31KIHJC77U0B8UM6JJG');ttq.page();
   }(window,document,'ttq');
   </script>
 </head>
 
 <body class="mpay-theme auth-body">
-  <!-- topo -->
   <div class="auth-header">
-    <a href="{% url 'core:home' %}"><i class="back-btn" data-feather="arrow-left"></i></a>
+    <a href="{% url 'home' %}"><i class="back-btn" data-feather="arrow-left"></i></a>
     <img class="img-fluid img" src="{% themed_static 'images/authentication/1.svg' %}" alt="Tela de autenticação" />
     <div class="auth-content">
       <div>
@@ -82,70 +67,46 @@
     </div>
   </div>
 
-  <!-- formulário -->
   <form class="auth-form theme-form" method="post" action="">
     {% csrf_token %}
 
     {% if messages %}
       <div class="custom-container">
         {% for message in messages %}
-          <div class="alert {% if message.tags %}alert-{{ message.tags }}{% else %}alert-info{% endif %} mt-2" role="alert">
-            {{ message }}
-          </div>
+          <div class="alert {% if message.tags %}alert-{{ message.tags }}{% else %}alert-info{% endif %} mt-2" role="alert">{{ message }}</div>
         {% endfor %}
       </div>
     {% endif %}
 
     {% if form.non_field_errors %}
-      <div class="custom-container">
-        <div class="alert alert-danger mt-2">
-          {% for error in form.non_field_errors %}{{ error }}{% endfor %}
-        </div>
-      </div>
+      <div class="custom-container"><div class="alert alert-danger mt-2">{% for e in form.non_field_errors %}{{ e }}{% endfor %}</div></div>
     {% endif %}
 
     <div class="custom-container">
       <div class="form-group">
         <label for="id_username" class="form-label">E-mail</label>
-        <div class="form-input">
-          {{ form.username }}
-        </div>
-        {% if form.username.errors %}
-          <small class="text-danger d-block mt-1">
-            {% for error in form.username.errors %}{{ error }}{% endfor %}
-          </small>
-        {% endif %}
+        <div class="form-input">{{ form.username }}</div>
       </div>
 
       <div class="form-group">
         <label for="id_password" class="form-label">Senha</label>
-        <div class="form-input">
-          {{ form.password }}
-        </div>
-        {% if form.password.errors %}
-          <small class="text-danger d-block mt-1">
-            {% for error in form.password.errors %}{{ error }}{% endfor %}
-          </small>
-        {% endif %}
+        <div class="form-input">{{ form.password }}</div>
       </div>
 
-      <div class="remember-option mt-3">
+      <div class="remember-option mt-3 d-flex justify-content-between align-items-center">
         <div class="form-check">
           <input class="form-check-input" type="checkbox" value="1" id="lembrar" name="remember" />
           <label class="form-check-label" for="lembrar">Lembrar-me</label>
         </div>
-        <a class="forgot" href="#">Esqueceu a senha?</a> {# troque pela sua rota real se tiver #}
+        <a class="forgot" href="#">Esqueceu a senha?</a> {# TODO: sua rota real #}
       </div>
 
       <button type="submit" class="btn theme-btn w-100">Entrar</button>
 
-      <h4 class="signup">Não tem uma conta?
-        <a href="{% url 'accounts:signup' %}"> Cadastre-se</a>
-      </h4>
+      <h4 class="signup">Não tem uma conta? <a href="{% url 'accounts:signup' %}">Cadastre-se</a></h4>
 
       <div class="division"><span>OU</span></div>
 
-      <!-- social (opcional; remova se não usar) -->
       <a href="#" class="btn gray-btn mt-3">
         <img class="img-fluid google" src="{% themed_static 'images/svg/google.svg' %}" alt="Google" />
         Continuar com Google
@@ -153,10 +114,12 @@
     </div>
   </form>
 
-  <!-- JS MPay -->
   <script src="{% themed_static 'js/feather.min.js' %}"></script>
   <script src="{% themed_static 'js/custom-feather.js' %}"></script>
   <script src="{% themed_static 'js/bootstrap.bundle.min.js' %}"></script>
   <script src="{% themed_static 'js/script.js' %}"></script>
+
+  <!-- failsafe: garante overrides por último em caso de injeção tardia -->
+  <script>(function(){var l=document.createElement('link');l.rel='stylesheet';l.href='{% themed_static "css/overrides.css" %}';document.head.appendChild(l);}())</script>
 </body>
 </html>
