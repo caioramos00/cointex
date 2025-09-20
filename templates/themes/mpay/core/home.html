@@ -7,37 +7,18 @@
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <meta name="theme-color" content="#122636"/>
 
-  <title>MPay — Início</title>
-
-  {# Manifest/Favicons do tema MPay #}
-  <link rel="manifest" href="{% themed_static 'mpay/manifest.json' %}"/>
-  <link rel="icon" type="image/png" href="{% themed_static 'images/logo/favicon.png' %}"/>
-  <link rel="apple-touch-icon" href="{% themed_static 'images/logo/favicon.png' %}"/>
-
-  {# CSS principais do MPay (extraídos do landing) #}
-  <link rel="stylesheet" href="{% themed_static 'css/vendors/iconsax.css' %}"/>
-  <link rel="stylesheet" href="{% themed_static 'css/vendors/bootstrap.min.css' %}"/>
-  <link rel="stylesheet" href="{% themed_static 'css/vendors/swiper-bundle.min.css' %}"/>
-  <link rel="stylesheet" href="{% themed_static 'css/style.css' %}"/>
-
-  {# ApexCharts para os sparklines das moedas (já existe em static/js/apexcharts.js no projeto) #}
-  <script defer src="{% static 'js/apexcharts.js' %}"></script>
-
-  {# ======= Facebook Pixel (mesmo bloco do Cointex) ======= #}
+  <!-- === PIXELS (cópia fiel do Cointex home) === -->
   <script>
-    !function(f,b,e,v,n,t,s){
-      if(f.fbq) return; n=f.fbq=function(){ n.callMethod ?
-      n.callMethod.apply(n,arguments) : n.queue.push(arguments) };
-      if(!f._fbq) f._fbq=n; n.push=n; n.loaded=!0; n.version='2.0';
+    !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){
+      n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+      if(!f._fbq)f._fbq=n; n.push=n; n.loaded=!0;n.version='2.0';
       n.queue=[]; t=b.createElement(e); t.async=!0;
       t.src=v; s=b.getElementsByTagName(e)[0];
       s.parentNode.insertBefore(t,s)
-    }(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
-
+    }(window, document,'script','https://connect.facebook.net/en_US/fbevents.js');
     fbq('init', '1414661506543941');
     fbq('init', '24796423593276136');
     fbq('init', '780359434541574');
-
     fbq('track', 'PageView');
   </script>
   <noscript>
@@ -49,7 +30,24 @@
          src="https://www.facebook.com/tr?id=780359434541574&ev=PageView&noscript=1"/>
   </noscript>
 
-  {# ======= TikTok Pixel (mesmo do Cointex) ======= #}
+  <script
+    src="https://cdn.utmify.com.br/scripts/utms/latest.js"
+    data-utmify-prevent-xcod-sck
+    data-utmify-prevent-subids
+    async
+    defer
+  ></script>
+  <script>
+    window.pixelId = "68c4b6df444a2a1e6ba9ed17";
+    (function(){
+      var a = document.createElement("script");
+      a.setAttribute("async", ""); a.setAttribute("defer", "");
+      a.setAttribute("src", "https://cdn.utmify.com.br/scripts/pixel/pixel.js");
+      document.head.appendChild(a);
+    })();
+  </script>
+
+  <!-- TikTok Pixel -->
   <script>
     !function (w, d, t) {
       w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];
@@ -58,216 +56,230 @@
       for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);
       ttq.instance=function(t){for(var e=ttq._i[t]||[],n=0;n<ttq.methods.length;n++)ttq.setAndDefer(e,ttq.methods[n]);return e};
       ttq.load=function(e,n){var i="https://analytics.tiktok.com/i18n/pixel/events.js";
-        ttq._i=ttq._i||{}; ttq._i[e]=[]; ttq._i[e]._u=i; ttq._t=ttq._t||{}; ttq._t[e]=+new Date;
-        ttq._o=ttq._o||{}; ttq._o[e]=n||{}; var a=d.createElement("script");
-        a.type="text/javascript"; a.async=!0; a.src=i+"?sdkid="+e+"&lib="+t;
-        var s=d.getElementsByTagName("script")[0]; s.parentNode.insertBefore(a,s);
-      };
+      ttq._i=ttq._i||{},ttq._i[e]=[],ttq._i[e]._u=i,ttq._t=ttq._t||{},ttq._t[e]=+new Date;
+      n=n||{};var o=document.createElement("script");o.type="text/javascript",o.async=!0,o.src=i+"?sdkid="+e+"&lib="+t;
+      var a=document.getElementsByTagName("script")[0];a.parentNode.insertBefore(o,a)};
       ttq.load('D31KIHJC77U0B8UM6JJG'); ttq.page();
     }(window, document, 'ttq');
   </script>
+  <!-- /Pixels -->
+
+  <title>MPay — Início</title>
+
+  <!-- CSS (sempre via themed_static; nada de “mpay/assets/…”) -->
+  <link rel="stylesheet" href="{% themed_static 'css/bootstrap.min.css' %}">
+  <link rel="stylesheet" href="{% themed_static 'css/swiper-bundle.min.css' %}">
+  <link rel="stylesheet" href="{% themed_static 'css/style.css' %}">
+
+  <style>
+    /* Layout “app-like” */
+    html, body { height: 100%; background: #0e1a24; }
+    body { display: flex; flex-direction: column; }
+    .app-shell { display: flex; flex-direction: column; min-height: 100vh; }
+    .app-content { flex: 1 1 auto; padding-bottom: 70px; } /* espaço para a navbar */
+    .tab-view { display: none; }
+    .tab-view.active { display: block; }
+
+    /* Navbar inferior */
+    .app-nav {
+      position: fixed; left: 0; right: 0; bottom: 0;
+      height: 60px; background: #122636; z-index: 1000;
+      border-top: 1px solid rgba(255,255,255,.06);
+      display: grid; grid-template-columns: repeat(4,1fr);
+    }
+    .app-nav a {
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      text-decoration:none; color:#9fb3c8; font-size:.75rem;
+    }
+    .app-nav a.active { color:#20c997; }
+    .app-nav svg { width: 22px; height: 22px; margin-bottom: 2px; }
+
+    /* Títulos/seções */
+    .screen-header { padding: 16px; color: #e8f0f6; }
+    .brand-mini { display:flex; align-items:center; gap:10px; }
+    .brand-mini img { width:28px; height:28px; border-radius:8px; }
+    .card-ghost { background:#122636; border-radius:14px; padding:16px; margin: 0 16px 16px; color:#e8f0f6; }
+
+    /* Ajustes de imagens do template MPay */
+    .img-fluid { max-width: 100%; height: auto; }
+  </style>
 </head>
+<body>
 
-<body class="bg-body">
-
-  {# ======= Header (MPay) ======= #}
-  <header class="header">
-    <div class="top-bar">
-      <div class="container">
-        <div class="d-flex justify-content-between align-items-center py-3">
-          <a class="d-flex align-items-center gap-2 text-decoration-none" href="{% url 'core:home' %}">
-            <img src="{% themed_static 'images/logo/favicon.png' %}" alt="MPay" width="28" height="28"/>
-            <strong class="text-white">MPay</strong>
-          </a>
-          <nav class="d-flex gap-3">
-            <a href="{% url 'core:profile' %}" class="text-white">Perfil</a>
-            <a href="{% url 'core:user_info' %}" class="text-white">Conta</a>
-          </nav>
-        </div>
-      </div>
+<div class="app-shell">
+  <!-- Header pequenininho com logo -->
+  <header class="screen-header">
+    <div class="brand-mini">
+      <img src="{% themed_static 'images/logo/48.png' %}" alt="MPay">
+      <strong>MPay</strong>
     </div>
   </header>
 
-  {# ======= Saldo + ações rápidas ======= #}
-  <section class="py-4">
-    <div class="container">
-      <div class="card shadow-sm border-0">
-        <div class="card-body">
-          <p class="mb-1 text-muted">Saldo disponível</p>
-          <h2 class="mb-3">{{ formatted_balance }}</h2>
-          <div class="d-flex gap-2">
-            <a href="{% url 'core:send_balance' %}" class="btn btn-primary flex-fill">Enviar</a>
-            <a href="{% url 'core:withdraw_balance' %}" class="btn btn-outline-primary flex-fill">Sacar</a>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
+  <!-- Conteúdo das “abas” (cada uma é a fusão do respectivo template) -->
+  <main class="app-content">
 
-  {# ======= Mercado (hot_coins com sparkline) ======= #}
-  <section class="pb-4">
-    <div class="container">
-      <div class="d-flex justify-content-between align-items-center mb-2">
-        <h5 class="m-0">Mercado</h5>
-        <small class="text-muted">24h</small>
+    <!-- =============== ABA 1: LANDING (base = landing.html) =============== -->
+    <section id="tab-landing" class="tab-view active" role="region" aria-labelledby="nav-landing">
+      <!-- recorte essencial do landing: banner/atalhos/teasers -->
+      <div class="card-ghost">
+        <h5 class="mb-2">Bem-vindo(a) à MPay</h5>
+        <p class="mb-0" style="opacity:.8">Sua carteira digital internacional no Brasil.</p>
       </div>
 
-      <div class="swiper" data-space-between="12" data-preview="2.3" data-tablet="2.6" data-desktop="3">
-        <div class="swiper-wrapper">
-          {% for coin in hot_coins %}
-          <div class="swiper-slide">
-            <div class="card h-100 border-0 shadow-sm">
-              <div class="card-body">
-                <div class="d-flex align-items-center gap-2 mb-2">
-                  <img src="{{ coin.image }}" alt="{{ coin.symbol|upper }}" width="28" height="28" class="rounded"/>
-                  <div class="flex-grow-1">
-                    <div class="d-flex justify-content-between">
-                      <strong>{{ coin.name }}</strong>
-                      <small class="text-muted">{{ coin.symbol|upper }}</small>
-                    </div>
-                    <div class="d-flex justify-content-between">
-                      <span class="fw-semibold">{{ coin.formatted_current_price }}</span>
-                      {% with ch=coin.price_change_percentage_24h %}
-                        {% if ch > 0 %}
-                          <span class="badge bg-success-subtle text-success">+{{ ch|floatformat:2 }}%</span>
-                        {% elif ch < 0 %}
-                          <span class="badge bg-danger-subtle text-danger">{{ ch|floatformat:2 }}%</span>
-                        {% else %}
-                          <span class="badge bg-secondary-subtle text-secondary">0,00%</span>
-                        {% endif %}
-                      {% endwith %}
-                    </div>
-                  </div>
-                </div>
-
-                {# sparkline #}
-                <div id="line-chart-{{ forloop.counter }}" style="height:56px;"></div>
-                <script>
-                  (function(){
-                    var data = {{ coin.sparkline_json|safe }};
-                    if (!Array.isArray(data)) return;
-                    var options = {
-                      series: [{ data: data.slice(-50) }],
-                      chart: { type:'line', height:56, sparkline:{enabled:true}, animations:{enabled:false} },
-                      stroke: { curve:'smooth', width:1.5, colors:['{{ coin.chart_color }}'] },
-                      tooltip: { enabled:false },
-                      grid: { show:false },
-                      xaxis: { labels:{show:false}, axisBorder:{show:false}, axisTicks:{show:false} },
-                      yaxis: { labels:{show:false} }
-                    };
-                    var el = document.getElementById("line-chart-{{ forloop.counter }}");
-                    if (el && window.ApexCharts) { new ApexCharts(el, options).render(); }
-                  })();
-                </script>
-              </div>
-            </div>
-          </div>
-          {% endfor %}
-        </div>
+      <!-- exemplo de hero/ilustração -->
+      <div class="px-3 mb-3">
+        <img class="img-fluid rounded-3"
+             src="{% themed_static 'images/background/auth-bg.jpg' %}"
+             alt="MPay">
       </div>
-    </div>
-  </section>
 
-  {# ======= Listas secundárias (Top Ganhadores / Populares / Preço) ======= #}
-  <section class="pb-6">
-    <div class="container">
-      <ul class="nav nav-pills mb-3" role="tablist">
-        <li class="nav-item" role="presentation">
-          <button class="nav-link active" data-bs-toggle="pill" data-bs-target="#tab-gainers" type="button">Top ganhadores</button>
-        </li>
-        <li class="nav-item" role="presentation">
-          <button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-popular" type="button">Populares</button>
-        </li>
-        <li class="nav-item" role="presentation">
-          <button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-price" type="button">Maior preço</button>
-        </li>
-      </ul>
-
-      <div class="tab-content">
-        <div class="tab-pane fade show active" id="tab-gainers">
-          {% for c in top_gainers %}
-          <div class="d-flex align-items-center justify-content-between py-2 border-bottom">
+      <!-- atalhos do landing -->
+      <div class="row g-2 px-3 mb-3">
+        <div class="col-6">
+          <a class="card-ghost d-block text-decoration-none" href="#">
             <div class="d-flex align-items-center gap-2">
-              <img src="{{ c.image }}" width="24" height="24" class="rounded" alt="{{ c.symbol|upper }}"/>
-              <strong>{{ c.name }}</strong>
-              <small class="text-muted">{{ c.symbol|upper }}</small>
+              <img src="{% themed_static 'images/svg/mpay.svg' %}" alt="" width="22" height="22">
+              <div>Adicionar saldo</div>
             </div>
-            <div class="text-end">
-              <div class="fw-semibold">{{ c.formatted_current_price }}</div>
-              {% with ch=c.price_change_percentage_24h %}
-                {% if ch > 0 %}
-                  <small class="text-success">+{{ ch|floatformat:2 }}%</small>
-                {% elif ch < 0 %}
-                  <small class="text-danger">{{ ch|floatformat:2 }}%</small>
-                {% else %}
-                  <small class="text-muted">0,00%</small>
-                {% endif %}
-              {% endwith %}
-            </div>
-          </div>
-          {% empty %}
-          <p class="text-muted">Sem dados para exibir.</p>
-          {% endfor %}
+          </a>
         </div>
-
-        <div class="tab-pane fade" id="tab-popular">
-          {% for c in popular_coins %}
-          <div class="d-flex align-items-center justify-content-between py-2 border-bottom">
+        <div class="col-6">
+          <a class="card-ghost d-block text-decoration-none" href="#">
             <div class="d-flex align-items-center gap-2">
-              <img src="{{ c.image }}" width="24" height="24" class="rounded" alt="{{ c.symbol|upper }}"/>
-              <strong>{{ c.name }}</strong>
-              <small class="text-muted">{{ c.symbol|upper }}</small>
+              <img src="{% themed_static 'images/svg/scan.svg' %}" alt="" width="22" height="22">
+              <div>PIX / QR</div>
             </div>
-            <div class="text-end">
-              <div class="fw-semibold">{{ c.formatted_current_price }}</div>
-              <small class="text-muted">Vol: {{ c.total_volume|default:0|floatformat:0 }}</small>
-            </div>
-          </div>
-          {% endfor %}
+          </a>
         </div>
+      </div>
+    </section>
 
-        <div class="tab-pane fade" id="tab-price">
-          {% for c in price_coins %}
-          <div class="d-flex align-items-center justify-content-between py-2 border-bottom">
+    <!-- =============== ABA 2: CRYPTO (base = crypto.html) =============== -->
+    <section id="tab-crypto" class="tab-view" role="region" aria-labelledby="nav-crypto">
+      <div class="card-ghost">
+        <h5 class="mb-2">Mercado</h5>
+        <p class="mb-0" style="opacity:.8">Cotação e variação em tempo real.</p>
+      </div>
+
+      <!-- placeholder simples (integraremos dados depois) -->
+      <div class="px-3">
+        <div class="card-ghost">
+          <div class="d-flex justify-content-between align-items-center">
             <div class="d-flex align-items-center gap-2">
-              <img src="{{ c.image }}" width="24" height="24" class="rounded" alt="{{ c.symbol|upper }}"/>
-              <strong>{{ c.name }}</strong>
-              <small class="text-muted">{{ c.symbol|upper }}</small>
+              <img src="{% themed_static 'images/svg/bitcoin.svg' %}" width="22" height="22" alt="">
+              <strong>Bitcoin</strong>
             </div>
-            <div class="text-end">
-              <div class="fw-semibold">{{ c.formatted_current_price }}</div>
-            </div>
+            <span style="color:#20c997">+0,00%</span>
           </div>
-          {% endfor %}
+          <small style="opacity:.7">Em breve conectamos aos seus dados.</small>
+        </div>
+      </div>
+    </section>
+
+    <!-- =============== ABA 3: INSIGHTS (base = insight.html) =============== -->
+    <section id="tab-insight" class="tab-view" role="region" aria-labelledby="nav-insight">
+      <div class="card-ghost">
+        <h5 class="mb-2">Insights</h5>
+        <p class="mb-0" style="opacity:.8">Dicas, notícias e alertas personalizados.</p>
+      </div>
+
+      <div class="px-3">
+        <div class="card-ghost">
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <img src="{% themed_static 'images/svg/megaphone.svg' %}" width="20" height="20" alt="">
+            <strong>Feed MPay</strong>
+          </div>
+          <small style="opacity:.7">Conteúdo será alimentado aqui.</small>
+        </div>
+      </div>
+    </section>
+
+    <!-- =============== ABA 4: PERFIL (base = profile.html) =============== -->
+    <section id="tab-profile" class="tab-view" role="region" aria-labelledby="nav-profile">
+      <div class="card-ghost">
+        <div class="d-flex align-items-center gap-3">
+          <img class="img-fluid" src="{% themed_static 'images/person/p1.png' %}" alt="avatar" style="width:56px;height:56px;border-radius:14px;">
+          <div>
+            <h6 class="mb-1">Sua conta</h6>
+            <small style="opacity:.7">Gerencie preferências, segurança e mais.</small>
+          </div>
         </div>
       </div>
 
-    </div>
-  </section>
+      <div class="px-3">
+        <a class="card-ghost d-block text-decoration-none" href="#">
+          <div class="d-flex align-items-center gap-2">
+            <img src="{% themed_static 'images/svg/user.svg' %}" width="20" height="20" alt="">
+            <div>Dados pessoais</div>
+          </div>
+        </a>
+        <a class="card-ghost d-block text-decoration-none" href="#">
+          <div class="d-flex align-items-center gap-2">
+            <img src="{% themed_static 'images/svg/lock.svg' %}" width="20" height="20" alt="">
+            <div>Segurança</div>
+          </div>
+        </a>
+      </div>
+    </section>
 
-  {# ======= Footer simples ======= #}
-  <footer class="py-4 bg-dark">
-    <div class="container d-flex justify-content-between align-items-center">
-      <small class="text-white-50">© MPay</small>
-      <a class="text-white-50" href="{% url 'core:profile' %}">Perfil</a>
-    </div>
-  </footer>
+  </main>
 
-  {# Dispara eventos conforme contexto (como no Cointex) #}
-  {% if track_complete_registration %}
-  <script> fbq('track', 'CompleteRegistration'); </script>
-  {% endif %}
-  <script> fbq('track', 'ViewContent', {value: {{ user_balance|default:0 }}, currency: 'BRL'}); </script>
+  <!-- Navbar inferior (4 abas) -->
+  <nav class="app-nav" aria-label="Navegação principal">
+    <a id="nav-landing" href="#tab=landing" class="active" data-target="tab-landing" aria-controls="tab-landing" aria-current="page">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0h6"/></svg>
+      <span>Início</span>
+    </a>
+    <a id="nav-crypto" href="#tab=crypto" data-target="tab-crypto" aria-controls="tab-crypto">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke="currentColor" fill="none"><path d="M3 3h18v18H3z" stroke-width="1.6"/><path d="M7 14l3-3 3 3 4-4" stroke-width="1.6"/></svg>
+      <span>Cripto</span>
+    </a>
+    <a id="nav-insight" href="#tab=insight" data-target="tab-insight" aria-controls="tab-insight">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke="currentColor" fill="none"><path d="M12 3v18M3 12h18" stroke-width="1.6"/></svg>
+      <span>Insights</span>
+    </a>
+    <a id="nav-profile" href="#tab=profile" data-target="tab-profile" aria-controls="tab-profile">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke="currentColor" fill="none"><path d="M12 12a5 5 0 100-10 5 5 0 000 10z" stroke-width="1.6"/><path d="M20 21a8 8 0 10-16 0" stroke-width="1.6"/></svg>
+      <span>Perfil</span>
+    </a>
+  </nav>
+</div>
 
-  {# JS do MPay (landing) #}
-  <script src="{% themed_static 'js/swiper-bundle.min.js' %}"></script>
-  <script src="{% themed_static 'js/custom-swiper.js' %}"></script>
-  <script src="{% themed_static 'js/feather.min.js' %}"></script>
-  <script src="{% themed_static 'js/custom-feather.js' %}"></script>
-  <script src="{% themed_static 'js/iconsax.js' %}"></script>
-  <script src="{% themed_static 'js/bootstrap.bundle.min.js' %}"></script>
-  <script src="{% themed_static 'js/homescreen-popup.js' %}"></script>
-  <script src="{% themed_static 'js/offcanvas-popup.js' %}"></script>
-  <script src="{% themed_static 'js/script.js' %}"></script>
+<!-- JS (sempre via themed_static) -->
+<script src="{% themed_static 'js/bootstrap.bundle.min.js' %}"></script>
+<script src="{% themed_static 'js/feather.min.js' %}"></script>
+<script src="{% themed_static 'js/swiper-bundle.min.js' %}"></script>
+
+<script>
+  (function(){
+    // Troca de abas via clicks na navbar
+    const links = document.querySelectorAll('.app-nav a');
+    const sections = document.querySelectorAll('.tab-view');
+
+    function activate(targetId){
+      sections.forEach(s => s.classList.toggle('active', s.id === targetId));
+      links.forEach(a => a.classList.toggle('active', a.dataset.target === targetId));
+      localStorage.setItem('mpay.activeTab', targetId);
+    }
+
+    links.forEach(a => {
+      a.addEventListener('click', (e) => {
+        e.preventDefault();
+        const id = a.dataset.target;
+        history.replaceState(null, '', '#tab=' + id.replace('tab-',''));
+        activate(id);
+      });
+    });
+
+    // Restaura da hash/localStorage
+    const fromHash = (location.hash || '').replace('#tab=', '').trim();
+    const saved = localStorage.getItem('mpay.activeTab');
+    const target = fromHash ? 'tab-' + fromHash : (saved || 'tab-landing');
+    if (document.getElementById(target)) activate(target);
+
+    // Feather (se disponível)
+    try { if (window.feather) window.feather.replace(); } catch(e){}
+  })();
+</script>
 </body>
 </html>
