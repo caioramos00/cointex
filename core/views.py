@@ -510,17 +510,23 @@ def home(request):
         'price_change_percentage': '24h',
     }
 
-    # helpers locais
-    def sfloat(x, default=0.0):
+    # helpers locais --------------------------------------------
+    def sfloat(x, default=None):
+        """Converte para float de forma segura. Se não der, devolve `default`."""
+        if x is None:
+            return default
         try:
-            return float(x)
+            v = float(x)
+            # protege contra NaN
+            return v if v == v else default
         except Exception:
-            return float(default)
+            return default
 
     def money_br(v):
-        # usa sua função robusta já definida no arquivo (a de cima)
+        # usa a sua format_number_br robusta (definida acima no arquivo)
         return f"R$ {format_number_br(v, default='0,00')}"
 
+    # Redis ------------------------------------------------------
     r = None
     try:
         r = get_redis_connection("default")
@@ -529,7 +535,7 @@ def home(request):
 
     KEY_FRESH = "cg:markets:v1:fresh"
     KEY_STALE = "cg:markets:v1:stale"
-    KEY_LOCK = "lock:cg:markets:v1"
+    KEY_LOCK  = "lock:cg:markets:v1"
 
     def _refresh_coingecko_async():
         import threading
@@ -560,7 +566,7 @@ def home(request):
                     pass
         threading.Thread(target=_job, daemon=True).start()
 
-    # ---------- Fetch com cache ----------
+    # Fetch com cache -------------------------------------------
     main_coins = []
     try:
         if r:
@@ -612,20 +618,23 @@ def home(request):
             logger.warning(f"coingecko fetch failed: {e2}")
             main_coins = []
 
-    # ---------- Listas ----------
+    # Listas -----------------------------------------------------
     hot_coins = main_coins[:per_page]
 
-    top_gainers = sorted(
-        [c for c in main_coins if sfloat(c.get('price_change_percentage_24h'), None) not in (None,) and sfloat(c.get('price_change_percentage_24h')) > 0],
-        key=lambda x: sfloat(x.get('price_change_percentage_24h')),
-        reverse=True
-    )[:per_page]
+    # top_gainers: calcula uma vez por item, ignora None e positivos apenas
+    tmp_gainers = []
+    for c in main_coins:
+        chg = sfloat(c.get('price_change_percentage_24h'), None)
+        if chg is not None and chg > 0:
+            tmp_gainers.append((chg, c))
+    tmp_gainers.sort(key=lambda t: t[0], reverse=True)
+    top_gainers = [c for _, c in tmp_gainers[:per_page]]
 
-    popular_coins = sorted(main_coins, key=lambda x: sfloat(x.get('total_volume')), reverse=True)[:per_page]
-    price_coins   = sorted(main_coins, key=lambda x: sfloat(x.get('current_price')), reverse=True)[:per_page]
+    popular_coins = sorted(main_coins, key=lambda x: sfloat(x.get('total_volume'), 0.0), reverse=True)[:per_page]
+    price_coins   = sorted(main_coins, key=lambda x: sfloat(x.get('current_price'), 0.0), reverse=True)[:per_page]
     favorites_coins = hot_coins  # placeholder
 
-    # ---------- Formatação segura ----------
+    # Formatação segura -----------------------------------------
     for lst in (hot_coins, favorites_coins, top_gainers, popular_coins, price_coins):
         for coin in lst:
             cp   = coin.get('current_price')
@@ -633,17 +642,15 @@ def home(request):
             spark = (coin.get('sparkline_in_7d') or {}).get('price') or []
 
             coin['formatted_current_price'] = money_br(cp)
-            # mantém o mesmo formato numérico (sem %) usado no template; tolerante a None
-            coin['formatted_price_change'] = format_number_br(chg, default="0,00")
+            coin['formatted_price_change']  = format_number_br(chg, default="0,00")
 
-            # sparkline e cor
             try:
                 coin['sparkline_json'] = json.dumps(spark)
             except Exception:
                 coin['sparkline_json'] = "[]"
-            coin['chart_color'] = '#26de81' if sfloat(chg) > 0 else '#fc5c65'
+            coin['chart_color'] = '#26de81' if sfloat(chg, 0.0) > 0 else '#fc5c65'
 
-    # ---------- Saldo do usuário ----------
+    # Saldo do usuário ------------------------------------------
     try:
         wallet = request.user.wallet
         user_balance = wallet.balance
