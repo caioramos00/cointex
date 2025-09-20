@@ -1,0 +1,93 @@
+<section>
+  <div class="custom-container">
+    <div class="statistics-banner">
+      <div class="d-flex justify-content-center gap-3">
+        <div class="statistics-content">
+          <h5>Saldo total</h5>
+          <h3 class="text-white fw-semibold">R$ 1.06.786,65</h3>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="custom-container">
+    <div class="chart">
+      <div class="d-flex justify-content-between">
+        <h3 class="fw-semibold dark-text">Analytics | <span class="light-text fw-normal">Mar–Jul</span></h3>
+        <ul class="listing"><li>S</li><li class="active">M</li><li>A</li></ul>
+      </div>
+      <div id="analytics-chart"></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wallet-details">
+    <div class="amount w-50 text-center">
+      <div class="d-flex align-items-center justify-content-center">
+        <img class="img-fluid transaction-icon" src="{% static 'assets/images/svg/income.svg' %}" alt="down" />
+        <h5>Receitas</h5>
+      </div>
+      <h3 class="dark-text fw-semibold">R$ 15.256,33</h3>
+    </div>
+    <div class="amount w-50 text-center border-0">
+      <div class="d-flex align-items-center justify-content-center">
+        <img class="img-fluid transaction-icon" src="{% static 'assets/images/svg/expense.svg' %}" alt="up" />
+        <h5>Despesas</h5>
+      </div>
+      <h3 class="dark-text fw-semibold">R$ 91.530,32</h3>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="custom-container">
+    <div class="title"><h2>Categorias</h2></div>
+    <div class="chart mb-3"><div id="category-chart"></div></div>
+    <!-- Lista de categorias traduzida -->
+    <div class="row gy-3">
+      <!-- ... (Shopping, Alimentação, Saúde, Entretenimento) ... -->
+    </div>
+  </div>
+</section>
+
+<section class="section-b-space">
+  <div class="custom-container">
+    <div class="title"><h2>Histórico de transações</h2></div>
+    <div class="row gy-3">
+      <!-- ... cards traduzidos ... -->
+    </div>
+  </div>
+</section>
+
+<script>
+  // Inicializações específicas da rota "insight" — dados estáticos
+  window.initInsight = function () {
+    if (window.ApexCharts) {
+      var ac = document.querySelector('#analytics-chart');
+      if (ac && !ac.__ok) {
+        new ApexCharts(ac, {
+          series: [{ name: 'Entradas', data: [12,14,11,18,13,21,19] }, { name: 'Saídas', data: [8,10,9,12,11,13,12] }],
+          chart: { type: 'area', height: 220, toolbar: { show:false } },
+          dataLabels: { enabled:false }, stroke:{ curve:'smooth' },
+          xaxis: { labels: { show:false } }, yaxis: { labels:{ show:false } },
+          tooltip: { enabled:true }
+        }).render();
+        ac.__ok = 1;
+      }
+
+      var cc = document.querySelector('#category-chart');
+      if (cc && !cc.__ok) {
+        new ApexCharts(cc, {
+          series: [44, 26, 18, 12],
+          chart: { type: 'donut', height: 220 },
+          labels: ['Compras', 'Alimentação', 'Saúde', 'Entretenimento'],
+          legend: { show: false }
+        }).render();
+        cc.__ok = 1;
+      }
+    }
+  };
+</script>

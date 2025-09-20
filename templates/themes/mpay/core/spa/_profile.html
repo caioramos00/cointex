@@ -1,0 +1,75 @@
+<section class="section-b-space">
+  <div class="custom-container">
+    <div class="profile-section">
+      <div class="profile-banner">
+        <div class="profile-image">
+          <img class="img-fluid profile-pic" src="{% static 'assets/images/person/p3.png' %}" alt="perfil" />
+        </div>
+      </div>
+      <h2>{{ request.user.get_full_name|default:"Usuário" }}</h2>
+      <h5>{{ request.user.phone_number|default:"+55 ***********" }}</h5>
+    </div>
+
+    <ul class="profile-list">
+      <li>
+        <a href="#/profile" class="profile-box">
+          <div class="profile-img"><i class="icon" data-feather="user"></i></div>
+          <div class="profile-details">
+            <h4>Minha conta</h4>
+            <img class="img-fluid arrow" src="{% static 'assets/images/svg/arrow.svg' %}" alt="arrow" />
+          </div>
+        </a>
+      </li>
+      <li>
+        <a href="#/profile" class="profile-box">
+          <div class="profile-img"><i class="icon" data-feather="credit-card"></i></div>
+          <div class="profile-details">
+            <h4>Meus cartões</h4>
+            <img class="img-fluid arrow" src="{% static 'assets/images/svg/arrow.svg' %}" alt="arrow" />
+          </div>
+        </a>
+      </li>
+      <li>
+        <a href="#/profile" class="profile-box">
+          <div class="profile-img"><i class="icon" data-feather="settings"></i></div>
+          <div class="profile-details">
+            <h4>Alterar senha</h4>
+            <img class="img-fluid arrow" src="{% static 'assets/images/svg/arrow.svg' %}" alt="arrow" />
+          </div>
+        </a>
+      </li>
+      <li>
+        <a href="#/profile" class="profile-box">
+          <div class="profile-img"><i class="icon" data-feather="lock"></i></div>
+          <div class="profile-details">
+            <h4>Configurações</h4>
+            <img class="img-fluid arrow" src="{% static 'assets/images/svg/arrow.svg' %}" alt="arrow" />
+          </div>
+        </a>
+      </li>
+      <li>
+        <a href="#/profile" class="profile-box">
+          <div class="profile-img"><i class="icon" data-feather="help-circle"></i></div>
+          <div class="profile-details">
+            <h4>Ajuda</h4>
+            <img class="img-fluid arrow" src="{% static 'assets/images/svg/arrow.svg' %}" alt="arrow" />
+          </div>
+        </a>
+      </li>
+      <li>
+        <a href="{% url 'logout' %}" class="profile-box">
+          <div class="profile-img"><i class="icon" data-feather="log-out"></i></div>
+          <div class="profile-details"><h4>Sair</h4></div>
+        </a>
+      </li>
+    </ul>
+  </div>
+</section>
+
+<section class="panel-space"></section>
+
+<script>
+  window.initProfile = function () {
+    // nada específico por ora
+  };
+</script>

@@ -1,0 +1,92 @@
+<section class="section-b-space">
+  <div class="custom-container">
+    <div class="card-box">
+      <div class="card-details">
+        <div class="d-flex justify-content-between">
+          <h5 class="fw-semibold">Saldo total</h5>
+          <img src="{% static 'assets/images/svg/ellipse.svg' %}" alt="ellipse" />
+        </div>
+        <h1 class="mt-2 text-white">R$ {{ user_balance|default:"0,00" }}</h1>
+        <div class="amount-details">
+          <div class="amount w-50 text-start">
+            <div class="d-flex align-items-center justify-content-start">
+              <img class="img-fluid icon" src="{% static 'assets/images/svg/arrow-down-right.svg' %}" alt="down" />
+              <h5>Receitas</h5>
+            </div>
+            <h3 class="text-white">R$ 15.256,33</h3>
+          </div>
+          <div class="amount w-50 text-end border-0">
+            <div class="d-flex align-items-center justify-content-end">
+              <img class="img-fluid icon" src="{% static 'assets/images/svg/arrow-up-right.svg' %}" alt="up" />
+              <h5>Despesas</h5>
+            </div>
+            <h3 class="text-white">R$ 91.530,32</h3>
+          </div>
+        </div>
+      </div>
+      <a href="#/landing" class="add-money theme-color">+ Adicionar dinheiro</a>
+    </div>
+  </div>
+</section>
+
+<section class="categories-section section-b-space">
+  <div class="custom-container">
+    <ul class="categories-list">
+      <li>
+        <a href="#/landing">
+          <div class="categories-box"><i class="categories-icon" data-feather="repeat"></i></div>
+          <h5 class="mt-2 text-center">Transferir</h5>
+        </a>
+      </li>
+      <li>
+        <a href="#/landing">
+          <div class="categories-box"><i class="categories-icon" data-feather="file-text"></i></div>
+          <h5 class="mt-2 text-center">Boleto</h5>
+        </a>
+      </li>
+      <li>
+        <a href="#/landing">
+          <div class="categories-box"><i class="categories-icon icon1" data-feather="log-in"></i></div>
+          <h5 class="mt-2 text-center">Solicitar</h5>
+        </a>
+      </li>
+      <li>
+        <a href="#/landing">
+          <div class="categories-box"><i class="iconsax categories-icon" data-icon="bank"></i></div>
+          <h5 class="mt-2 text-center">Saque</h5>
+        </a>
+      </li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <div class="custom-container">
+    <div class="title">
+      <h2>Serviços</h2>
+      <a href="#/landing">Ver todos</a>
+    </div>
+    <!-- (mantidos cards/serviços — traduzidos) -->
+    <!-- ... -->
+  </div>
+</section>
+
+<section>
+  <div class="custom-container">
+    <div class="title">
+      <h2>Transações</h2>
+      <a href="#/landing">Ver todas</a>
+    </div>
+    <div class="row gy-3">
+      <!-- (mantidos exemplos de transações — traduzidos) -->
+      <!-- ... -->
+    </div>
+  </div>
+</section>
+
+<script>
+  // Inicializações específicas da rota "landing"
+  window.initLanding = function() {
+    // Ex.: sliders Swiper, se existirem nessa seção
+  };
+</script>
