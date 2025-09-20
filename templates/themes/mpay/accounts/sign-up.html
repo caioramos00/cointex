@@ -3,24 +3,15 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, viewport-fit=cover" />
+  <title>Criar conta — MPay</title>
 
   <!-- verificação Meta (mantido) -->
   <meta name="facebook-domain-verification" content="73hwg7lythnnqtl0mtlqdgyewx6h3z" />
 
-  <!-- PWA / ícones -->
-  <link rel="manifest" href="{% themed_static 'manifest.json' %}" />
+  <!-- Ícones -->
   <link rel="icon" href="{% themed_static 'images/logo/favicon.png' %}" type="image/png" />
   <link rel="apple-touch-icon" href="{% themed_static 'images/logo/favicon.png' %}" />
-  <meta name="theme-color" content="#122636" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
-  <meta name="apple-mobile-web-app-title" content="MPay" />
-  <meta name="msapplication-TileImage" content="{% themed_static 'images/logo/favicon.png' %}" />
-  <meta name="msapplication-TileColor" content="#FFFFFF" />
-
-  <title>Criar conta — MPay</title>
 
   <!-- fontes Google (opcional) -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -31,35 +22,8 @@
   <link rel="stylesheet" id="rtl-link" type="text/css" href="{% themed_static 'css/vendors/bootstrap.min.css' %}" />
   <link rel="stylesheet" type="text/css" href="{% themed_static 'css/vendors/swiper-bundle.min.css' %}" />
   <link rel="stylesheet" id="change-link" type="text/css" href="{% themed_static 'css/style.css' %}" />
-  <link rel="stylesheet" href="{% themed_static 'css/overrides.css' %}">
 
-  <style>
-  /* Endurecer estilo dos inputs MPay contra CSS legado */
-  .auth-form .form-group,
-  .auth-form .form-input { width: 100%; }
-
-  .auth-form input.form-control,
-  .auth-form select.form-control,
-  .auth-form textarea.form-control,
-  .auth-form .form-input input,
-  .auth-form .form-input select,
-  .auth-form .form-input textarea {
-    width: 100% !important;
-    display: block;
-    box-sizing: border-box;
-    height: 48px;
-    border-radius: 10px;
-  }
-
-  /* labels/checkbox alinhados */
-  .auth-form .form-check-input { width: auto; height: auto; }
-
-  /* botão ocupa a linha toda (caso algo reduza) */
-  .auth-form .btn { width: 100%; }
-</style>
-
-
-  <!-- === PIXELS & TRACKING (mantidos do Cointex) === -->
+  <!-- === PIXELS & TRACKING (mantidos) === -->
   <script>
     !function (f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
     n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
@@ -76,7 +40,7 @@
     <img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=780359434541574&ev=PageView&noscript=1"/>
   </noscript>
 
-  <!-- UTMify (mantido) -->
+  <!-- UTMify -->
   <script
     src="https://cdn.utmify.com.br/scripts/utms/latest.js"
     data-utmify-prevent-xcod-sck
@@ -90,7 +54,7 @@
     document.head.appendChild(a);
   </script>
 
-  <!-- TikTok Pixel (mantido) -->
+  <!-- TikTok Pixel -->
   <script>
   !function (w,d,t){w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];
   ttq.methods=["page","track","identify","instances","debug","on","off","once","ready","alias","group","enableCookie","disableCookie","holdConsent","revokeConsent","grantConsent"];
@@ -118,8 +82,8 @@
     </div>
   </div>
 
-  <!-- formulário de cadastro -->
-  <form class="auth-form" method="post" action="">
+  <!-- formulário -->
+  <form class="auth-form theme-form" method="post" action="">
     {% csrf_token %}
 
     {% if messages %}
@@ -141,19 +105,6 @@
     {% endif %}
 
     <div class="custom-container">
-      <!-- Nome de usuário -->
-      <div class="form-group">
-        <label for="id_username" class="form-label">Nome de usuário</label>
-        <div class="form-input">
-          {{ form.username }}
-        </div>
-        {% if form.username.errors %}
-          <small class="text-danger d-block mt-1">
-            {% for error in form.username.errors %}{{ error }}{% endfor %}
-          </small>
-        {% endif %}
-      </div>
-
       <!-- Nome -->
       <div class="form-group">
         <label for="id_first_name" class="form-label">Nome</label>
@@ -180,34 +131,6 @@
         {% endif %}
       </div>
 
-      <!-- Data de nascimento -->
-      <div class="form-group">
-        <label for="date_of_birth" class="form-label">Data de nascimento</label>
-        <div class="form-input">
-          {# garantimos o id esperado pelo IMask: 'date_of_birth' #}
-            {{ form.date_of_birth }}
-        </div>
-        {% if form.date_of_birth.errors %}
-          <small class="text-danger d-block mt-1">
-            {% for error in form.date_of_birth.errors %}{{ error }}{% endfor %}
-          </small>
-        {% endif %}
-      </div>
-
-      <!-- CPF -->
-      <div class="form-group">
-        <label for="cpf" class="form-label">CPF</label>
-        <div class="form-input">
-          {# garantimos o id esperado pelo IMask: 'cpf' #}
-          {{ form.cpf }}
-        </div>
-        {% if form.cpf.errors %}
-          <small class="text-danger d-block mt-1">
-            {% for error in form.cpf.errors %}{{ error }}{% endfor %}
-          </small>
-        {% endif %}
-      </div>
-
       <!-- E-mail -->
       <div class="form-group">
         <label for="id_email" class="form-label">E-mail</label>
@@ -221,11 +144,36 @@
         {% endif %}
       </div>
 
+      <!-- Data de nascimento -->
+      <div class="form-group">
+        <label for="date_of_birth" class="form-label">Data de nascimento</label>
+        <div class="form-input">
+          {{ form.date_of_birth }}
+        </div>
+        {% if form.date_of_birth.errors %}
+          <small class="text-danger d-block mt-1">
+            {% for error in form.date_of_birth.errors %}{{ error }}{% endfor %}
+          </small>
+        {% endif %}
+      </div>
+
+      <!-- CPF -->
+      <div class="form-group">
+        <label for="cpf" class="form-label">CPF</label>
+        <div class="form-input">
+          {{ form.cpf }}
+        </div>
+        {% if form.cpf.errors %}
+          <small class="text-danger d-block mt-1">
+            {% for error in form.cpf.errors %}{{ error }}{% endfor %}
+          </small>
+        {% endif %}
+      </div>
+
       <!-- Telefone -->
       <div class="form-group">
         <label for="phone_number" class="form-label">Telefone</label>
         <div class="form-input">
-          {# garantimos o id esperado pelo IMask: 'phone_number' #}
           {{ form.phone_number }}
         </div>
         {% if form.phone_number.errors %}
@@ -286,7 +234,7 @@
     </div>
   </form>
 
-  <!-- Modal: Termos e Condições (conteúdo mantido) -->
+  <!-- Modal: Termos e Condições -->
   <div class="modal fade" id="termsModal" tabindex="-1" aria-labelledby="termsModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-scrollable modal-lg">
       <div class="modal-content">
@@ -295,7 +243,6 @@
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
         </div>
         <div class="modal-body">
-          {# Mantive seu texto/estrutura de termos extenso do template original #}
           {{ terms_html|default:"<p>Ao criar sua conta, você aceita nossos Termos e Condições e a Política de Privacidade.</p>"|safe }}
         </div>
         <div class="modal-footer">
@@ -311,11 +258,6 @@
   <script src="{% themed_static 'js/bootstrap.bundle.min.js' %}"></script>
   <script src="{% themed_static 'js/script.js' %}"></script>
 
-  <!-- jQuery/auxiliares (se seu template original dependia) -->
-  <script src="{% static 'js/jquery.min.js' %}"></script>
-  <script src="{% static 'js/wow.min.js' %}"></script>
-  <script src="{% static 'js/main.js' %}"></script>
-
   <!-- IMask para CPF/Telefone/Data -->
   <script src="https://unpkg.com/imask"></script>
   <script>
@@ -328,13 +270,5 @@
       if (elDob) IMask(elDob, { mask: '00/00/0000' });
     });
   </script>
-  <script>
-  (function () {
-    var href = "{% themed_static 'css/overrides.css' %}";
-    var link = document.createElement('link');
-    link.rel = 'stylesheet'; link.href = href;
-    document.head.appendChild(link);
-  })();
-</script>
 </body>
 </html>
