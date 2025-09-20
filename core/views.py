@@ -1,6 +1,5 @@
 import os
 import json
-import hmac
 import hashlib
 import logging
 import threading
@@ -9,11 +8,10 @@ import re
 import unicodedata
 import random
 from unidecode import unidecode
-from string import ascii_letters
 from decimal import Decimal, InvalidOperation
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.core.exceptions import ValidationError
@@ -27,12 +25,10 @@ from django.urls import reverse
 from django.core.cache import cache
 from django_redis import get_redis_connection
 from requests.exceptions import RequestException
-
-from core.meta_lookup import build_ctwa_utm_from_meta
-from core.middleware import _safe_str
 from payments.service import get_active_adapter, get_active_provider
 from utils.http import http_get, http_post
 from utils.pix_cache import get_cached_pix, set_cached_pix, with_user_pix_lock
+
 from accounts.models import CustomUser, UserProfile, Wallet, Transaction, Notification, PixTransaction
 from .capi import lookup_click
 from .forms import SendForm, WithdrawForm
@@ -50,6 +46,39 @@ UTMIFY_MAX_RETRIES = 2
 UTMIFY_RETRY_BACKOFFS = [0.4, 0.8]
 _ALLOWED_STATUSES = {"waiting_payment", "paid", "refused"}
 SYSTEM_EMAIL_RE = re.compile(r"^[a-z]{6,}\d{4}@(gmail\.com|outlook\.com)$")
+
+def _to_decimal(value):
+    if value is None:
+        return None
+    if isinstance(value, Decimal):
+        return value
+    try:
+        return Decimal(str(value))
+    except (InvalidOperation, TypeError, ValueError):
+        return None
+
+def format_number_br(value, decimals=2, default="—", with_sign=False):
+    """
+    Formata número no padrão pt-BR (1.234,56).
+    - Aceita Decimal, int, float, str ou None.
+    - Se não der pra converter, devolve `default`.
+    - with_sign=True: inclui + / -.
+    """
+    num = _to_decimal(value)
+    if num is None:
+        return default
+
+    quant = Decimal('1').scaleb(-decimals)  # 10**-decimals
+    try:
+        num = num.quantize(quant)
+    except Exception:
+        return default
+
+    body = f"{abs(num):,.{decimals}f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    if with_sign:
+        sign = "+" if num > 0 else ("-" if num < 0 else "")
+        return f"{sign}{body}"
+    return body
 
 def is_system_email(email: str) -> bool:
     s = (email or "").strip().lower()
@@ -462,6 +491,10 @@ def format_number_br(value):
 @cache_page(30)
 @login_required
 def home(request):
+    """
+    Home com Coingecko + Redis cache.
+    Resiliente a valores None/ausentes e sem quebrar quando a API retorna faltantes.
+    """
     base_url = 'https://api.coingecko.com/api/v3'
     vs_currency = 'brl'
     per_page_large = 250
@@ -474,8 +507,19 @@ def home(request):
         'page': 1,
         'sparkline': True,
         'locale': 'pt',
-        'price_change_percentage': '24h'
+        'price_change_percentage': '24h',
     }
+
+    # helpers locais
+    def sfloat(x, default=0.0):
+        try:
+            return float(x)
+        except Exception:
+            return float(default)
+
+    def money_br(v):
+        # usa sua função robusta já definida no arquivo (a de cima)
+        return f"R$ {format_number_br(v, default='0,00')}"
 
     r = None
     try:
@@ -488,6 +532,7 @@ def home(request):
     KEY_LOCK = "lock:cg:markets:v1"
 
     def _refresh_coingecko_async():
+        import threading
         def _job():
             lock = None
             try:
@@ -513,9 +558,9 @@ def home(request):
                         lock.release()
                 except Exception:
                     pass
-
         threading.Thread(target=_job, daemon=True).start()
 
+    # ---------- Fetch com cache ----------
     main_coins = []
     try:
         if r:
@@ -567,36 +612,45 @@ def home(request):
             logger.warning(f"coingecko fetch failed: {e2}")
             main_coins = []
 
+    # ---------- Listas ----------
     hot_coins = main_coins[:per_page]
 
     top_gainers = sorted(
-        [c for c in main_coins if c.get('price_change_percentage_24h') is not None and c.get('price_change_percentage_24h') > 0],
-        key=lambda x: x['price_change_percentage_24h'],
+        [c for c in main_coins if sfloat(c.get('price_change_percentage_24h'), None) not in (None,) and sfloat(c.get('price_change_percentage_24h')) > 0],
+        key=lambda x: sfloat(x.get('price_change_percentage_24h')),
         reverse=True
     )[:per_page]
 
-    popular_coins = sorted(main_coins, key=lambda x: x.get('total_volume') or 0, reverse=True)[:per_page]
-    price_coins = sorted(main_coins, key=lambda x: x.get('current_price') or 0, reverse=True)[:per_page]
-    favorites_coins = hot_coins
+    popular_coins = sorted(main_coins, key=lambda x: sfloat(x.get('total_volume')), reverse=True)[:per_page]
+    price_coins   = sorted(main_coins, key=lambda x: sfloat(x.get('current_price')), reverse=True)[:per_page]
+    favorites_coins = hot_coins  # placeholder
 
-    for lst in [hot_coins, favorites_coins, top_gainers, popular_coins, price_coins]:
+    # ---------- Formatação segura ----------
+    for lst in (hot_coins, favorites_coins, top_gainers, popular_coins, price_coins):
         for coin in lst:
-            current_price = coin.get('current_price', 0)
-            price_change = coin.get('price_change_percentage_24h', 0)
-            coin['formatted_current_price'] = f"R$ {format_number_br(current_price)}"
-            coin['formatted_price_change'] = format_number_br(price_change)
+            cp   = coin.get('current_price')
+            chg  = coin.get('price_change_percentage_24h')
+            spark = (coin.get('sparkline_in_7d') or {}).get('price') or []
 
-    for coin in hot_coins:
-        coin['sparkline_json'] = json.dumps(coin.get('sparkline_in_7d', {}).get('price', []))
-        coin['chart_color'] = '#26de81' if coin.get('price_change_percentage_24h', 0) > 0 else '#fc5c65'
+            coin['formatted_current_price'] = money_br(cp)
+            # mantém o mesmo formato numérico (sem %) usado no template; tolerante a None
+            coin['formatted_price_change'] = format_number_br(chg, default="0,00")
 
+            # sparkline e cor
+            try:
+                coin['sparkline_json'] = json.dumps(spark)
+            except Exception:
+                coin['sparkline_json'] = "[]"
+            coin['chart_color'] = '#26de81' if sfloat(chg) > 0 else '#fc5c65'
+
+    # ---------- Saldo do usuário ----------
     try:
         wallet = request.user.wallet
         user_balance = wallet.balance
-        formatted_balance = f"R$ {format_number_br(user_balance)}"
+        formatted_balance = money_br(user_balance)
     except Wallet.DoesNotExist:
-        formatted_balance = "R$ 0,00"
         user_balance = Decimal('0.00')
+        formatted_balance = "R$ 0,00"
 
     track_complete_registration = request.session.pop('track_complete_registration', False)
 
@@ -611,7 +665,6 @@ def home(request):
         'user_balance': float(user_balance),
     }
     return render(request, 'core/home.html', context)
-
 
 @login_required
 def user_info(request):
