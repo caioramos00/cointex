@@ -7,7 +7,6 @@
   <title>Criar conta — MPay</title>
 
   <meta name="facebook-domain-verification" content="73hwg7lythnnqtl0mtlqdgyewx6h3z" />
-
   <link rel="icon" href="{% themed_static 'images/logo/favicon.png' %}" type="image/png" />
   <link rel="apple-touch-icon" href="{% themed_static 'images/logo/favicon.png' %}" />
 
@@ -19,38 +18,6 @@
   <link rel="stylesheet" href="{% themed_static 'css/vendors/swiper-bundle.min.css' %}" />
   <link rel="stylesheet" href="{% themed_static 'css/style.css' %}" />
   <link rel="stylesheet" href="{% themed_static 'css/overrides.css' %}" />
-
-  <!-- PIXELS (mantidos) -->
-  <script>
-    !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-    n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
-    n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
-    t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
-    fbq('init','1414661506543941'); fbq('init','24796423593276136'); fbq('init','780359434541574'); fbq('track','PageView');
-  </script>
-  <noscript>
-    <img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=1414661506543941&ev=PageView&noscript=1"/>
-    <img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=24796423593276136&ev=PageView&noscript=1"/>
-    <img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=780359434541574&ev=PageView&noscript=1"/>
-  </noscript>
-
-  <script src="https://cdn.utmify.com.br/scripts/utms/latest.js" data-utmify-prevent-xcod-sck data-utmify-prevent-subids async defer></script>
-  <script>
-    window.pixelId="68c4b6df444a2a1e6ba9ed17";
-    var a=document.createElement("script");a.async=1;a.defer=1;a.src="https://cdn.utmify.com.br/scripts/pixel/pixel.js";document.head.appendChild(a);
-  </script>
-
-  <script>
-  !function(w,d,t){w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];
-  ttq.methods=["page","track","identify","instances","debug","on","off","once","ready","alias","group","enableCookie","disableCookie","holdConsent","revokeConsent","grantConsent"];
-  ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e].concat([].slice.call(arguments,0)))}};for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);
-  ttq.instance=function(t){for(var e=ttq._i[t]||[],n=0;n<ttq.methods.length;n++)ttq.setAndDefer(e,ttq.methods[n]);return e};
-  ttq.load=function(e,n){var r="https://analytics.tiktok.com/i18n/pixel/events.js",o=n&&n.partner;
-  ttq._i=ttq._i||{},ttq._i[e]=[],ttq._t=ttq._t||{},ttq._t[e]=+new Date,ttq._o=ttq._o||{},ttq._o[e]=n||{};
-  n=d.createElement("script");n.type="text/javascript";n.async=!0;n.src=r+"?sdkid="+e+"&lib="+t;
-  e=d.getElementsByTagName("script")[0];e.parentNode.insertBefore(n,e)};ttq.load('D31KIHJC77U0B8UM6JJG');ttq.page();
-  }(window,document,'ttq');
-  </script>
 </head>
 
 <body class="mpay-theme auth-body">
@@ -67,18 +34,6 @@
 
   <form class="auth-form theme-form" method="post" action="">
     {% csrf_token %}
-
-    {% if messages %}
-      <div class="custom-container">
-        {% for message in messages %}
-          <div class="alert {% if message.tags %}alert-{{ message.tags }}{% else %}alert-info{% endif %} mt-2" role="alert">{{ message }}</div>
-        {% endfor %}
-      </div>
-    {% endif %}
-
-    {% if form.non_field_errors %}
-      <div class="custom-container"><div class="alert alert-danger mt-2">{% for e in form.non_field_errors %}{{ e }}{% endfor %}</div></div>
-    {% endif %}
 
     <div class="custom-container">
       <div class="form-group">
@@ -128,15 +83,19 @@
       </div>
 
       <div class="remember-option mt-3">
-        <div class="form-check">
-          <input class="form-check-input" type="checkbox" value="1" id="aceito-termos" checked />
-          <label class="form-check-label" for="aceito-termos">Eu concordo com os <a href="#" data-bs-toggle="modal" data-bs-target="#termsModal">Termos e Condições</a></label>
+        <div class="form-check p-0">
+          <input class="checkbox_animated" type="checkbox" id="aceito-termos" checked />
+          <label class="form-check-label" for="aceito-termos">
+            Eu concordo com os <a href="#" data-bs-toggle="modal" data-bs-target="#termsModal">Termos e Condições</a>
+          </label>
         </div>
       </div>
 
-      <button type="submit" class="btn theme-btn w-100 mt-3">Criar conta</button>
+      <button type="submit" class="btn theme-btn mt-3">Criar conta</button>
 
-      <h4 class="signup">Já tem uma conta? <a href="{% url 'accounts:login' %}">Entrar</a></h4>
+      <h4 class="signup">Já tem uma conta?
+        <a href="{% url 'accounts:login' %}"> Entrar</a>
+      </h4>
     </div>
   </form>
 
@@ -172,8 +131,5 @@
       if (elDob) IMask(elDob, { mask: '00/00/0000' });
     });
   </script>
-
-  <!-- failsafe -->
-  <script>(function(){var l=document.createElement('link');l.rel='stylesheet';l.href='{% themed_static "css/overrides.css" %}';document.head.appendChild(l);}())</script>
 </body>
 </html>

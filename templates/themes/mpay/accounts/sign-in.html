@@ -7,7 +7,6 @@
   <title>Entrar — MPay</title>
 
   <meta name="facebook-domain-verification" content="73hwg7lythnnqtl0mtlqdgyewx6h3z" />
-
   <link rel="icon" href="{% themed_static 'images/logo/favicon.png' %}" type="image/png" />
   <link rel="apple-touch-icon" href="{% themed_static 'images/logo/favicon.png' %}" />
 
@@ -15,11 +14,10 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Lato:wght@100;300;400;700;900&display=swap" rel="stylesheet" />
 
-  <!-- CSS do tema -->
+  <!-- CSS MPay -->
   <link rel="stylesheet" href="{% themed_static 'css/vendors/bootstrap.min.css' %}" />
   <link rel="stylesheet" href="{% themed_static 'css/vendors/swiper-bundle.min.css' %}" />
   <link rel="stylesheet" href="{% themed_static 'css/style.css' %}" />
-  <!-- Nosso override por último -->
   <link rel="stylesheet" href="{% themed_static 'css/overrides.css' %}" />
 
   <!-- PIXELS (mantidos) -->
@@ -35,13 +33,8 @@
     <img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=24796423593276136&ev=PageView&noscript=1"/>
     <img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=780359434541574&ev=PageView&noscript=1"/>
   </noscript>
-
   <script src="https://cdn.utmify.com.br/scripts/utms/latest.js" data-utmify-prevent-xcod-sck data-utmify-prevent-subids async defer></script>
-  <script>
-    window.pixelId="68c4b6df444a2a1e6ba9ed17";
-    var a=document.createElement("script");a.async=1;a.defer=1;a.src="https://cdn.utmify.com.br/scripts/pixel/pixel.js";document.head.appendChild(a);
-  </script>
-
+  <script>window.pixelId="68c4b6df444a2a1e6ba9ed17";var a=document.createElement("script");a.async=1;a.defer=1;a.src="https://cdn.utmify.com.br/scripts/pixel/pixel.js";document.head.appendChild(a);</script>
   <script>
   !function(w,d,t){w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];
   ttq.methods=["page","track","identify","instances","debug","on","off","once","ready","alias","group","enableCookie","disableCookie","holdConsent","revokeConsent","grantConsent"];
@@ -78,10 +71,6 @@
       </div>
     {% endif %}
 
-    {% if form.non_field_errors %}
-      <div class="custom-container"><div class="alert alert-danger mt-2">{% for e in form.non_field_errors %}{{ e }}{% endfor %}</div></div>
-    {% endif %}
-
     <div class="custom-container">
       <div class="form-group">
         <label for="id_username" class="form-label">E-mail</label>
@@ -94,16 +83,18 @@
       </div>
 
       <div class="remember-option mt-3 d-flex justify-content-between align-items-center">
-        <div class="form-check">
-          <input class="form-check-input" type="checkbox" value="1" id="lembrar" name="remember" />
+        <div class="form-check p-0">
+          <input class="checkbox_animated" type="checkbox" id="lembrar" name="remember" />
           <label class="form-check-label" for="lembrar">Lembrar-me</label>
         </div>
-        <a class="forgot" href="#">Esqueceu a senha?</a> {# TODO: sua rota real #}
+        <a class="forgot" href="#">Esqueceu a senha?</a>
       </div>
 
-      <button type="submit" class="btn theme-btn w-100">Entrar</button>
+      <button type="submit" class="btn theme-btn">Entrar</button>
 
-      <h4 class="signup">Não tem uma conta? <a href="{% url 'accounts:signup' %}">Cadastre-se</a></h4>
+      <h4 class="signup">Não tem uma conta?
+        <a href="{% url 'accounts:signup' %}"> Cadastre-se</a>
+      </h4>
 
       <div class="division"><span>OU</span></div>
 
@@ -118,8 +109,5 @@
   <script src="{% themed_static 'js/custom-feather.js' %}"></script>
   <script src="{% themed_static 'js/bootstrap.bundle.min.js' %}"></script>
   <script src="{% themed_static 'js/script.js' %}"></script>
-
-  <!-- failsafe: garante overrides por último em caso de injeção tardia -->
-  <script>(function(){var l=document.createElement('link');l.rel='stylesheet';l.href='{% themed_static "css/overrides.css" %}';document.head.appendChild(l);}())</script>
 </body>
 </html>

@@ -1,35 +1,43 @@
-/* Escopo isolado do tema MPay */
-.mpay-theme .theme-form .form-group {
-  display: block !important;              /* nada de grid/flex 2 colunas */
-  grid-template-columns: none !important;
+/* Escopo do tema MPay apenas nessas telas */
+.mpay-theme .theme-form .form-group { display:block !important; }
+.mpay-theme .theme-form .form-label{
+  display:block !important;
+  margin-bottom:.5rem !important;
+  color:#8E8E8E !important;            /* cor correta dos rótulos (não roxo) */
+  font-weight:600;
 }
 
-.mpay-theme .theme-form .form-label {
-  display: block !important;              /* label acima do input */
-  width: 100% !important;
-  margin-bottom: .5rem !important;
+/* Inputs 100% e visual do tema */
+.mpay-theme .theme-form .form-input,
+.mpay-theme .theme-form .form-control{
+  width:100% !important;
+  max-width:none !important;
+  box-sizing:border-box !important;
+}
+.mpay-theme .theme-form .form-control{
+  height:48px !important;
+  border-radius:12px !important;
 }
 
-.mpay-theme .theme-form .form-input {
-  width: 100% !important;
-  max-width: none !important;
+/* Checkbox custom do tema (independente do CSS legado) */
+.mpay-theme .theme-form .form-check{ position:relative; }
+.mpay-theme .theme-form .checkbox_animated{
+  position:absolute; opacity:0; width:0; height:0; left:0; top:0;
+}
+.mpay-theme .theme-form .form-check-label{
+  position:relative; padding-left:28px; cursor:pointer; color:#9AA0A6;
+}
+.mpay-theme .theme-form .form-check-label:before{
+  content:""; position:absolute; left:0; top:2px; width:18px; height:18px;
+  border:1px solid #DADCE0; border-radius:4px; background:#fff;
+}
+.mpay-theme .theme-form .checkbox_animated:checked + .form-check-label:before{
+  background:linear-gradient(90deg,#7B2CFF 0%, #6C2CF9 100%); border-color:transparent;
+}
+.mpay-theme .theme-form .checkbox_animated:checked + .form-check-label:after{
+  content:""; position:absolute; left:4px; top:6px; width:10px; height:5px;
+  border-left:2px solid #fff; border-bottom:2px solid #fff; transform:rotate(-45deg);
 }
 
-.mpay-theme .theme-form .form-input .form-control,
-.mpay-theme .theme-form .form-control {
-  width: 100% !important;
-  max-width: none !important;
-  display: block !important;
-  box-sizing: border-box !important;
-  height: 48px !important;
-  border-radius: 12px !important;
-}
-
-/* checkbox e botão */
-.mpay-theme .theme-form .form-check-input {
-  width: auto !important;
-  height: auto !important;
-}
-.mpay-theme .theme-form .btn {
-  width: 100% !important;
-}
+/* Botões */
+.mpay-theme .theme-form .btn{ width:100% !important; }
