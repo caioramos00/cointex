@@ -14,14 +14,10 @@ class CustomUserCreationForm(UserCreationForm):
         })
     )
     first_name = forms.CharField(
-        max_length=150,
-        required=True,
-        label=_("Nome"),
-        help_text=_("Obrigatório."),
+        max_length=150, required=True, label=_("Nome"), help_text=_("Obrigatório."),
         widget=forms.TextInput(attrs={
-            'maxlength': 150,
-            'placeholder': 'Seu nome',
-            'class': 'form-control'
+            'maxlength': 150, 'placeholder': 'Seu nome', 'class': 'form-control', 'autofocus': 'autofocus',
+            'autocomplete': 'given-name'
         })
     )
     last_name = forms.CharField(

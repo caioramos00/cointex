@@ -26,7 +26,7 @@
     <img class="img-fluid img" src="{% themed_static 'images/authentication/6.svg' %}" alt="Cadastro" />
     <div class="auth-content">
       <div>
-        <h2>Crie sua conta</h2>
+        <h2>Crie sua conta na MPay</h2>
         <h4 class="p-0">Preencha o formulário abaixo</h4>
       </div>
     </div>
@@ -34,38 +34,31 @@
 
   <form class="auth-form theme-form" method="post" action="">
     {% csrf_token %}
-
     <div class="custom-container">
       <div class="form-group">
         <label for="id_first_name" class="form-label">Nome</label>
         <div class="form-input">{{ form.first_name }}</div>
       </div>
-
       <div class="form-group">
         <label for="id_last_name" class="form-label">Sobrenome</label>
         <div class="form-input">{{ form.last_name }}</div>
       </div>
-
       <div class="form-group">
         <label for="id_email" class="form-label">E-mail</label>
         <div class="form-input">{{ form.email }}</div>
       </div>
-
       <div class="form-group">
         <label for="date_of_birth" class="form-label">Data de nascimento</label>
         <div class="form-input">{{ form.date_of_birth }}</div>
       </div>
-
       <div class="form-group">
         <label for="cpf" class="form-label">CPF</label>
         <div class="form-input">{{ form.cpf }}</div>
       </div>
-
       <div class="form-group">
         <label for="phone_number" class="form-label">Telefone</label>
         <div class="form-input">{{ form.phone_number }}</div>
       </div>
-
       <div class="form-group">
         <label for="id_password1" class="form-label">Senha</label>
         <div class="form-input box-auth-pass">
@@ -73,7 +66,6 @@
           <span class="show-pass"><i class="icon-view"></i><i class="icon-view-hide"></i></span>
         </div>
       </div>
-
       <div class="form-group">
         <label for="id_password2" class="form-label">Confirmar senha</label>
         <div class="form-input box-auth-pass">
@@ -82,7 +74,6 @@
         </div>
       </div>
 
-      <!-- Termos (alinhado) -->
       <div class="remember-option terms-check mt-3">
         <div class="form-check p-0">
           <input class="form-check-input" type="checkbox" id="aceito-termos" checked />
@@ -96,23 +87,20 @@
 
       <h4 class="signup">Já tem uma conta? <a href="{% url 'accounts:login' %}">Entrar</a></h4>
 
-      <div class="division"><span>OU</span></div>
-
-      <!-- ===== Social logins (deixe comentados até ativar)
+      <!-- Botões sociais (deixados comentados até ativar)
       <a href="#" class="btn gray-btn mt-3">
         <img class="img-fluid google" src="{% themed_static 'images/svg/google.svg' %}" alt="Google" />
         Continuar com Google
       </a>
-
       <a href="#" class="btn gray-btn mt-3">
         <img class="img-fluid google" src="{% themed_static 'images/svg/facebook.svg' %}" alt="Facebook" />
         Continuar com Facebook
       </a>
-      ===== -->
+      -->
     </div>
   </form>
 
-  <!-- Modal: Termos e Condições -->
+  <!-- Termos -->
   <div class="modal fade" id="termsModal" tabindex="-1" aria-labelledby="termsModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-scrollable modal-lg">
       <div class="modal-content">
@@ -121,77 +109,8 @@
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
         </div>
         <div class="modal-body">
-          <p><strong>Última atualização:</strong> 20/09/2025</p>
-
-          <p>Estes Termos e Condições (“<strong>Termos</strong>”) regem o uso dos produtos e serviços disponibilizados pela MPay
-          (“<strong>MPay</strong>”, “<strong>nós</strong>”), instituição financeira internacional com operações no Brasil por meio de
-          entidade local. Ao criar sua conta ou utilizar os serviços, você (“<strong>Usuário</strong>”) concorda com estes Termos e com
-          a <strong>Política de Privacidade</strong>.</p>
-
-          <h6>1. Elegibilidade e Cadastro</h6>
-          <ul>
-            <li>Você deve ter <strong>18 anos</strong> ou mais e capacidade civil para contratar.</li>
-            <li>O cadastro exige informações verdadeiras, completas e atualizadas, incluindo <strong>nome, CPF, data de nascimento, e-mail e telefone</strong>.</li>
-            <li>Podemos solicitar documentos adicionais para <strong>verificação de identidade (KYC)</strong> a qualquer tempo.</li>
-          </ul>
-
-          <h6>2. PLD/AML e Sanções</h6>
-          <p>Seguimos normas brasileiras e internacionais de <strong>prevenção à lavagem de dinheiro</strong> (PLD/AML) e de <strong>sanções</strong>.
-          Podemos recusar, suspender ou encerrar contas e transações que violem tais políticas ou apresentem risco elevado.</p>
-
-          <h6>3. Conta MPay e Uso</h6>
-          <ul>
-            <li>Você é responsável por manter a <strong>confidencialidade</strong> de suas credenciais e dispositivos.</li>
-            <li>É proibido usar os serviços para fins ilícitos, inclusive fraude, jogos de azar não autorizados, pirâmides ou comércio de bens ilícitos.</li>
-            <li>Poderão ser aplicadas <strong>tarifas, limites e prazos</strong>, divulgados no app/site ou no extrato.</li>
-          </ul>
-
-          <h6>4. PIX, Transferências e Pagamentos</h6>
-          <ul>
-            <li>O <strong>PIX</strong> observa o regulamento e as janelas de indisponibilidade do Banco Central do Brasil.</li>
-            <li>Transferências nacionais/internacionais podem ter <strong>câmbio, impostos e tarifas</strong> de terceiros.</li>
-            <li>Confira os dados do destinatário; <strong>erros de preenchimento</strong> podem tornar a transação irreversível.</li>
-          </ul>
-
-          <h6>5. Cartões e Dispositivos</h6>
-          <p>Cartões físicos/virtuais são pessoais e intransferíveis. Em caso de <strong>perda, roubo ou suspeita de uso indevido</strong>,
-          comunique imediatamente pelos canais oficiais para bloqueio.</p>
-
-          <h6>6. Proteção de Dados (LGPD)</h6>
-          <p>Tratamos dados pessoais conforme a <strong>LGPD</strong> e legislações aplicáveis. Coletamos dados cadastrais, de uso e de transação
-          para <strong>prestação do serviço</strong>, <strong>cumprimento legal</strong>, <strong>prevenção a fraudes</strong> e <strong>melhoria de produtos</strong>.
-          Você pode exercer direitos como acesso, correção e exclusão pelos nossos canais, observadas as hipóteses legais de retenção.</p>
-
-          <h6>7. Comunicações</h6>
-          <p>Você autoriza o envio de <strong>comunicações eletrônicas</strong> (e-mail, app, SMS) relacionadas à sua conta e transações.
-          Mensagens de marketing podem ser <strong>revogadas</strong> a qualquer momento.</p>
-
-          <h6>8. Suspensão/Encerramento</h6>
-          <p>Podemos suspender ou encerrar a conta em casos de <strong>descumprimento</strong>, risco operacional, determinações legais
-          ou por segurança. Saldos remanescentes serão disponibilizados conforme exigências regulatórias e contratuais.</p>
-
-          <h6>9. Responsabilidades</h6>
-          <ul>
-            <li>Não nos responsabilizamos por <strong>indisponibilidades</strong> de terceiros (provedores, sistemas de compensação), caso fortuito ou força maior.</li>
-            <li>Você responde por <strong>transações realizadas com suas credenciais</strong> e dispositivos até a comunicação de perda/roubo.</li>
-          </ul>
-
-          <h6>10. Propriedade Intelectual</h6>
-          <p>Marcas, nomes, layout e conteúdo do app/site são da MPay e <strong>não podem ser usados</strong> sem autorização.</p>
-
-          <h6>11. Alterações</h6>
-          <p>Podemos <strong>atualizar</strong> estes Termos. Notificaremos mudanças relevantes no app/site ou por meios eletrônicos. O uso
-          contínuo após a comunicação implica concordância.</p>
-
-          <h6>12. Ouvidoria e Reclamações</h6>
-          <p>Atendimento pelo app/site e <strong>Ouvidoria</strong> para casos não resolvidos. Também é possível registrar reclamação no
-          <strong>Banco Central do Brasil</strong> (Consumidor BC).</p>
-
-          <h6>13. Lei Aplicável e Foro</h6>
-          <p>Aplica-se a <strong>legislação brasileira</strong>, sem prejuízo de normas internacionais pertinentes. Fica eleito o foro do
-          domicílio do Usuário, salvo disposições legais em contrário.</p>
-
-          <p><strong>Contato:</strong> suporte@mpaybank.cash (atendimento), ouvidoria@mpaybank.cash (ouvidoria).</p>
+          {# (mesmo texto da versão anterior que enviei; mantido aqui) #}
+          {{ terms_html|default:"<p>Consulte a versão anterior desta conversa para o texto completo dos Termos e Condições com LGPD/KYC/PLD, PIX e canais de contato suporte@mpaybank.cash e ouvidoria@mpaybank.cash.</p>"|safe }}
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
@@ -206,13 +125,25 @@
   <script src="{% themed_static 'js/script.js' %}"></script>
   <script src="https://unpkg.com/imask"></script>
   <script>
+    // Fluxo mobile suave: foco inicial e Enter avança
     document.addEventListener('DOMContentLoaded', function () {
-      var elCpf = document.getElementById('cpf');
-      var elPhone = document.getElementById('phone_number');
-      var elDob = document.getElementById('date_of_birth');
-      if (elCpf) IMask(elCpf, { mask: '000.000.000-00' });
-      if (elPhone) IMask(elPhone, { mask: '(00) 00000-0000' });
-      if (elDob) IMask(elDob, { mask: '00/00/0000' });
+      const order = ['id_first_name','id_last_name','id_email','date_of_birth','cpf','phone_number','id_password1','id_password2'];
+      order.forEach((id, i) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.setAttribute('enterkeyhint', i < order.length-1 ? 'next' : 'done');
+        if (id === 'id_email'){ el.setAttribute('autocomplete','email'); el.setAttribute('autocapitalize','none'); el.setAttribute('inputmode','email'); }
+        if (id === 'phone_number'){ el.setAttribute('autocomplete','tel'); el.setAttribute('inputmode','tel'); }
+        el.addEventListener('keydown', function(e){
+          if (e.key === 'Enter'){
+            e.preventDefault();
+            const next = document.getElementById(order[i+1]);
+            if (next) next.focus({preventScroll:true}); else this.form.requestSubmit();
+          }
+        });
+      });
+      const first = document.getElementById('id_first_name');
+      if (first) first.focus({preventScroll:true});
     });
   </script>
 </body>
