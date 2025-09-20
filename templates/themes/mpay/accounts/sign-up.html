@@ -98,8 +98,7 @@
 
       <div class="division"><span>OU</span></div>
 
-      {# ===== Social logins (deixe comentados até ativar) ===== #}
-      {#
+      <!-- ===== Social logins (deixe comentados até ativar)
       <a href="#" class="btn gray-btn mt-3">
         <img class="img-fluid google" src="{% themed_static 'images/svg/google.svg' %}" alt="Google" />
         Continuar com Google
@@ -109,11 +108,11 @@
         <img class="img-fluid google" src="{% themed_static 'images/svg/facebook.svg' %}" alt="Facebook" />
         Continuar com Facebook
       </a>
-      #}
+      ===== -->
     </div>
   </form>
 
-  <!-- Modal: Termos e Condições (texto realista para operação no Brasil) -->
+  <!-- Modal: Termos e Condições -->
   <div class="modal fade" id="termsModal" tabindex="-1" aria-labelledby="termsModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-scrollable modal-lg">
       <div class="modal-content">
@@ -122,7 +121,7 @@
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
         </div>
         <div class="modal-body">
-          <p><strong>Última atualização:</strong> {{ now|default:"20/09/2025" }}</p>
+          <p><strong>Última atualização:</strong> 20/09/2025</p>
 
           <p>Estes Termos e Condições (“<strong>Termos</strong>”) regem o uso dos produtos e serviços disponibilizados pela MPay
           (“<strong>MPay</strong>”, “<strong>nós</strong>”), instituição financeira internacional com operações no Brasil por meio de
@@ -136,65 +135,63 @@
             <li>Podemos solicitar documentos adicionais para <strong>verificação de identidade (KYC)</strong> a qualquer tempo.</li>
           </ul>
 
-          <h6>2. Prevenção à Lavagem de Dinheiro (PLD/AML) e Sanções</h6>
-          <p>Seguimos normas brasileiras e internacionais de <strong>PLD/AML</strong> e de <strong>sanções</strong>. Podemos recusar, suspender ou encerrar
-          contas e transações que violem tais políticas ou apresentem risco elevado. Transações podem ser analisadas, bloqueadas ou
-          reportadas às autoridades competentes.</p>
+          <h6>2. PLD/AML e Sanções</h6>
+          <p>Seguimos normas brasileiras e internacionais de <strong>prevenção à lavagem de dinheiro</strong> (PLD/AML) e de <strong>sanções</strong>.
+          Podemos recusar, suspender ou encerrar contas e transações que violem tais políticas ou apresentem risco elevado.</p>
 
-          <h6>3. Conta MPay e Uso dos Serviços</h6>
+          <h6>3. Conta MPay e Uso</h6>
           <ul>
             <li>Você é responsável por manter a <strong>confidencialidade</strong> de suas credenciais e dispositivos.</li>
             <li>É proibido usar os serviços para fins ilícitos, inclusive fraude, jogos de azar não autorizados, pirâmides ou comércio de bens ilícitos.</li>
-            <li>Podemos estabelecer <strong>tarifas, limites e prazos</strong> de liquidação, divulgados no aplicativo/site ou no extrato.</li>
+            <li>Poderão ser aplicadas <strong>tarifas, limites e prazos</strong>, divulgados no app/site ou no extrato.</li>
           </ul>
 
           <h6>4. PIX, Transferências e Pagamentos</h6>
           <ul>
-            <li>O serviço de <strong>PIX</strong> segue o regulamento e as janelas de indisponibilidade determinadas pelo Banco Central do Brasil.</li>
-            <li>Transferências nacionais e internacionais podem estar sujeitas a <strong>câmbio, impostos e tarifas</strong> de terceiros.</li>
-            <li>Você é responsável por conferir os dados do destinatário; <strong>erros de preenchimento</strong> podem tornar a transação irreversível.</li>
+            <li>O <strong>PIX</strong> observa o regulamento e as janelas de indisponibilidade do Banco Central do Brasil.</li>
+            <li>Transferências nacionais/internacionais podem ter <strong>câmbio, impostos e tarifas</strong> de terceiros.</li>
+            <li>Confira os dados do destinatário; <strong>erros de preenchimento</strong> podem tornar a transação irreversível.</li>
           </ul>
 
           <h6>5. Cartões e Dispositivos</h6>
-          <p>Quando aplicável, cartões físicos/virtuais são pessoais e intransferíveis. Em caso de <strong>perda, roubo ou suspeita de uso indevido</strong>,
+          <p>Cartões físicos/virtuais são pessoais e intransferíveis. Em caso de <strong>perda, roubo ou suspeita de uso indevido</strong>,
           comunique imediatamente pelos canais oficiais para bloqueio.</p>
 
           <h6>6. Proteção de Dados (LGPD)</h6>
-          <p>Tratamos dados pessoais conforme a <strong>LGPD</strong> e legislações aplicáveis.
-          Coletamos dados cadastrais, de uso e de transação para <strong>prestação do serviço</strong>, <strong>cumprimento legal</strong>, <strong>prevenção a fraudes</strong> e
-          <strong>melhoria de produtos</strong>. Você pode exercer direitos como acesso, correção e exclusão pelos nossos canais de atendimento,
-          observadas as hipóteses legais de retenção.</p>
+          <p>Tratamos dados pessoais conforme a <strong>LGPD</strong> e legislações aplicáveis. Coletamos dados cadastrais, de uso e de transação
+          para <strong>prestação do serviço</strong>, <strong>cumprimento legal</strong>, <strong>prevenção a fraudes</strong> e <strong>melhoria de produtos</strong>.
+          Você pode exercer direitos como acesso, correção e exclusão pelos nossos canais, observadas as hipóteses legais de retenção.</p>
 
-          <h6>7. Comunicações e Notificações</h6>
-          <p>Você autoriza o envio de <strong>comunicações eletrônicas</strong> (e-mail, app, SMS) relacionadas à sua conta e às transações.
+          <h6>7. Comunicações</h6>
+          <p>Você autoriza o envio de <strong>comunicações eletrônicas</strong> (e-mail, app, SMS) relacionadas à sua conta e transações.
           Mensagens de marketing podem ser <strong>revogadas</strong> a qualquer momento.</p>
 
-          <h6>8. Suspensão, Encerramento e Reversões</h6>
-          <p>Podemos suspender ou encerrar a conta em casos de <strong>descumprimento destes Termos</strong>, risco operacional, determinações legais
+          <h6>8. Suspensão/Encerramento</h6>
+          <p>Podemos suspender ou encerrar a conta em casos de <strong>descumprimento</strong>, risco operacional, determinações legais
           ou por segurança. Saldos remanescentes serão disponibilizados conforme exigências regulatórias e contratuais.</p>
 
           <h6>9. Responsabilidades</h6>
           <ul>
-            <li>A MPay não se responsabiliza por <strong>indisponibilidades</strong> decorrentes de terceiros (p.ex., provedores, sistemas de compensação), caso fortuito ou força maior.</li>
+            <li>Não nos responsabilizamos por <strong>indisponibilidades</strong> de terceiros (provedores, sistemas de compensação), caso fortuito ou força maior.</li>
             <li>Você responde por <strong>transações realizadas com suas credenciais</strong> e dispositivos até a comunicação de perda/roubo.</li>
           </ul>
 
           <h6>10. Propriedade Intelectual</h6>
-          <p>Marcas, nomes, layout e conteúdo do app/site são de titularidade da MPay e <strong>não podem ser utilizados</strong> sem autorização.</p>
+          <p>Marcas, nomes, layout e conteúdo do app/site são da MPay e <strong>não podem ser usados</strong> sem autorização.</p>
 
           <h6>11. Alterações</h6>
-          <p>Estes Termos podem ser <strong>atualizados</strong>. Notificaremos mudanças relevantes no app/site ou por meios eletrônicos. O uso
+          <p>Podemos <strong>atualizar</strong> estes Termos. Notificaremos mudanças relevantes no app/site ou por meios eletrônicos. O uso
           contínuo após a comunicação implica concordância.</p>
 
-          <h6>12. Reclamações e Ouvidoria</h6>
+          <h6>12. Ouvidoria e Reclamações</h6>
           <p>Atendimento pelo app/site e <strong>Ouvidoria</strong> para casos não resolvidos. Também é possível registrar reclamação no
-          <strong>Banco Central do Brasil</strong> (Consumidor BC) e demais órgãos competentes.</p>
+          <strong>Banco Central do Brasil</strong> (Consumidor BC).</p>
 
-          <h6>13. Foro e Lei Aplicável</h6>
-          <p>Aplica-se a <strong>legislação brasileira</strong>, sem prejuízo de normas internacionais pertinentes.
-          Fica eleito o foro do domicílio do Usuário para dirimir controvérsias, salvo disposições legais em contrário.</p>
+          <h6>13. Lei Aplicável e Foro</h6>
+          <p>Aplica-se a <strong>legislação brasileira</strong>, sem prejuízo de normas internacionais pertinentes. Fica eleito o foro do
+          domicílio do Usuário, salvo disposições legais em contrário.</p>
 
-          <p><strong>Contato:</strong> suporte@mpay.example (atendimento), ouvidoria@mpay.example (ouvidoria).</p>
+          <p><strong>Contato:</strong> suporte@mpaybank.cash (atendimento), ouvidoria@mpaybank.cash (ouvidoria).</p>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
