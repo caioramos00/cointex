@@ -6,23 +6,20 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
   <meta name="theme-color" content="#122636"/>
-
   <title>MPay — Início</title>
-
-  <!-- CSS núcleo do tema MPay -->
+  
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="{% themed_static 'assets/css/vendors/bootstrap.min.css' %}">
-  <link rel="stylesheet" href="{% themed_static 'assets/css/vendors/feather.css' %}">
-  <link rel="stylesheet" href="{% themed_static 'assets/css/style.css' %}">
-  <link rel="stylesheet" href="{% themed_static 'assets/css/custom.css' %}">
+  <link rel="stylesheet" href="{% themed_static 'css/bootstrap.min.css' %}">
+  <link rel="stylesheet" href="{% themed_static 'css/feather.css' %}">
+  <link rel="stylesheet" href="{% themed_static 'css/style.css' %}">
+  <link rel="stylesheet" href="{% themed_static 'css/custom.css' %}">
 
-
-  <!-- Meta Pixel (copiado do Cointex) -->
+  
+  <!-- Meta Pixel (EXATAMENTE como no Cointex) -->
   <script>
         !function (f, b, e, v, n, t, s) {
             if (f.fbq) return; n = f.fbq = function () {
-                n.callMethod ?
-                n.callMethod.apply(n, arguments) : n.queue.push(arguments)
+                n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments)
             };
             if (!f._fbq) f._fbq = n; n.push = n; n.loaded = !0; n.version = '2.0';
             n.queue = []; t = b.createElement(e); t.async = !0;
@@ -43,10 +40,11 @@
         src="https://www.facebook.com/tr?id=780359434541574&ev=PageView&noscript=1" />
   </noscript>
 
-
+  
   <style>
     html, body {height:100%;}
-    .app-shell {min-height:100%; display:flex; flex-direction:column; background:#0f1f2c;}
+    body {background:#0f1f2c;}
+    .app-shell {min-height:100%; display:flex; flex-direction:column;}
     .app-content {flex:1 1 auto; position:relative; overflow:hidden;}
     .page {position:absolute; inset:0; overflow:auto; -webkit-overflow-scrolling:touch; display:none;}
     .page.active {display:block;}
@@ -55,2179 +53,2295 @@
     .app-nav .nav-link.active {color:#22c55e;}
     .page > .page-inner {min-height:100%; background:#0f1f2c;}
   </style>
+
 </head>
 <body class="app-shell">
-<main class="app-content">
 
-<section id="page-landing" class="page active">
-  <div class="page-inner">
+  <main class="app-content">
 
- side bar start 
-<div class="offcanvas sidebar-offcanvas offcanvas-start" id="offcanvasLeft" tabindex="-1">
-<div class="offcanvas-header sidebar-header">
-<div class="sidebar-logo">
-<img alt="logo" class="img-fluid logo"src="{% themed_static 'assets/images/logo/logo.png' %}"/>
-</div>
-<div class="balance">
-<img alt="auth-bg" class="img-fluid balance-bg"src="{% themed_static 'assets/images/background/auth-bg.jpg' %}"/>
-<h5>Balance</h5>
-<h2>$1,06,786.65</h2>
-</div>
-</div>
-<div class="offcanvas-body">
-<div class="sidebar-content">
-<ul class="link-section">
-<li>
-<a class="pages" href="landing.html">
-<i class="sidebar-icon" data-feather="credit-card"></i>
-<h3>mPay</h3>
-</a>
-</li>
-<li>
-<a class="pages" href="crypto.html">
-<i class="sidebar-icon" data-feather="dollar-sign"></i>
-<h3>Crypto</h3>
-</a>
-</li>
-<li>
-<a class="pages" href="page-list.html">
-<i class="sidebar-icon" data-feather="file-text"></i>
-<h3>Theme Pages</h3>
-</a>
-</li>
-<li>
-<a class="pages" href="component.html">
-<i class="sidebar-icon" data-feather="command"></i>
-<h3>Theme Components</h3>
-</a>
-</li>
-<li>
-<a class="pages" href="profile.html">
-<i class="sidebar-icon" data-feather="user"></i>
-<h3>Profile</h3>
-</a>
-</li>
-<li>
-<a class="pages" href="signin.html">
-<i class="sidebar-icon" data-feather="log-out"></i>
-<h3>Log out</h3>
-</a>
-</li>
-</ul>
-<div class="mode-switch">
-<ul class="switch-section">
-<li>
-<h3>RTL</h3>
-<div class="switch-btn">
-<input id="dir-switch" type="checkbox"/>
-</div>
-</li>
-<li>
-<h3>Dark</h3>
-<div class="switch-btn">
-<input id="dark-switch" type="checkbox"/>
-</div>
-</li>
-</ul>
-</div>
-</div>
-</div>
-</div>
- side bar end 
- header start 
-<header class="section-t-space">
-<div class="custom-container">
-<div class="header-panel">
-<a class="sidebar-btn" data-bs-target="#offcanvasLeft" data-bs-toggle="offcanvas">
-<i class="menu-icon" data-feather="menu"></i>
-</a>
-<img alt="logo" class="img-fluid logo"src="{% themed_static 'assets/images/logo/logo.png' %}"/>
-<a class="notification" href="notification.html">
-<i class="notification-icon" data-feather="bell"></i>
-</a>
-</div>
-</div>
-</header>
- header end 
- card start 
-<section class="section-b-space">
-<div class="custom-container">
-<div class="card-box">
-<div class="card-details">
-<div class="d-flex justify-content-between">
-<h5 class="fw-semibold">Total Balance</h5>
-<img alt="ellipse"src="{% themed_static 'assets/images/svg/ellipse.svg' %}"/>
-</div>
-<h1 class="mt-2 text-white">$ 1,06,786.65</h1>
-<div class="amount-details">
-<div class="amount w-50 text-start">
-<div class="d-flex align-items-center justify-content-start">
-<img alt="down" class="img-fluid icon"src="{% themed_static 'assets/images/svg/arrow-down-right.svg' %}"/>
-<h5>Income</h5>
-</div>
-<h3 class="text-white">$ 15,256.33</h3>
-</div>
-<div class="amount w-50 text-end border-0">
-<div class="d-flex align-items-center justify-content-end">
-<img alt="up" class="img-fluid icon"src="{% themed_static 'assets/images/svg/arrow-up-right.svg' %}"/>
-<h5>Expense</h5>
-</div>
-<h3 class="text-white">$ 91,530.32</h3>
-</div>
-</div>
-</div>
-<a class="add-money theme-color" data-bs-toggle="modal" href="#add-money">+ Add Money</a>
-</div>
-</div>
-</section>
- card end 
- categories section starts 
-<section class="categories-section section-b-space">
-<div class="custom-container">
-<ul class="categories-list">
-<li>
-<a href="transfer.html">
-<div class="categories-box">
-<i class="categories-icon" data-feather="repeat"></i>
-</div>
-<h5 class="mt-2 text-center">Transfer</h5>
-</a>
-</li>
-<li>
-<a href="bill.html">
-<div class="categories-box">
-<i class="categories-icon" data-feather="file-text"></i>
-</div>
-<h5 class="mt-2 text-center">Bill</h5>
-</a>
-</li>
-<li>
-<a href="request.html">
-<div class="categories-box">
-<i class="categories-icon icon1" data-feather="log-in"></i>
-</div>
-<h5 class="mt-2 text-center">Request</h5>
-</a>
-</li>
-<li>
-<a href="withdraw.html">
-<div class="categories-box">
-<i class="iconsax categories-icon" data-icon="bank"></i>
-</div>
-<h5 class="mt-2 text-center">Withdraw</h5>
-</a>
-</li>
-</ul>
-</div>
-</section>
- categories section end 
- service section starts 
-<section>
-<div class="custom-container">
-<div class="title">
-<h2>Select service</h2>
-<a href="service.html">See all</a>
-</div>
-<div class="row gy-3">
-<div class="col-3">
-<a href="service.html">
-<div class="service-box">
-<i class="service-icon" data-feather="activity"></i>
-</div>
-<h5 class="mt-2 text-center dark-text">Electricity</h5>
-</a>
-</div>
-<div class="col-3">
-<a href="service.html">
-<div class="service-box">
-<i class="service-icon" data-feather="droplet"></i>
-</div>
-<h5 class="mt-2 text-center dark-text">Water</h5>
-</a>
-</div>
-<div class="col-3">
-<a href="service.html">
-<div class="service-box">
-<i class="service-icon" data-feather="wifi"></i>
-</div>
-<h5 class="mt-2 text-center dark-text">Internet</h5>
-</a>
-</div>
-<div class="col-3">
-<a href="service.html">
-<div class="service-box">
-<i class="service-icon" data-feather="monitor"></i>
-</div>
-<h5 class="mt-2 text-center dark-text">Television</h5>
-</a>
-</div>
-<div class="col-3">
-<a href="service.html">
-<div class="service-box">
-<i class="service-icon" data-feather="bar-chart-2"></i>
-</div>
-<h5 class="mt-2 text-center dark-text">Investment</h5>
-</a>
-</div>
-<div class="col-3">
-<a href="service.html">
-<div class="service-box">
-<i class="service-icon" data-feather="tablet"></i>
-</div>
-<h5 class="mt-2 text-center dark-text">Mobile</h5>
-</a>
-</div>
-<div class="col-3">
-<a href="service.html">
-<div class="service-box">
-<i class="service-icon" data-feather="plus-square"></i>
-</div>
-<h5 class="mt-2 text-center dark-text">Medical</h5>
-</a>
-</div>
-<div class="col-3">
-<a href="service.html">
-<div class="service-box">
-<i class="service-icon" data-feather="more-horizontal"></i>
-</div>
-<h5 class="mt-2 text-center dark-text">Other</h5>
-</a>
-</div>
-</div>
-</div>
-</section>
- service section end 
- quick send section starts 
-<section>
-<div class="custom-container">
-<div class="title">
-<h2>Quick send to</h2>
-<a href="scan-pay.html">See all</a>
-</div>
-</div>
-<div class="quick-send">
-<div class="profile">
-<a class="profile new-profile" href="scan-pay.html">
-<div class="new-image">
-<i class="icon" data-feather="plus"></i>
-</div>
-</a>
-</div>
-<div class="profile">
-<a href="pay-money.html">
-<img alt="p1" class="img-fluid person-img"src="{% themed_static 'assets/images/person/p1.png' %}"/>
-</a>
-<h5>Mike</h5>
-</div>
-<div class="profile">
-<a href="pay-money.html">
-<img alt="p2" class="img-fluid person-img"src="{% themed_static 'assets/images/person/p2.png' %}"/>
-<h5>Michael</h5>
-</a>
-</div>
-<div class="profile">
-<a href="pay-money.html">
-<img alt="p3" class="img-fluid person-img"src="{% themed_static 'assets/images/person/p3.png' %}"/>
-<h5>Kristin</h5>
-</a>
-</div>
-<div class="profile">
-<a href="pay-money.html">
-<img alt="p4" class="img-fluid person-img"src="{% themed_static 'assets/images/person/p4.png' %}"/>
-<h5>Trunk</h5>
-</a>
-</div>
-<div class="profile">
-<a href="pay-money.html">
-<img alt="p5" class="img-fluid person-img"src="{% themed_static 'assets/images/person/p5.png' %}"/>
-<h5>Johnny</h5>
-</a>
-</div>
-</div>
-</section>
- quick send section end 
- Transaction section starts 
-<section>
-<div class="custom-container">
-<div class="title">
-<h2>Transaction</h2>
-<a href="transaction-history.html">See all</a>
-</div>
-<div class="row gy-3">
-<div class="col-12">
-<div class="transaction-box">
-<a class="d-flex gap-3" href="transaction-history.html">
-<div class="transaction-image">
-<img alt="p1" class="img-fluid transaction-icon"src="{% themed_static 'assets/images/svg/1.svg' %}"/>
-</div>
-<div class="transaction-details">
-<div class="transaction-name">
-<h5>Amazon prime</h5>
-<h3 class="error-color">$199.<span>99</span></h3>
-</div>
-<div class="d-flex justify-content-between">
-<h5 class="light-text">Subscription</h5>
-<h5 class="light-text">8:45 am</h5>
-</div>
-</div>
-</a>
-</div>
-</div>
-<div class="col-12">
-<div class="transaction-box">
-<a class="d-flex gap-3" href="transaction-history.html">
-<div class="transaction-image">
-<img alt="p2" class="img-fluid transaction-icon"src="{% themed_static 'assets/images/svg/2.svg' %}"/>
-</div>
-<div class="transaction-details">
-<div class="transaction-name">
-<h5>Apple store</h5>
-<h3 class="success-color">$60.<span>30</span></h3>
-</div>
-<div class="d-flex justify-content-between">
-<h5 class="light-text">Installment</h5>
-<h5 class="light-text">9:00 pm</h5>
-</div>
-</div>
-</a>
-</div>
-</div>
-<div class="col-12">
-<div class="transaction-box">
-<a class="d-flex gap-3" href="transaction-history.html">
-<div class="transaction-image">
-<img alt="p3" class="img-fluid transaction-icon"src="{% themed_static 'assets/images/svg/3.svg' %}"/>
-</div>
-<div class="transaction-details">
-<div class="transaction-name">
-<h5>Grocery shop</h5>
-<h3 class="error-color">$55.<span>20</span></h3>
-</div>
-<div class="d-flex justify-content-between">
-<h5 class="light-text">Purchase</h5>
-<h5 class="light-text">20 May</h5>
-</div>
-</div>
-</a>
-</div>
-</div>
-<div class="col-12">
-<div class="transaction-box">
-<a class="d-flex gap-3" href="transaction-history.html">
-<div class="transaction-image">
-<img alt="p4" class="img-fluid transaction-icon"src="{% themed_static 'assets/images/svg/4.svg' %}"/>
-</div>
-<div class="transaction-details">
-<div class="transaction-name">
-<h5>Sanpchat sub</h5>
-<h3 class="success-color">$18.<span>10</span></h3>
-</div>
-<div class="d-flex justify-content-between">
-<h5 class="light-text">Bill pay</h5>
-<h5 class="light-text">19 May</h5>
-</div>
-</div>
-</a>
-</div>
-</div>
-<div class="col-12">
-<div class="transaction-box">
-<a class="d-flex gap-3" href="transaction-history.html">
-<div class="transaction-image">
-<img alt="p5" class="img-fluid transaction-icon"src="{% themed_static 'assets/images/svg/5.svg' %}"/>
-</div>
-<div class="transaction-details">
-<div class="transaction-name">
-<h5>Spotify music</h5>
-<h3 class="success-color">$20.<span>50</span></h3>
-</div>
-<div class="d-flex justify-content-between">
-<h5 class="light-text">Transfer</h5>
-<h5 class="light-text">18 May</h5>
-</div>
-</div>
-</a>
-</div>
-</div>
-</div>
-</div>
-</section>
- Transaction section end 
- all cards section starts 
-<section>
-<div class="custom-container">
-<div class="title">
-<h2>All Cards</h2>
-<a href="cards.html">See all</a>
-</div>
-<div class="swiper card-slider">
-<div class="swiper-wrapper">
-<div class="swiper-slide">
-<div class="credit-card-box color1">
-<div class="card-logo">
-<img alt="logo1" class="img-fluid"src="{% themed_static 'assets/images/svg/logo1.svg' %}"/>
-<img alt="card-chip" class="img-fluid"src="{% themed_static 'assets/images/svg/card-chip.svg' %}"/>
-</div>
-<h6 class="card-number">**** **** **** 2563</h6>
-<h5 class="card-name">Survana Williams</h5>
-<h2 class="card-amount">$25,000.89</h2>
-<div class="d-block">
-<div class="card-date w-100">
-<h6>Exp. date</h6>
-<h6>Cvv</h6>
-</div>
-<div class="card-numbers w-100">
-<h6 class="text-white fw-semibold mt-1">12 /24</h6>
-<h6 class="text-white fw-semibold mt-1">***</h6>
-</div>
-</div>
-</div>
-</div>
-<div class="swiper-slide">
-<div class="credit-card-box color2">
-<div class="card-logo">
-<img alt="logo1" class="img-fluid"src="{% themed_static 'assets/images/svg/logo1.svg' %}"/>
-<img alt="card-chip" class="img-fluid"src="{% themed_static 'assets/images/svg/card-chip.svg' %}"/>
-</div>
-<h6 class="card-number">**** **** **** 2563</h6>
-<h5 class="card-name">Survana Williams</h5>
-<h2 class="card-amount">$25,000.89</h2>
-<div class="d-block">
-<div class="card-date w-100">
-<h6>Exp. date</h6>
-<h6>Cvv</h6>
-</div>
-<div class="card-numbers w-100">
-<h6 class="text-white fw-semibold mt-1">12 /24</h6>
-<h6 class="text-white fw-semibold mt-1">***</h6>
-</div>
-</div>
-</div>
-</div>
-<div class="swiper-slide">
-<div class="credit-card-box color3">
-<div class="card-logo">
-<img alt="logo1" class="img-fluid"src="{% themed_static 'assets/images/svg/logo1.svg' %}"/>
-<img alt="card-chip" class="img-fluid"src="{% themed_static 'assets/images/svg/card-chip.svg' %}"/>
-</div>
-<h6 class="card-number">**** **** **** 2563</h6>
-<h5 class="card-name">Survana Williams</h5>
-<h2 class="card-amount">$25,000.89</h2>
-<div class="d-block">
-<div class="card-date w-100">
-<h6>Exp. date</h6>
-<h6>Cvv</h6>
-</div>
-<div class="card-numbers w-100">
-<h6 class="text-white fw-semibold mt-1">12 /24</h6>
-<h6 class="text-white fw-semibold mt-1">***</h6>
-</div>
-</div>
-</div>
-</div>
-</div>
-</div>
-</div>
-</section>
- all cards section end 
- bill details section starts 
-<section>
-<div class="custom-container">
-<div class="title">
-<h2>Bills Detail</h2>
-<a href="bill.html">See all</a>
-</div>
-<div class="row g-3">
-<div class="col-md-3 col-6">
-<div class="bill-box">
-<div class="d-flex gap-3">
-<div class="bill-icon">
-<img alt="p6" class="img-fluid icon"src="{% themed_static 'assets/images/svg/6.svg' %}"/>
-</div>
-<div class="bill-details">
-<h5 class="dark-text">Airtel</h5>
-<h6 class="light-text mt-2">Pre-paid</h6>
-</div>
-</div>
-<div class="bill-price">
-<h5>$69.49</h5>
-<a class="btn bill-pay bill-paid" data-bs-toggle="modal" href="#pay">Pay</a>
-</div>
-</div>
-</div>
-<div class="col-md-3 col-6">
-<div class="bill-box">
-<div class="d-flex gap-3">
-<div class="bill-icon">
-<img alt="p7" class="img-fluid icon"src="{% themed_static 'assets/images/svg/7.svg' %}"/>
-</div>
-<div class="bill-details">
-<h5 class="dark-text">Apple</h5>
-<h6 class="light-text mt-2">Subscription</h6>
-</div>
-</div>
-<div class="bill-price">
-<h5>$49.85</h5>
-<a class="btn bill-pay bill-paid" data-bs-toggle="modal" href="#pay">Pay</a>
-</div>
-</div>
-</div>
-<div class="col-md-3 col-6">
-<div class="bill-box">
-<div class="d-flex gap-3">
-<div class="bill-icon">
-<img alt="p8" class="img-fluid icon"src="{% themed_static 'assets/images/svg/8.svg' %}"/>
-</div>
-<div class="bill-details">
-<h5 class="dark-text">TV</h5>
-<h6 class="light-text mt-2">Connection</h6>
-</div>
-</div>
-<div class="bill-price">
-<h5>$99.99</h5>
-<a class="btn bill-pay bill-paid" data-bs-toggle="modal" href="#pay">Pay</a>
-</div>
-</div>
-</div>
-<div class="col-md-3 col-6">
-<div class="bill-box">
-<div class="d-flex gap-3">
-<div class="bill-icon">
-<img alt="p9" class="img-fluid icon"src="{% themed_static 'assets/images/svg/9.svg' %}"/>
-</div>
-<div class="bill-details">
-<h5 class="dark-text">Torrent</h5>
-<h6 class="light-text mt-2">Electricity</h6>
-</div>
-</div>
-<div class="bill-price">
-<h5>$60.49</h5>
-<a class="btn bill-pay bill-paid" data-bs-toggle="modal" href="#pay">Pay</a>
-</div>
-</div>
-</div>
-</div>
-</div>
-</section>
- bill details section starts 
- saving plans section starts 
-<section>
-<div class="custom-container">
-<div class="title">
-<h2>My Saving Plans</h2>
-<a href="saving-plans.html">See all</a>
-</div>
-<div class="row">
-<div class="col-6">
-<div class="saving-plan-box">
-<div class="saving-plan-icon">
-<img alt="p10" class="img-fluid"src="{% themed_static 'assets/images/svg/10.svg' %}"/>
-</div>
-<h3>New Car</h3>
-<h6>Amount left</h6>
-<div aria-label="progressbar" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="progress" role="progressbar">
-<div class="progress-bar bar1"></div>
-</div>
-<div class="d-flex justify-content-between align-items-center mt-2">
-<h5 class="theme-color">$2,000.00</h5>
-<img alt="arrow" class="img-fluid arrow"src="{% themed_static 'assets/images/svg/arrow.svg' %}"/>
-</div>
-</div>
-</div>
-<div class="col-6">
-<div class="saving-plan-box">
-<div class="saving-plan-icon">
-<img alt="p11" class="img-fluid"src="{% themed_static 'assets/images/svg/11.svg' %}"/>
-</div>
-<h3>Grand Home</h3>
-<h6>Amount left</h6>
-<div aria-label="progressbar" aria-valuemax="100" aria-valuemin="0" aria-valuenow="0" class="progress" role="progressbar">
-<div class="progress-bar bar2"></div>
-</div>
-<div class="d-flex justify-content-between align-items-center mt-2">
-<h5 class="theme-color">$2,000.00</h5>
-<img alt="arrow" class="img-fluid arrow"src="{% themed_static 'assets/images/svg/arrow.svg' %}"/>
-</div>
-</div>
-</div>
-</div>
-</div>
-</section>
- saving plans section end 
- monthly statistics section starts 
-<section>
-<div class="custom-container">
-<div class="statistics-banner">
-<div class="d-flex justify-content-center gap-3">
-<div class="statistics-image">
-<i class="icon" data-feather="bar-chart-2"></i>
-</div>
-<div class="statistics-content d-block">
-<h5>Monthly Statistics</h5>
-<h6>30% better performance than previous</h6>
-</div>
-</div>
-</div>
-</div>
-</section>
- monthly statistics section end 
- news-update section starts 
-<section class="section-b-space">
-<div class="custom-container">
-<div class="title">
-<h2>News Update</h2>
-<a href="news-update.html">See all</a>
-</div>
-<div class="row gy-3">
-<div class="col-12">
-<div class="news-update-box">
-<div class="d-flex align-items-center gap-3">
-<a href="news-update-details.html">
-<img alt="img1" class="img-fluid news-update-image"src="{% themed_static 'assets/images/1.jpg' %}"/>
-</a>
-<div class="news-update-content">
-<a href="news-update-details.html">
-<h3>Save and invest to obtain more</h3>
-</a>
-<div class="news-writer">
-<h6>13 May, 23</h6>
-<h6>-Smith</h6>
-</div>
-</div>
-</div>
-</div>
-</div>
-<div class="col-12">
-<div class="news-update-box">
-<div class="d-flex align-items-center gap-3">
-<a href="news-update-details.html">
-<img alt="img2" class="img-fluid news-update-image"src="{% themed_static 'assets/images/2.jpg' %}"/>
-</a>
-<div class="news-update-content">
-<a href="news-update-details.html">
-<h3>How to get more money from savings</h3>
-</a>
-<div class="news-writer">
-<h6>10 May, 23</h6>
-<h6>-Laila</h6>
-</div>
-</div>
-</div>
-</div>
-</div>
-<div class="col-12">
-<div class="news-update-box">
-<div class="d-flex align-items-center gap-3">
-<a href="news-update-details.html">
-<img alt="img3" class="img-fluid news-update-image"src="{% themed_static 'assets/images/3.jpg' %}"/>
-</a>
-<div class="news-update-content">
-<a href="news-update-details.html">
-<h3>5 Tips on expand your business</h3>
-</a>
-<div class="news-writer">
-<h6>6 May, 23</h6>
-<h6>-Brunt</h6>
-</div>
-</div>
-</div>
-</div>
-</div>
-</div>
-</div>
-</section>
- news-update section end 
- panel-space start 
-<section class="panel-space"></section>
- panel-space end 
- bottom navbar start 
-<div class="navbar-menu">
-<div class="scanner-bg">
-<a class="scanner-btn" href="scan-pay.html">
-<img alt="scan" class="img-fluid"src="{% themed_static 'assets/images/svg/scan.svg' %}"/>
-</a>
-</div>
-<ul>
-<li class="active">
-<a href="landing.html">
-<div class="icon">
-<img alt="mPay" class="unactive"src="{% themed_static 'assets/images/svg/mpay.svg' %}"/>
-<img alt="mPay" class="active"src="{% themed_static 'assets/images/svg/mpay-fill.svg' %}"/>
-</div>
-<h5 class="active">mPay</h5>
-</a>
-</li>
-<li>
-<a href="crypto.html">
-<div class="icon">
-<img alt="categories" class="unactive"src="{% themed_static 'assets/images/svg/bitcoin.svg' %}"/>
-<img alt="categories" class="active"src="{% themed_static 'assets/images/svg/bitcoin-fill.svg' %}"/>
-</div>
-<h5>Crypto</h5>
-</a>
-</li>
-<li></li>
-<li>
-<a href="insight.html">
-<div class="icon">
-<img alt="bag" class="unactive"src="{% themed_static 'assets/images/svg/bar-chart.svg' %}"/>
-<img alt="bag" class="active"src="{% themed_static 'assets/images/svg/bar-chart-fill.svg' %}"/>
-</div>
-<h5>Insight</h5>
-</a>
-</li>
-<li>
-<a href="profile.html">
-<div class="icon">
-<img alt="profile" class="unactive"src="{% themed_static 'assets/images/svg/user.svg' %}"/>
-<img alt="profile" class="active"src="{% themed_static 'assets/images/svg/user-fill.svg' %}"/>
-</div>
-<h5>Profile</h5>
-</a>
-</li>
-</ul>
-</div>
- bottom navbar end 
- add money modal start 
-<div class="modal add-money-modal fade" id="add-money" tabindex="-1">
-<div class="modal-dialog modal-dialog-centered">
-<div class="modal-content">
-<div class="modal-header">
-<h2 class="modal-title">Add Money</h2>
-</div>
-<div class="modal-body">
-<div class="form-group">
-<label class="form-label mb-2" for="inputcard">From</label>
-<div class="d-flex gap-2">
-<select class="form-select" id="inputcard">
-<option selected="">**** **** **** 1566 - Saving a/c</option>
-<option>**** **** **** 1566 - Saving a/c</option>
-<option>**** **** **** 1566 - Saving a/c</option>
-</select>
-</div>
-</div>
-<div class="form-group">
-<label class="form-label mb-2" for="inputamount">Amount</label>
-<div class="form-input">
-<input class="form-control" id="inputamount" type="number"/>
-</div>
-</div>
-<a class="btn theme-btn successfully w-100" href="landing.html">Deposit</a>
-</div>
-<button class="btn close-btn" data-bs-dismiss="modal" type="button">
-<i class="icon" data-feather="x"></i>
-</button>
-</div>
-</div>
-</div>
- add money modal end 
- pay modal starts 
-<div class="modal pay-modal fade" id="pay" tabindex="-1">
-<div class="modal-dialog modal-dialog-centered">
-<div class="modal-content">
-<div class="modal-header">
-<h2 class="modal-title">Apple Bill Detail</h2>
-</div>
-<div class="modal-body">
-<ul class="details-list">
-<li>
-<h3 class="fw-normal dark-text">Amount</h3>
-<h3 class="fw-semibold theme-color">$49.85</h3>
-</li>
-<li>
-<h3 class="fw-normal dark-text">Bill date</h3>
-<h3 class="fw-normal light-text">10 May, 2023</h3>
-</li>
-<li>
-<h3 class="fw-normal dark-text">Due Date</h3>
-<h3 class="fw-normal error-color">31 May, 2023</h3>
-</li>
-<li>
-<h3 class="fw-normal dark-text">Bill number</h3>
-<h3 class="fw-normal light-text">BM452695523</h3>
-</li>
-<li>
-<h3 class="fw-normal dark-text">Mobile number</h3>
-<h3 class="fw-normal light-text">+91 ***** **256</h3>
-</li>
-<li>
-<h3 class="fw-normal dark-text">Bill status</h3>
-<h3 class="fw-semibold error-color">Unpaid</h3>
-</li>
-</ul>
-<a class="btn theme-btn successfully w-100" href="make-payment.html">Pay</a>
-</div>
-<button class="btn close-btn" data-bs-dismiss="modal" type="button">
-<i class="icon" data-feather="x"></i>
-</button>
-</div>
-</div>
-</div>
- pay modal end 
- paid modal starts 
-<div class="modal pay-modal fade" id="paid" tabindex="-1">
-<div class="modal-dialog modal-dialog-centered">
-<div class="modal-content">
-<div class="modal-header">
-<h2 class="modal-title">Mobile Bill Detail</h2>
-</div>
-<div class="modal-body">
-<ul class="details-list">
-<li>
-<h3 class="fw-normal dark-text">Amount</h3>
-<h3 class="fw-semibold theme-color">$69.49</h3>
-</li>
-<li>
-<h3 class="fw-normal dark-text">Bill date</h3>
-<h3 class="fw-normal light-text">10 May, 2023</h3>
-</li>
-<li>
-<h3 class="fw-normal dark-text">Due Date</h3>
-<h3 class="fw-normal light-text">22 May, 2023</h3>
-</li>
-<li>
-<h3 class="fw-normal dark-text">Bill number</h3>
-<h3 class="fw-normal light-text">BM452695523</h3>
-</li>
-<li>
-<h3 class="fw-normal dark-text">Mobile number</h3>
-<h3 class="fw-normal light-text">+91 ***** **256</h3>
-</li>
-<li>
-<h3 class="fw-normal dark-text">Bill status</h3>
-<h3 class="fw-semibold theme-color">Paid</h3>
-</li>
-</ul>
-<a class="btn theme-btn successfully w-100" href="landing.html">Paid - Thank you !</a>
-</div>
-<button class="btn close-btn" data-bs-dismiss="modal" type="button">
-<i class="icon" data-feather="x"></i>
-</button>
-</div>
-</div>
-</div>
- paid modal end 
- pwa install app popup start 
-<div class="offcanvas offcanvas-bottom addtohome-popup theme-offcanvas" id="offcanvas" tabindex="-1">
-<button aria-label="Close" class="btn-close text-reset" data-bs-dismiss="offcanvas" type="button"></button>
-<div class="offcanvas-body small">
-<div class="app-info">
-<img alt="" class="img-fluid"src="{% themed_static 'assets/images/logo/48.png' %}"/>
-<div class="content">
-<h4>mPay App</h4>
-<a href="#">www.mPay-app.com</a>
-</div>
-</div>
-<a class="btn theme-btn install-app btn-inline home-screen-btn m-0" href="#!" id="installapp">Add to Home
+    <section id="page-landing" class="page active">
+      <div class="page-inner">
+        
+  <!-- side bar start -->
+  <div class="offcanvas sidebar-offcanvas offcanvas-start" tabindex="-1" id="offcanvasLeft">
+    <div class="offcanvas-header sidebar-header">
+      <div class="sidebar-logo">
+        <img class="img-fluid logo" src="{% themed_static 'images/logo/logo.png' %}" alt="logo" />
+      </div>
+      <div class="Saldo">
+        <img class="img-fluid Saldo-bg" src="{% themed_static 'images/background/auth-bg.jpg' %}" alt="auth-bg" />
+        <h5>Saldo</h5>
+        <h2>$1,06,786.65</h2>
+      </div>
+    </div>
+    <div class="offcanvas-body">
+      <div class="sidebar-content">
+        <ul class="link-section">
+          <li>
+            <a href="Início.html" class="pages">
+              <i class="sidebar-icon" data-feather="credit-card"></i>
+              <h3>mPay</h3>
+            </a>
+          </li>
+          <li>
+            <a href="Cripto.html" class="pages">
+              <i class="sidebar-icon" data-feather="dollar-sign"></i>
+              <h3>Cripto</h3>
+            </a>
+          </li>
+          <li>
+            <a href="page-list.html" class="pages">
+              <i class="sidebar-icon" data-feather="file-text"></i>
+              <h3>Theme Pages</h3>
+            </a>
+          </li>
+          <li>
+            <a href="component.html" class="pages">
+              <i class="sidebar-icon" data-feather="command"></i>
+              <h3>Theme Components</h3>
+            </a>
+          </li>
+
+          <li>
+            <a href="Perfil.html" class="pages">
+              <i class="sidebar-icon" data-feather="user"></i>
+              <h3>Perfil</h3>
+            </a>
+          </li>
+
+          <li>
+            <a href="signin.html" class="pages">
+              <i class="sidebar-icon" data-feather="log-out"></i>
+              <h3>Sair</h3>
+            </a>
+          </li>
+        </ul>
+        <div class="mode-switch">
+          <ul class="switch-section">
+            <li>
+              <h3>RTL</h3>
+              <div class="switch-btn">
+                <input id="dir-switch" type="checkbox" />
+              </div>
+            </li>
+            <li>
+              <h3>Dark</h3>
+              <div class="switch-btn">
+                <input id="dark-switch" type="checkbox" />
+              </div>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- side bar end -->
+
+  <!-- header start -->
+  <header class="section-t-space">
+    <div class="custom-container">
+      <div class="header-panel">
+        <a class="sidebar-btn" data-bs-toggle="offcanvas" data-bs-target="#offcanvasLeft">
+          <i class="menu-icon" data-feather="menu"></i>
+        </a>
+        <img class="img-fluid logo" src="{% themed_static 'images/logo/logo.png' %}" alt="logo" />
+
+        <a href="Notificações.html" class="Notificações">
+          <i class="Notificações-icon" data-feather="bell"></i>
+        </a>
+      </div>
+    </div>
+  </header>
+  <!-- header end -->
+
+  <!-- card start -->
+  <section class="section-b-space">
+    <div class="custom-container">
+      <div class="card-box">
+        <div class="card-details">
+          <div class="d-flex justify-content-between">
+            <h5 class="fw-semibold">Total Saldo</h5>
+            <img src="{% themed_static 'images/svg/ellipse.svg' %}" alt="ellipse" />
+          </div>
+
+          <h1 class="mt-2 text-white">$ 1,06,786.65</h1>
+
+          <div class="amount-details">
+            <div class="amount w-50 text-start">
+              <div class="d-flex align-items-center justify-content-start">
+                <img class="img-fluid icon" src="{% themed_static 'images/svg/arrow-down-right.svg' %}" alt="down" />
+                <h5>Income</h5>
+              </div>
+              <h3 class="text-white">$ 15,256.33</h3>
+            </div>
+            <div class="amount w-50 text-end border-0">
+              <div class="d-flex align-items-center justify-content-end">
+                <img class="img-fluid icon" src="{% themed_static 'images/svg/arrow-up-right.svg' %}" alt="up" />
+                <h5>Expense</h5>
+              </div>
+              <h3 class="text-white">$ 91,530.32</h3>
+            </div>
+          </div>
+        </div>
+        <a href="#add-money" class="add-money theme-color" data-bs-toggle="modal">+ Add Money</a>
+      </div>
+    </div>
+  </section>
+  <!-- card end -->
+
+  <!-- categories section starts -->
+  <section class="categories-section section-b-space">
+    <div class="custom-container">
+      <ul class="categories-list">
+        <li>
+          <a href="transfer.html">
+            <div class="categories-box">
+              <i class="categories-icon" data-feather="repeat"></i>
+            </div>
+            <h5 class="mt-2 text-center">Transfer</h5>
+          </a>
+        </li>
+        <li>
+          <a href="bill.html">
+            <div class="categories-box">
+              <i class="categories-icon" data-feather="file-text"></i>
+            </div>
+            <h5 class="mt-2 text-center">Bill</h5>
+          </a>
+        </li>
+        <li>
+          <a href="request.html">
+            <div class="categories-box">
+              <i class="categories-icon icon1" data-feather="log-in"></i>
+            </div>
+            <h5 class="mt-2 text-center">Request</h5>
+          </a>
+        </li>
+        <li>
+          <a href="Sacar.html">
+            <div class="categories-box">
+              <i class="iconsax categories-icon" data-icon="bank"></i>
+            </div>
+            <h5 class="mt-2 text-center">Sacar</h5>
+          </a>
+        </li>
+      </ul>
+    </div>
+  </section>
+  <!-- categories section end -->
+
+  <!-- service section starts -->
+  <section>
+    <div class="custom-container">
+      <div class="title">
+        <h2>Select service</h2>
+        <a href="service.html">See all</a>
+      </div>
+      <div class="row gy-3">
+        <div class="col-3">
+          <a href="service.html">
+            <div class="service-box">
+              <i class="service-icon" data-feather="activity"></i>
+            </div>
+            <h5 class="mt-2 text-center dark-text">Electricity</h5>
+          </a>
+        </div>
+
+        <div class="col-3">
+          <a href="service.html">
+            <div class="service-box">
+              <i class="service-icon" data-feather="droplet"></i>
+            </div>
+            <h5 class="mt-2 text-center dark-text">Water</h5>
+          </a>
+        </div>
+        <div class="col-3">
+          <a href="service.html">
+            <div class="service-box">
+              <i class="service-icon" data-feather="wifi"></i>
+            </div>
+            <h5 class="mt-2 text-center dark-text">Internet</h5>
+          </a>
+        </div>
+
+        <div class="col-3">
+          <a href="service.html">
+            <div class="service-box">
+              <i class="service-icon" data-feather="monitor"></i>
+            </div>
+            <h5 class="mt-2 text-center dark-text">Television</h5>
+          </a>
+        </div>
+        <div class="col-3">
+          <a href="service.html">
+            <div class="service-box">
+              <i class="service-icon" data-feather="bar-chart-2"></i>
+            </div>
+            <h5 class="mt-2 text-center dark-text">Investment</h5>
+          </a>
+        </div>
+        <div class="col-3">
+          <a href="service.html">
+            <div class="service-box">
+              <i class="service-icon" data-feather="tablet"></i>
+            </div>
+            <h5 class="mt-2 text-center dark-text">Mobile</h5>
+          </a>
+        </div>
+        <div class="col-3">
+          <a href="service.html">
+            <div class="service-box">
+              <i class="service-icon" data-feather="plus-square"></i>
+            </div>
+            <h5 class="mt-2 text-center dark-text">Medical</h5>
+          </a>
+        </div>
+        <div class="col-3">
+          <a href="service.html">
+            <div class="service-box">
+              <i class="service-icon" data-feather="more-horizontal"></i>
+            </div>
+            <h5 class="mt-2 text-center dark-text">Other</h5>
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+  <!-- service section end -->
+
+  <!-- quick Enviar section starts -->
+  <section>
+    <div class="custom-container">
+      <div class="title">
+        <h2>Quick Enviar to</h2>
+        <a href="scan-pay.html">See all</a>
+      </div>
+    </div>
+    <div class="quick-Enviar">
+      <div class="Perfil">
+        <a href="scan-pay.html" class="Perfil new-Perfil">
+          <div class="new-image">
+            <i class="icon" data-feather="plus"></i>
+          </div>
+        </a>
+      </div>
+
+      <div class="Perfil">
+         <a href="pay-money.html">
+          <img class="img-fluid person-img" src="{% themed_static 'images/person/p1.png' %}" alt="p1" />
+        </a>
+        <h5>Mike</h5>
+      </div>
+
+      <div class="Perfil">
+         <a href="pay-money.html">
+          <img class="img-fluid person-img" src="{% themed_static 'images/person/p2.png' %}" alt="p2" />
+          <h5>Michael</h5>
+        </a>
+      </div>
+
+      <div class="Perfil">
+         <a href="pay-money.html">
+          <img class="img-fluid person-img" src="{% themed_static 'images/person/p3.png' %}" alt="p3" />
+          <h5>Kristin</h5>
+        </a>
+      </div>
+
+      <div class="Perfil">
+         <a href="pay-money.html">
+          <img class="img-fluid person-img" src="{% themed_static 'images/person/p4.png' %}" alt="p4" />
+          <h5>Trunk</h5>
+        </a>
+      </div>
+
+      <div class="Perfil">
+         <a href="pay-money.html">
+          <img class="img-fluid person-img" src="{% themed_static 'images/person/p5.png' %}" alt="p5" />
+          <h5>Johnny</h5>
+        </a>
+      </div>
+    </div>
+  </section>
+  <!-- quick Enviar section end -->
+
+  <!-- Transações section starts -->
+  <section>
+    <div class="custom-container">
+      <div class="title">
+        <h2>Transações</h2>
+        <a href="Transações-Histórico.html">See all</a>
+      </div>
+
+      <div class="row gy-3">
+        <div class="col-12">
+          <div class="Transações-box">
+            <a href="Transações-Histórico.html" class="d-flex gap-3">
+              <div class="Transações-image">
+                <img class="img-fluid Transações-icon" src="{% themed_static 'images/svg/1.svg' %}" alt="p1" />
+              </div>
+              <div class="Transações-details">
+                <div class="Transações-name">
+                  <h5>Amazon prime</h5>
+                  <h3 class="error-color">$199.<span>99</span></h3>
+                </div>
+                <div class="d-flex justify-content-between">
+                  <h5 class="light-text">Subscription</h5>
+                  <h5 class="light-text">8:45 am</h5>
+                </div>
+              </div>
+            </a>
+          </div>
+        </div>
+        <div class="col-12">
+          <div class="Transações-box">
+            <a href="Transações-Histórico.html" class="d-flex gap-3">
+              <div class="Transações-image">
+                <img class="img-fluid Transações-icon" src="{% themed_static 'images/svg/2.svg' %}" alt="p2" />
+              </div>
+              <div class="Transações-details">
+                <div class="Transações-name">
+                  <h5>Apple store</h5>
+                  <h3 class="success-color">$60.<span>30</span></h3>
+                </div>
+                <div class="d-flex justify-content-between">
+                  <h5 class="light-text">Installment</h5>
+                  <h5 class="light-text">9:00 pm</h5>
+                </div>
+              </div>
+            </a>
+          </div>
+        </div>
+        <div class="col-12">
+          <div class="Transações-box">
+            <a href="Transações-Histórico.html" class="d-flex gap-3">
+              <div class="Transações-image">
+                <img class="img-fluid Transações-icon" src="{% themed_static 'images/svg/3.svg' %}" alt="p3" />
+              </div>
+              <div class="Transações-details">
+                <div class="Transações-name">
+                  <h5>Grocery shop</h5>
+                  <h3 class="error-color">$55.<span>20</span></h3>
+                </div>
+                <div class="d-flex justify-content-between">
+                  <h5 class="light-text">Purchase</h5>
+                  <h5 class="light-text">20 May</h5>
+                </div>
+              </div>
+            </a>
+          </div>
+        </div>
+        <div class="col-12">
+          <div class="Transações-box">
+            <a href="Transações-Histórico.html" class="d-flex gap-3">
+              <div class="Transações-image">
+                <img class="img-fluid Transações-icon" src="{% themed_static 'images/svg/4.svg' %}" alt="p4" />
+              </div>
+              <div class="Transações-details">
+                <div class="Transações-name">
+                  <h5>Sanpchat sub</h5>
+                  <h3 class="success-color">$18.<span>10</span></h3>
+                </div>
+                <div class="d-flex justify-content-between">
+                  <h5 class="light-text">Bill pay</h5>
+                  <h5 class="light-text">19 May</h5>
+                </div>
+              </div>
+            </a>
+          </div>
+        </div>
+        <div class="col-12">
+          <div class="Transações-box">
+            <a href="Transações-Histórico.html" class="d-flex gap-3">
+              <div class="Transações-image">
+                <img class="img-fluid Transações-icon" src="{% themed_static 'images/svg/5.svg' %}" alt="p5" />
+              </div>
+              <div class="Transações-details">
+                <div class="Transações-name">
+                  <h5>Spotify music</h5>
+                  <h3 class="success-color">$20.<span>50</span></h3>
+                </div>
+                <div class="d-flex justify-content-between">
+                  <h5 class="light-text">Transfer</h5>
+                  <h5 class="light-text">18 May</h5>
+                </div>
+              </div>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <!-- Transações section end -->
+
+  <!-- all cards section starts -->
+  <section>
+    <div class="custom-container">
+      <div class="title">
+        <h2>All Cards</h2>
+        <a href="cards.html">See all</a>
+      </div>
+
+      <div class="swiper card-slider">
+        <div class="swiper-wrapper">
+          <div class="swiper-slide">
+            <div class="credit-card-box color1">
+              <div class="card-logo">
+                <img class="img-fluid" src="{% themed_static 'images/svg/logo1.svg' %}" alt="logo1" />
+                <img class="img-fluid" src="{% themed_static 'images/svg/card-chip.svg' %}" alt="card-chip" />
+              </div>
+              <h6 class="card-number">**** **** **** 2563</h6>
+              <h5 class="card-name">Survana Williams</h5>
+              <h2 class="card-amount">$25,000.89</h2>
+              <div class="d-block">
+                <div class="card-date w-100">
+                  <h6>Exp. date</h6>
+                  <h6>Cvv</h6>
+                </div>
+                <div class="card-numbers w-100">
+                  <h6 class="text-white fw-semibold mt-1">12 /24</h6>
+                  <h6 class="text-white fw-semibold mt-1">***</h6>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="swiper-slide">
+            <div class="credit-card-box color2">
+              <div class="card-logo">
+                <img class="img-fluid" src="{% themed_static 'images/svg/logo1.svg' %}" alt="logo1" />
+                <img class="img-fluid" src="{% themed_static 'images/svg/card-chip.svg' %}" alt="card-chip" />
+              </div>
+              <h6 class="card-number">**** **** **** 2563</h6>
+              <h5 class="card-name">Survana Williams</h5>
+              <h2 class="card-amount">$25,000.89</h2>
+              <div class="d-block">
+                <div class="card-date w-100">
+                  <h6>Exp. date</h6>
+                  <h6>Cvv</h6>
+                </div>
+                <div class="card-numbers w-100">
+                  <h6 class="text-white fw-semibold mt-1">12 /24</h6>
+                  <h6 class="text-white fw-semibold mt-1">***</h6>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="swiper-slide">
+            <div class="credit-card-box color3">
+              <div class="card-logo">
+                <img class="img-fluid" src="{% themed_static 'images/svg/logo1.svg' %}" alt="logo1" />
+                <img class="img-fluid" src="{% themed_static 'images/svg/card-chip.svg' %}" alt="card-chip" />
+              </div>
+              <h6 class="card-number">**** **** **** 2563</h6>
+              <h5 class="card-name">Survana Williams</h5>
+              <h2 class="card-amount">$25,000.89</h2>
+              <div class="d-block">
+                <div class="card-date w-100">
+                  <h6>Exp. date</h6>
+                  <h6>Cvv</h6>
+                </div>
+                <div class="card-numbers w-100">
+                  <h6 class="text-white fw-semibold mt-1">12 /24</h6>
+                  <h6 class="text-white fw-semibold mt-1">***</h6>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <!-- all cards section end -->
+
+  <!-- bill details section starts -->
+  <section>
+    <div class="custom-container">
+      <div class="title">
+        <h2>Bills Detail</h2>
+        <a href="bill.html">See all</a>
+      </div>
+      <div class="row g-3">
+        <div class="col-md-3 col-6">
+          <div class="bill-box">
+            <div class="d-flex gap-3">
+              <div class="bill-icon">
+                <img class="img-fluid icon" src="{% themed_static 'images/svg/6.svg' %}" alt="p6" />
+              </div>
+              <div class="bill-details">
+                <h5 class="dark-text">Airtel</h5>
+                <h6 class="light-text mt-2">Pre-paid</h6>
+              </div>
+            </div>
+            <div class="bill-price">
+              <h5>$69.49</h5>
+              <a href="#pay" data-bs-toggle="modal" class="btn bill-pay bill-paid">Pay</a>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3 col-6">
+          <div class="bill-box">
+            <div class="d-flex gap-3">
+              <div class="bill-icon">
+                <img class="img-fluid icon" src="{% themed_static 'images/svg/7.svg' %}" alt="p7" />
+              </div>
+              <div class="bill-details">
+                <h5 class="dark-text">Apple</h5>
+                <h6 class="light-text mt-2">Subscription</h6>
+              </div>
+            </div>
+            <div class="bill-price">
+              <h5>$49.85</h5>
+              <a href="#pay" data-bs-toggle="modal" class="btn bill-pay bill-paid">Pay</a>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3 col-6">
+          <div class="bill-box">
+            <div class="d-flex gap-3">
+              <div class="bill-icon">
+                <img class="img-fluid icon" src="{% themed_static 'images/svg/8.svg' %}" alt="p8" />
+              </div>
+              <div class="bill-details">
+                <h5 class="dark-text">TV</h5>
+                <h6 class="light-text mt-2">Connection</h6>
+              </div>
+            </div>
+            <div class="bill-price">
+              <h5>$99.99</h5>
+              <a href="#pay" data-bs-toggle="modal" class="btn bill-pay bill-paid">Pay</a>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3 col-6">
+          <div class="bill-box">
+            <div class="d-flex gap-3">
+              <div class="bill-icon">
+                <img class="img-fluid icon" src="{% themed_static 'images/svg/9.svg' %}" alt="p9" />
+              </div>
+              <div class="bill-details">
+                <h5 class="dark-text">Torrent</h5>
+                <h6 class="light-text mt-2">Electricity</h6>
+              </div>
+            </div>
+            <div class="bill-price">
+              <h5>$60.49</h5>
+              <a href="#pay" data-bs-toggle="modal" class="btn bill-pay bill-paid">Pay</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <!-- bill details section starts -->
+
+  <!-- saving plans section starts -->
+  <section>
+    <div class="custom-container">
+      <div class="title">
+        <h2>My Saving Plans</h2>
+        <a href="saving-plans.html">See all</a>
+      </div>
+      <div class="row">
+        <div class="col-6">
+          <div class="saving-plan-box">
+            <div class="saving-plan-icon">
+              <img class="img-fluid" src="{% themed_static 'images/svg/10.svg' %}" alt="p10" />
+            </div>
+            <h3>New Car</h3>
+            <h6>Amount left</h6>
+            <div class="progress" role="progressbar" aria-label="progressbar" aria-valuenow="0" aria-valuemin="0"
+              aria-valuemax="100">
+              <div class="progress-bar bar1"></div>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mt-2">
+              <h5 class="theme-color">$2,000.00</h5>
+              <img class="img-fluid arrow" src="{% themed_static 'images/svg/arrow.svg' %}" alt="arrow" />
+            </div>
+          </div>
+        </div>
+        <div class="col-6">
+          <div class="saving-plan-box">
+            <div class="saving-plan-icon">
+              <img class="img-fluid" src="{% themed_static 'images/svg/11.svg' %}" alt="p11" />
+            </div>
+            <h3>Grand Início</h3>
+            <h6>Amount left</h6>
+            <div class="progress" role="progressbar" aria-label="progressbar" aria-valuenow="0" aria-valuemin="0"
+              aria-valuemax="100">
+              <div class="progress-bar bar2"></div>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mt-2">
+              <h5 class="theme-color">$2,000.00</h5>
+              <img class="img-fluid arrow" src="{% themed_static 'images/svg/arrow.svg' %}" alt="arrow" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <!-- saving plans section end -->
+
+  <!-- monthly statistics section starts -->
+  <section>
+    <div class="custom-container">
+      <div class="statistics-banner">
+        <div class="d-flex justify-content-center gap-3">
+          <div class="statistics-image">
+            <i class="icon" data-feather="bar-chart-2"></i>
+          </div>
+          <div class="statistics-content d-block">
+            <h5>Monthly Statistics</h5>
+            <h6>30% better performance than Voltar</h6>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <!-- monthly statistics section end -->
+
+  <!-- news-update section starts -->
+  <section class="section-b-space">
+    <div class="custom-container">
+      <div class="title">
+        <h2>News Update</h2>
+        <a href="news-update.html">See all</a>
+      </div>
+      <div class="row gy-3">
+        <div class="col-12">
+          <div class="news-update-box">
+            <div class="d-flex align-items-center gap-3">
+              <a href="news-update-details.html">
+                <img class="img-fluid news-update-image" src="{% themed_static 'images/1.jpg' %}" alt="img1" />
+              </a>
+              <div class="news-update-content">
+                <a href="news-update-details.html">
+                  <h3>Salvar and invest to obtain more</h3>
+                </a>
+                <div class="news-writer">
+                  <h6>13 May, 23</h6>
+                  <h6>-Smith</h6>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-12">
+          <div class="news-update-box">
+            <div class="d-flex align-items-center gap-3">
+              <a href="news-update-details.html">
+                <img class="img-fluid news-update-image" src="{% themed_static 'images/2.jpg' %}" alt="img2" />
+              </a>
+              <div class="news-update-content">
+                <a href="news-update-details.html">
+                  <h3>How to get more money from savings</h3>
+                </a>
+                <div class="news-writer">
+                  <h6>10 May, 23</h6>
+                  <h6>-Laila</h6>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-12">
+          <div class="news-update-box">
+            <div class="d-flex align-items-center gap-3">
+              <a href="news-update-details.html">
+                <img class="img-fluid news-update-image" src="{% themed_static 'images/3.jpg' %}" alt="img3" />
+              </a>
+              <div class="news-update-content">
+                <a href="news-update-details.html">
+                  <h3>5 Tips on expand your business</h3>
+                </a>
+                <div class="news-writer">
+                  <h6>6 May, 23</h6>
+                  <h6>-Brunt</h6>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <!-- news-update section end -->
+
+  <!-- panel-space start -->
+  <section class="panel-space"></section>
+  <!-- panel-space end -->
+
+  <!-- bottom navbar start -->
+  <div class="navbar-menu">
+    <div class="scanner-bg">
+      <a href="scan-pay.html" class="scanner-btn">
+        <img class="img-fluid" src="{% themed_static 'images/svg/scan.svg' %}" alt="scan" />
+      </a>
+    </div>
+
+    <ul>
+      <li class="active">
+        <a href="Início.html">
+          <div class="icon">
+            <img class="unactive" src="{% themed_static 'images/svg/mpay.svg' %}" alt="mPay" />
+            <img class="active" src="{% themed_static 'images/svg/mpay-fill.svg' %}" alt="mPay" />
+          </div>
+          <h5 class="active">mPay</h5>
+        </a>
+      </li>
+
+      <li>
+        <a href="Cripto.html">
+          <div class="icon">
+            <img class="unactive" src="{% themed_static 'images/svg/bitcoin.svg' %}" alt="categories" />
+            <img class="active" src="{% themed_static 'images/svg/bitcoin-fill.svg' %}" alt="categories" />
+          </div>
+          <h5>Cripto</h5>
+        </a>
+      </li>
+
+      <li></li>
+
+      <li>
+        <a href="Insights.html">
+          <div class="icon">
+            <img class="unactive" src="{% themed_static 'images/svg/bar-chart.svg' %}" alt="bag" />
+            <img class="active" src="{% themed_static 'images/svg/bar-chart-fill.svg' %}" alt="bag" />
+          </div>
+          <h5>Insights</h5>
+        </a>
+      </li>
+
+      <li>
+        <a href="Perfil.html">
+          <div class="icon">
+            <img class="unactive" src="{% themed_static 'images/svg/user.svg' %}" alt="Perfil" />
+            <img class="active" src="{% themed_static 'images/svg/user-fill.svg' %}" alt="Perfil" />
+          </div>
+          <h5>Perfil</h5>
+        </a>
+      </li>
+    </ul>
+  </div>
+  <!-- bottom navbar end -->
+
+  <!-- add money modal start -->
+  <div class="modal add-money-modal fade" id="add-money" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title">Add Money</h2>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="inputcard" class="form-label mb-2">From</label>
+            <div class="d-flex gap-2">
+              <select id="inputcard" class="form-select">
+                <option selected>**** **** **** 1566 - Saving a/c</option>
+                <option>**** **** **** 1566 - Saving a/c</option>
+                <option>**** **** **** 1566 - Saving a/c</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="inputamount" class="form-label mb-2">Amount</label>
+            <div class="form-input">
+              <input type="number" class="form-control" id="inputamount" />
+            </div>
+          </div>
+          <a href="Início.html" class="btn theme-btn successfully w-100">Depositar</a>
+        </div>
+        <button type="button" class="btn close-btn" data-bs-dismiss="modal">
+          <i class="icon" data-feather="x"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+  <!-- add money modal end -->
+
+  <!-- pay modal starts -->
+  <div class="modal pay-modal fade" id="pay" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title">Apple Bill Detail</h2>
+        </div>
+        <div class="modal-body">
+          <ul class="details-list">
+            <li>
+              <h3 class="fw-normal dark-text">Amount</h3>
+              <h3 class="fw-semibold theme-color">$49.85</h3>
+            </li>
+            <li>
+              <h3 class="fw-normal dark-text">Bill date</h3>
+              <h3 class="fw-normal light-text">10 May, 2023</h3>
+            </li>
+            <li>
+              <h3 class="fw-normal dark-text">Due Date</h3>
+              <h3 class="fw-normal error-color">31 May, 2023</h3>
+            </li>
+            <li>
+              <h3 class="fw-normal dark-text">Bill number</h3>
+              <h3 class="fw-normal light-text">BM452695523</h3>
+            </li>
+            <li>
+              <h3 class="fw-normal dark-text">Mobile number</h3>
+              <h3 class="fw-normal light-text">+91 ***** **256</h3>
+            </li>
+            <li>
+              <h3 class="fw-normal dark-text">Bill status</h3>
+              <h3 class="fw-semibold error-color">Unpaid</h3>
+            </li>
+          </ul>
+          <a href="make-payment.html" class="btn theme-btn successfully w-100">Pay</a>
+        </div>
+        <button type="button" class="btn close-btn" data-bs-dismiss="modal">
+          <i class="icon" data-feather="x"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+  <!-- pay modal end -->
+
+  <!-- paid modal starts -->
+  <div class="modal pay-modal fade" id="paid" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title">Mobile Bill Detail</h2>
+        </div>
+        <div class="modal-body">
+          <ul class="details-list">
+            <li>
+              <h3 class="fw-normal dark-text">Amount</h3>
+              <h3 class="fw-semibold theme-color">$69.49</h3>
+            </li>
+            <li>
+              <h3 class="fw-normal dark-text">Bill date</h3>
+              <h3 class="fw-normal light-text">10 May, 2023</h3>
+            </li>
+            <li>
+              <h3 class="fw-normal dark-text">Due Date</h3>
+              <h3 class="fw-normal light-text">22 May, 2023</h3>
+            </li>
+            <li>
+              <h3 class="fw-normal dark-text">Bill number</h3>
+              <h3 class="fw-normal light-text">BM452695523</h3>
+            </li>
+            <li>
+              <h3 class="fw-normal dark-text">Mobile number</h3>
+              <h3 class="fw-normal light-text">+91 ***** **256</h3>
+            </li>
+            <li>
+              <h3 class="fw-normal dark-text">Bill status</h3>
+              <h3 class="fw-semibold theme-color">Paid</h3>
+            </li>
+          </ul>
+          <a href="Início.html" class="btn theme-btn successfully w-100">Paid - Thank you !</a>
+        </div>
+        <button type="button" class="btn close-btn" data-bs-dismiss="modal">
+          <i class="icon" data-feather="x"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+  <!-- paid modal end -->
+
+  <!-- pwa install app popup start -->
+  <div class="offcanvas offcanvas-bottom addtohome-popup theme-offcanvas" tabindex="-1" id="offcanvas">
+    <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    <div class="offcanvas-body small">
+      <div class="app-info">
+        <img src="{% themed_static 'images/logo/48.png' %}" class="img-fluid" alt="" />
+        <div class="content">
+          <h4>mPay App</h4>
+          <a href="#">www.mPay-app.com</a>
+        </div>
+      </div>
+      <a href="#!" class="btn theme-btn install-app btn-inline Início-screen-btn m-0" id="installapp">Add to Início
         Screen</a>
-</div>
-</div>
- pwa install app popup start 
- swiper js 
-<scriptsrc="{% themed_static 'assets/js/swiper-bundle.min.js' %}"></script>
-<scriptsrc="{% themed_static 'assets/js/custom-swiper.js' %}"></script>
- feather js 
-<scriptsrc="{% themed_static 'assets/js/feather.min.js' %}"></script>
-<scriptsrc="{% themed_static 'assets/js/custom-feather.js' %}"></script>
- iconsax js 
-<scriptsrc="{% themed_static 'assets/js/iconsax.js' %}"></script>
- bootstrap js 
-<scriptsrc="{% themed_static 'assets/js/bootstrap.bundle.min.js' %}"></script>
- homescreen popup js 
-<scriptsrc="{% themed_static 'assets/js/homescreen-popup.js' %}"></script>
- PWA offcanvas popup js 
-<scriptsrc="{% themed_static 'assets/js/offcanvas-popup.js' %}"></script>
- script js 
-<scriptsrc="{% themed_static 'assets/js/script.js' %}"></script>
-
+    </div>
   </div>
-</section>
+  <!-- pwa install app popup start -->
 
-<section id="page-crypto" class="page">
-  <div class="page-inner">
+  <!-- swiper js -->
+  
+  
 
- side bar start 
-<div class="offcanvas sidebar-offcanvas offcanvas-start" id="offcanvasLeft" tabindex="-1">
-<div class="offcanvas-header sidebar-header">
-<div class="sidebar-logo">
-<img alt="logo" class="img-fluid logo"src="{% themed_static 'assets/images/logo/logo.png' %}"/>
-</div>
-<div class="balance">
-<img alt="auth-bg" class="img-fluid balance-bg"src="{% themed_static 'assets/images/background/auth-bg.jpg' %}"/>
-<h5>Balance</h5>
-<h2>$1,06,786.65</h2>
-</div>
-</div>
-<div class="offcanvas-body">
-<div class="sidebar-content">
-<ul class="link-section">
-<li>
-<a class="pages" href="landing.html">
-<i class="sidebar-icon" data-feather="credit-card"></i>
-<h3>mPay</h3>
-</a>
-</li>
-<li>
-<a class="pages" href="crypto.html">
-<i class="sidebar-icon" data-feather="dollar-sign"></i>
-<h3>Crypto</h3>
-</a>
-</li>
-<li>
-<a class="pages" href="page-list.html">
-<i class="sidebar-icon" data-feather="file-text"></i>
-<h3>Theme Pages</h3>
-</a>
-</li>
-<li>
-<a class="pages" href="component.html">
-<i class="sidebar-icon" data-feather="command"></i>
-<h3>Theme Components</h3>
-</a>
-</li>
-<li>
-<a class="pages" href="profile.html">
-<i class="sidebar-icon" data-feather="user"></i>
-<h3>Profile</h3>
-</a>
-</li>
-<li>
-<a class="pages" href="signin.html">
-<i class="sidebar-icon" data-feather="log-out"></i>
-<h3>Log out</h3>
-</a>
-</li>
-</ul>
-<div class="mode-switch">
-<ul class="switch-section">
-<li>
-<h3>RTL</h3>
-<div class="switch-btn">
-<input id="dir-switch" type="checkbox"/>
-</div>
-</li>
-<li>
-<h3>Dark</h3>
-<div class="switch-btn">
-<input id="dark-switch" type="checkbox"/>
-</div>
-</li>
-</ul>
-</div>
-</div>
-</div>
-</div>
- side bar end 
- header start 
-<header class="section-t-space">
-<div class="custom-container">
-<div class="header-panel">
-<a class="sidebar-btn" data-bs-target="#offcanvasLeft" data-bs-toggle="offcanvas">
-<i class="menu-icon" data-feather="menu"></i>
-</a>
-<h2>Crypto Wallet</h2>
-</div>
-</div>
-</header>
- header end 
- card start 
-<section>
-<div class="custom-container">
-<div class="crypto-wallet-box">
-<div class="card-details">
-<div class="d-block w-75">
-<h5 class="fw-semibold">Current Balance</h5>
-<h2 class="mt-2">$ 1,06,786.65</h2>
-</div>
-<div class="price-difference">
-<i class="menu-icon" data-feather="arrow-up"></i>
-<h6>8.56% (+253BTC)</h6>
-</div>
-</div>
-</div>
-</div>
-</section>
- card end 
-<section>
-<div class="custom-container">
-<div class="chart mb-3">
-<ul class="day-list">
-<li class="active">Today</li>
-<li>Week</li>
-<li>Month</li>
-<li>Year</li>
-</ul>
-<div id="wallet"></div>
-</div>
-</div>
-</section>
- categories section starts 
-<section class="categories-section section-b-space">
-<div class="custom-container">
-<ul class="categories-list">
-<li>
-<a href="crypto-send.html">
-<div class="categories-box">
-<i class="categories-icon" data-feather="arrow-up"></i>
-</div>
-<h5 class="mt-2 text-center">Send</h5>
-</a>
-</li>
-<li>
-<a href="crypto-request.html">
-<div class="categories-box">
-<i class="categories-icon" data-feather="arrow-down"></i>
-</div>
-<h5 class="mt-2 text-center">Request</h5>
-</a>
-</li>
-<li>
-<a href="crypto-exchange.html">
-<div class="categories-box">
-<i class="categories-icon" data-feather="repeat"></i>
-</div>
-<h5 class="mt-2 text-center">Exchange</h5>
-</a>
-</li>
-<li>
-<a href="crypto-withdraw.html">
-<div class="categories-box">
-<i class="iconsax categories-icon" data-icon="bank"></i>
-</div>
-<h5 class="mt-2 text-center">Withdraw</h5>
-</a>
-</li>
-</ul>
-</div>
-</section>
- categories section end 
- my-portfolio section starts 
-<section>
-<div class="custom-container">
-<div class="title">
-<h2>My Portfolio</h2>
-<a href="my-portfolio.html">See all</a>
-</div>
-<div class="swiper portfolio">
-<div class="swiper-wrapper">
-<div class="swiper-slide">
-<div class="portfolio-box">
-<a href="coin-details.html">
-<div class="d-flex align-items-center gap-2 pb-3">
-<div class="portfolio-img">
-<img alt="bitcoins" class="img-fluid img"src="{% themed_static 'assets/images/svg/bitcoins.svg' %}"/>
-</div>
-<div class="portfolio-details">
-<div>
-<h3>Bitcoin</h3>
-<h6 class="success-color fw-normal">+11%</h6>
-</div>
-<img alt="success-chart" class="img-fluid"src="{% themed_static 'assets/images/svg/success-chart.svg' %}"/>
-</div>
-</div>
-<ul class="currency-amount">
-<li class="light-text">$45,875.98</li>
-<li class="dark-text">-12.77 <span>(8%)</span></li>
-</ul>
-</a>
-</div>
-</div>
-<div class="swiper-slide">
-<div class="portfolio-box">
-<a href="coin-details.html">
-<div class="d-flex align-items-center gap-2 pb-3">
-<div class="portfolio-img">
-<img alt="ethereum" class="img-fluid img"src="{% themed_static 'assets/images/svg/ethereum.svg' %}"/>
-</div>
-<div class="portfolio-details">
-<div>
-<h3>Ethereum</h3>
-<h6 class="error-color fw-normal">-25%</h6>
-</div>
-<img alt="lost-chart" class="img-fluid"src="{% themed_static 'assets/images/svg/lost-chart.svg' %}"/>
-</div>
-</div>
-<ul class="currency-amount">
-<li class="light-text">$20,256.28</li>
-<li class="dark-text">+10.77 <span>(20%)</span></li>
-</ul>
-</a>
-</div>
-</div>
-<div class="swiper-slide">
-<div class="portfolio-box">
-<a href="coin-details.html">
-<div class="d-flex align-items-center gap-2 pb-3">
-<div class="portfolio-img">
-<img alt="tether" class="img-fluid img"src="{% themed_static 'assets/images/svg/tether.svg' %}"/>
-</div>
-<div class="portfolio-details">
-<div>
-<h3>Tether</h3>
-<h6 class="success-color fw-normal">+30%</h6>
-</div>
-<img alt="success-chart" class="img-fluid"src="{% themed_static 'assets/images/svg/success-chart.svg' %}"/>
-</div>
-</div>
-<ul class="currency-amount">
-<li class="light-text">$10,256.30</li>
-<li class="dark-text">-20.05 <span>(12%)</span></li>
-</ul>
-</a>
-</div>
-</div>
-<div class="swiper-slide">
-<div class="portfolio-box">
-<a href="coin-details.html">
-<div class="d-flex align-items-center gap-2 pb-3">
-<div class="portfolio-img">
-<img alt="doge" class="img-fluid img"src="{% themed_static 'assets/images/svg/doge.svg' %}"/>
-</div>
-<div class="portfolio-details">
-<div>
-<h3>Doge</h3>
-<h6 class="error-color fw-normal">-18%</h6>
-</div>
-<img alt="lost-chart" class="img-fluid"src="{% themed_static 'assets/images/svg/lost-chart.svg' %}"/>
-</div>
-</div>
-<ul class="currency-amount">
-<li class="light-text">$20,256.28</li>
-<li class="dark-text">+10.77 <span>(20%)</span></li>
-</ul>
-</a>
-</div>
-</div>
-</div>
-</div>
-</div>
-</section>
- banner section end 
- Buy & Sell history section starts 
-<section>
-<div class="custom-container">
-<div class="title">
-<h2>Buy &amp; Sell History</h2>
-<a href="crypto-transaction.html">See all</a>
-</div>
-<div class="row gy-3">
-<div class="col-12">
-<div class="transaction-box">
-<a class="d-flex gap-3" href="transaction-history.html">
-<div class="transaction-image color1">
-<img alt="bitcoins" class="img-fluid icon"src="{% themed_static 'assets/images/svg/bitcoins.svg' %}"/>
-</div>
-<div class="transaction-details">
-<div class="transaction-name">
-<h5>Bitcoin</h5>
-<h3 class="dark-text">$10,265.16</h3>
-</div>
-<div class="d-flex justify-content-between">
-<h5 class="light-text">BTC</h5>
-<h5 class="success-color">+5.17% <span class="light-text">(24H)</span></h5>
-</div>
-</div>
-</a>
-</div>
-</div>
-<div class="col-12">
-<div class="transaction-box">
-<a class="d-flex gap-3" href="transaction-history.html">
-<div class="transaction-image color2">
-<img alt="ethereum" class="img-fluid icon"src="{% themed_static 'assets/images/svg/ethereum.svg' %}"/>
-</div>
-<div class="transaction-details">
-<div class="transaction-name">
-<h5>Ethereum</h5>
-<h3 class="dark-text">$59.85</h3>
-</div>
-<div class="d-flex justify-content-between">
-<h5 class="light-text">ETH</h5>
-<h5 class="success-color">+1.51% <span class="light-text">(24H)</span></h5>
-</div>
-</div>
-</a>
-</div>
-</div>
-<div class="col-12">
-<div class="transaction-box">
-<a class="d-flex gap-3" href="transaction-history.html">
-<div class="transaction-image color3">
-<img alt="litecoin" class="img-fluid icon"src="{% themed_static 'assets/images/svg/litecoin.svg' %}"/>
-</div>
-<div class="transaction-details">
-<div class="transaction-name">
-<h5>Litecoin</h5>
-<h3 class="dark-text">$18.01</h3>
-</div>
-<div class="d-flex justify-content-between">
-<h5 class="light-text">LTC</h5>
-<h5 class="error-color">-0.26% <span class="light-text">(24H)</span></h5>
-</div>
-</div>
-</a>
-</div>
-</div>
-<div class="col-12">
-<div class="transaction-box">
-<a class="d-flex gap-3" href="transaction-history.html">
-<div class="transaction-image color4">
-<img alt="binance" class="img-fluid icon"src="{% themed_static 'assets/images/svg/binance.svg' %}"/>
-</div>
-<div class="transaction-details">
-<div class="transaction-name">
-<h5>Binance</h5>
-<h3 class="dark-text">$55.30</h3>
-</div>
-<div class="d-flex justify-content-between">
-<h5 class="light-text">BNB</h5>
-<h5 class="success-color">+4.75% <span class="light-text">(24H)</span></h5>
-</div>
-</div>
-</a>
-</div>
-</div>
-<div class="col-12">
-<div class="transaction-box">
-<a class="d-flex gap-3" href="transaction-history.html">
-<div class="transaction-image color5">
-<img alt="tether" class="img-fluid icon"src="{% themed_static 'assets/images/svg/tether.svg' %}"/>
-</div>
-<div class="transaction-details">
-<div class="transaction-name">
-<h5>Tether</h5>
-<h3 class="dark-text">$19.20</h3>
-</div>
-<div class="d-flex justify-content-between">
-<h5 class="light-text">USDT</h5>
-<h5 class="error-color">-0.03% <span class="light-text">(24H)</span></h5>
-</div>
-</div>
-</a>
-</div>
-</div>
-</div>
-</div>
-</section>
- Transaction section end 
- banner section starts 
-<section>
-<div class="custom-container">
-<div class="swiper banner">
-<div class="swiper-wrapper">
-<div class="swiper-slide">
-<a href="coin-details.html">
-<img alt="banner1" class="img-fluid banner-img"src="{% themed_static 'assets/images/banner/banner1.png' %}"/>
-</a>
-</div>
-<div class="swiper-slide">
-<a href="profile.html">
-<img alt="banner2" class="img-fluid banner-img"src="{% themed_static 'assets/images/banner/banner2.png' %}"/>
-</a>
-</div>
-</div>
-</div>
-</div>
+  <!-- feather js -->
+  
+  
 
-</section>
- banner section end 
- news-update section starts 
-<section class="section-b-space">
-<div class="custom-container">
-<div class="title">
-<h2>News Update</h2>
-<a href="news-update.html">See all</a>
-</div>
-<div class="row gy-3">
-<div class="col-12">
-<div class="news-update-box">
-<div class="d-flex align-items-center gap-3">
-<a href="news-update-details.html">
-<img alt="img1" class="img-fluid news-update-image"src="{% themed_static 'assets/images/1.jpg' %}"/>
-</a>
-<div class="news-update-content">
-<a href="news-update-details.html">
-<h3>Save and invest to obtain more</h3>
-</a>
-<div class="news-writer">
-<h6>13 May, 23</h6>
-<h6>-Smith</h6>
-</div>
-</div>
-</div>
-</div>
-</div>
-<div class="col-12">
-<div class="news-update-box">
-<div class="d-flex align-items-center gap-3">
-<a href="news-update-details.html">
-<img alt="img2" class="img-fluid news-update-image"src="{% themed_static 'assets/images/2.jpg' %}"/>
-</a>
-<div class="news-update-content">
-<a href="news-update-details.html">
-<h3>How to get more money from savings</h3>
-</a>
-<div class="news-writer">
-<h6>10 May, 23</h6>
-<h6>-Laila</h6>
-</div>
-</div>
-</div>
-</div>
-</div>
-<div class="col-12">
-<div class="news-update-box">
-<div class="d-flex align-items-center gap-3">
-<a href="news-update-details.html">
-<img alt="img3" class="img-fluid news-update-image"src="{% themed_static 'assets/images/3.jpg' %}"/>
-</a>
-<div class="news-update-content">
-<a href="news-update-details.html">
-<h3>5 Tips on expand your business</h3>
-</a>
-<div class="news-writer">
-<h6>6 May, 23</h6>
-<h6>-Brunt</h6>
-</div>
-</div>
-</div>
-</div>
-</div>
-</div>
-</div>
-</section>
- news-update section end 
- panel-space start 
-<section class="panel-space"></section>
- panel-space end 
- bottom navbar start 
-<div class="navbar-menu">
-<div class="scanner-bg">
-<a class="scanner-btn" href="scan-pay.html">
-<img alt="scan" class="img-fluid"src="{% themed_static 'assets/images/svg/scan.svg' %}"/>
-</a>
-</div>
-<ul>
-<li>
-<a href="landing.html">
-<div class="icon">
-<img alt="mPay" class="unactive"src="{% themed_static 'assets/images/svg/mpay.svg' %}"/>
-<img alt="mPay" class="active"src="{% themed_static 'assets/images/svg/mpay-fill.svg' %}"/>
-</div>
-<h5>mPay</h5>
-</a>
-</li>
-<li class="active">
-<a href="crypto.html">
-<div class="icon">
-<img alt="categories" class="unactive"src="{% themed_static 'assets/images/svg/bitcoin.svg' %}"/>
-<img alt="categories" class="active"src="{% themed_static 'assets/images/svg/bitcoin-fill.svg' %}"/>
-</div>
-<h5>Crypto</h5>
-</a>
-</li>
-<li></li>
-<li>
-<a href="insight.html">
-<div class="icon">
-<img alt="bag" class="unactive"src="{% themed_static 'assets/images/svg/bar-chart.svg' %}"/>
-<img alt="bag" class="active"src="{% themed_static 'assets/images/svg/bar-chart-fill.svg' %}"/>
-</div>
-<h5>Insight</h5>
-</a>
-</li>
-<li>
-<a href="profile.html">
-<div class="icon">
-<img alt="profile" class="unactive"src="{% themed_static 'assets/images/svg/user.svg' %}"/>
-<img alt="profile" class="active"src="{% themed_static 'assets/images/svg/user-fill.svg' %}"/>
-</div>
-<h5>Profile</h5>
-</a>
-</li>
-</ul>
-</div>
- bottom navbar end 
- bootstrap js 
-<scriptsrc="{% themed_static 'assets/js/bootstrap.bundle.min.js' %}"></script>
- swiper js 
-<scriptsrc="{% themed_static 'assets/js/swiper-bundle.min.js' %}"></script>
-<scriptsrc="{% themed_static 'assets/js/custom-swiper.js' %}"></script>
- apexcharts js 
-<scriptsrc="{% themed_static 'assets/js/apexcharts.js' %}"></script>
-<scriptsrc="{% themed_static 'assets/js/custom-candlestick-chart.js' %}"></script>
- feather js 
-<scriptsrc="{% themed_static 'assets/js/feather.min.js' %}"></script>
-<scriptsrc="{% themed_static 'assets/js/custom-feather.js' %}"></script>
- iconsax js 
-<scriptsrc="{% themed_static 'assets/js/iconsax.js' %}"></script>
- script js 
-<scriptsrc="{% themed_static 'assets/js/script.js' %}"></script>
+  <!-- iconsax js -->
+  
 
+  <!-- bootstrap js -->
+  
+
+  <!-- homescreen popup js -->
+  
+
+  <!-- PWA offcanvas popup js -->
+  
+
+  <!-- script js -->
+  
+
+      </div>
+    </section>
+
+    <section id="page-crypto" class="page">
+      <div class="page-inner">
+        
+  <!-- side bar start -->
+  <div class="offcanvas sidebar-offcanvas offcanvas-start" tabindex="-1" id="offcanvasLeft">
+    <div class="offcanvas-header sidebar-header">
+      <div class="sidebar-logo">
+        <img class="img-fluid logo" src="{% themed_static 'images/logo/logo.png' %}" alt="logo" />
+      </div>
+      <div class="Saldo">
+        <img class="img-fluid Saldo-bg" src="{% themed_static 'images/background/auth-bg.jpg' %}" alt="auth-bg" />
+        <h5>Saldo</h5>
+        <h2>$1,06,786.65</h2>
+      </div>
+    </div>
+    <div class="offcanvas-body">
+      <div class="sidebar-content">
+        <ul class="link-section">
+          <li>
+            <a href="Início.html" class="pages">
+              <i class="sidebar-icon" data-feather="credit-card"></i>
+              <h3>mPay</h3>
+            </a>
+          </li>
+          <li>
+            <a href="Cripto.html" class="pages">
+              <i class="sidebar-icon" data-feather="dollar-sign"></i>
+              <h3>Cripto</h3>
+            </a>
+          </li>
+          <li>
+            <a href="page-list.html" class="pages">
+              <i class="sidebar-icon" data-feather="file-text"></i>
+              <h3>Theme Pages</h3>
+            </a>
+          </li>
+          <li>
+            <a href="component.html" class="pages">
+              <i class="sidebar-icon" data-feather="command"></i>
+              <h3>Theme Components</h3>
+            </a>
+          </li>
+
+          <li>
+            <a href="Perfil.html" class="pages">
+              <i class="sidebar-icon" data-feather="user"></i>
+              <h3>Perfil</h3>
+            </a>
+          </li>
+
+          <li>
+            <a href="signin.html" class="pages">
+              <i class="sidebar-icon" data-feather="log-out"></i>
+              <h3>Sair</h3>
+            </a>
+          </li>
+        </ul>
+        <div class="mode-switch">
+          <ul class="switch-section">
+            <li>
+              <h3>RTL</h3>
+              <div class="switch-btn">
+                <input id="dir-switch" type="checkbox" />
+              </div>
+            </li>
+            <li>
+              <h3>Dark</h3>
+              <div class="switch-btn">
+                <input id="dark-switch" type="checkbox" />
+              </div>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
   </div>
-</section>
+  <!-- side bar end -->
 
-<section id="page-insight" class="page">
-  <div class="page-inner">
+  <!-- header start -->
+  <header class="section-t-space">
+    <div class="custom-container">
+      <div class="header-panel">
+        <a class="sidebar-btn" data-bs-toggle="offcanvas" data-bs-target="#offcanvasLeft">
+          <i class="menu-icon" data-feather="menu"></i>
+        </a>
+        <h2>Cripto Carteira</h2>
+      </div>
+    </div>
+  </header>
+  <!-- header end -->
 
- side bar start 
-<div class="offcanvas sidebar-offcanvas offcanvas-start" id="offcanvasLeft" tabindex="-1">
-<div class="offcanvas-header sidebar-header">
-<div class="sidebar-logo">
-<img alt="logo" class="img-fluid logo"src="{% themed_static 'assets/images/logo/logo.png' %}"/>
-</div>
-<div class="balance">
-<img alt="auth-bg" class="img-fluid balance-bg"src="{% themed_static 'assets/images/background/auth-bg.jpg' %}"/>
-<h5>Balance</h5>
-<h2>$1,06,786.65</h2>
-</div>
-</div>
-<div class="offcanvas-body">
-<div class="sidebar-content">
-<ul class="link-section">
-<li>
-<a class="pages" href="landing.html">
-<i class="sidebar-icon" data-feather="credit-card"></i>
-<h3>mPay</h3>
-</a>
-</li>
-<li>
-<a class="pages" href="crypto.html">
-<i class="sidebar-icon" data-feather="dollar-sign"></i>
-<h3>Crypto</h3>
-</a>
-</li>
-<li>
-<a class="pages" href="page-list.html">
-<i class="sidebar-icon" data-feather="file-text"></i>
-<h3>Theme Pages</h3>
-</a>
-</li>
-<li>
-<a class="pages" href="component.html">
-<i class="sidebar-icon" data-feather="command"></i>
-<h3>Theme Components</h3>
-</a>
-</li>
-<li>
-<a class="pages" href="profile.html">
-<i class="sidebar-icon" data-feather="user"></i>
-<h3>Profile</h3>
-</a>
-</li>
-<li>
-<a class="pages" href="signin.html">
-<i class="sidebar-icon" data-feather="log-out"></i>
-<h3>Log out</h3>
-</a>
-</li>
-</ul>
-<div class="mode-switch">
-<ul class="switch-section">
-<li>
-<h3>RTL</h3>
-<div class="switch-btn">
-<input id="dir-switch" type="checkbox"/>
-</div>
-</li>
-<li>
-<h3>Dark</h3>
-<div class="switch-btn">
-<input id="dark-switch" type="checkbox"/>
-</div>
-</li>
-</ul>
-</div>
-</div>
-</div>
-</div>
- side bar end 
- header start 
-<header class="section-t-space">
-<div class="custom-container">
-<div class="header-panel">
-<a class="sidebar-btn" data-bs-target="#offcanvasLeft" data-bs-toggle="offcanvas">
-<i class="menu-icon" data-feather="menu"></i>
-</a>
-<h2>Insight</h2>
-<a class="back-btn" data-bs-toggle="modal" href="#calendar">
-<i class="icon" data-feather="calendar"></i>
-</a>
-</div>
-</div>
-</header>
- header end 
- balance section starts 
-<section>
-<div class="custom-container">
-<div class="statistics-banner">
-<div class="d-flex justify-content-center gap-3">
-<div class="statistics-content">
-<h5>Total Balance</h5>
-<h3 class="text-white fw-semibold">$ 1,06,786.65</h3>
-</div>
-</div>
-</div>
-</div>
-</section>
- balance statistics section end 
- analytics-chart section starts 
-<section>
-<div class="custom-container">
-<div class="chart">
-<div class="d-flex justify-content-between">
-<h3 class="fw-semibold dark-text">Analytics | <span class="light-text fw-normal">Mar- Jul</span></h3>
-<ul class="listing">
-<li>W</li>
-<li class="active">M</li>
-<li>Y</li>
-</ul>
-</div>
-<div id="analytics-chart"></div>
-</div>
-</div>
-</section>
- analytics-chart section end 
- wallet details section starts
-<section>
-<div class="wallet-details">
-<div class="amount w-50 text-center">
-<div class="d-flex align-items-center justify-content-center">
-<img alt="down" class="img-fluid transaction-icon"src="{% themed_static 'assets/images/svg/income.svg' %}"/>
-<h5>Income</h5>
-</div>
-<h3 class="dark-text fw-semibold">$ 15,256.33</h3>
-</div>
-<div class="amount w-50 text-center border-0">
-<div class="d-flex align-items-center justify-content-center">
-<img alt="up" class="img-fluid transaction-icon"src="{% themed_static 'assets/images/svg/expense.svg' %}"/>
-<h5>Expense</h5>
-</div>
-<h3 class="dark-text fw-semibold">$ 91,530.32</h3>
-</div>
-</div>
-</section>
- wallet details section end
- categories section starts 
-<section>
-<div class="custom-container">
-<div class="title">
-<h2>Categories</h2>
-</div>
-<div class="chart mb-3">
-<div id="category-chart"></div>
-</div>
-<div class="row gy-3">
-<div class="col-12">
-<div class="transaction-box">
-<a class="d-flex gap-3" data-bs-toggle="modal" href="#transaction-detail">
-<div class="categories-image color1">
-<img alt="p16" class="img-fluid transaction-icon"src="{% themed_static 'assets/images/svg/16.svg' %}"/>
-</div>
-<div class="transaction-details">
-<div class="transaction-name pb-0">
-<h5>Shopping</h5>
-<h5 class="dark-text fw-semibold">$15,000.10</h5>
-</div>
-</div>
-</a>
-</div>
-</div>
-<div class="col-12">
-<div class="transaction-box">
-<a class="d-flex gap-3" data-bs-toggle="modal" href="#transaction-detail">
-<div class="categories-image color2">
-<img alt="p17" class="img-fluid transaction-icon"src="{% themed_static 'assets/images/svg/17.svg' %}"/>
-</div>
-<div class="transaction-details">
-<div class="transaction-name pb-0">
-<h5>Food</h5>
-<h5 class="dark-text fw-semibold">$25,200.00</h5>
-</div>
-</div>
-</a>
-</div>
-</div>
-<div class="col-12">
-<div class="transaction-box">
-<a class="d-flex gap-3" data-bs-toggle="modal" href="#transaction-detail">
-<div class="categories-image color3">
-<img alt="p18" class="img-fluid transaction-icon"src="{% themed_static 'assets/images/svg/18.svg' %}"/>
-</div>
-<div class="transaction-details">
-<div class="transaction-name pb-0">
-<h5>Health</h5>
-<h5 class="dark-text fw-semibold">$5,000.03</h5>
-</div>
-</div>
-</a>
-</div>
-</div>
-<div class="col-12">
-<div class="transaction-box">
-<a class="d-flex gap-3" data-bs-toggle="modal" href="#transaction-detail">
-<div class="categories-image color4">
-<img alt="p19" class="img-fluid transaction-icon"src="{% themed_static 'assets/images/svg/19.svg' %}"/>
-</div>
-<div class="transaction-details">
-<div class="transaction-name pb-0">
-<h5>Entertainment</h5>
-<h5 class="dark-text fw-semibold">$7,053.00</h5>
-</div>
-</div>
-</a>
-</div>
-</div>
-</div>
-</div>
-</section>
- categories section end 
- transaction history section starts 
-<section class="section-b-space">
-<div class="custom-container">
-<div class="title">
-<h2>Transaction History</h2>
-</div>
-<div class="row gy-3">
-<div class="col-12">
-<div class="transaction-box">
-<a class="d-flex gap-3" data-bs-toggle="modal" href="#transaction-detail">
-<div class="transaction-image">
-<img alt="p1" class="img-fluid transaction-icon"src="{% themed_static 'assets/images/svg/1.svg' %}"/>
-</div>
-<div class="transaction-details">
-<div class="transaction-name">
-<h5>Amazon prime</h5>
-<h3 class="error-color">$199.<span>99</span></h3>
-</div>
-<div class="d-flex justify-content-between">
-<h5 class="light-text">Subscription</h5>
-<h5 class="light-text">8:45 am</h5>
-</div>
-</div>
-</a>
-</div>
-</div>
-<div class="col-12">
-<div class="transaction-box">
-<a class="d-flex gap-3" data-bs-toggle="modal" href="#transaction-detail">
-<div class="transaction-image">
-<img alt="p2" class="img-fluid transaction-icon"src="{% themed_static 'assets/images/svg/2.svg' %}"/>
-</div>
-<div class="transaction-details">
-<div class="transaction-name">
-<h5>Apple store</h5>
-<h3 class="success-color">$60.<span>30</span></h3>
-</div>
-<div class="d-flex justify-content-between">
-<h5 class="light-text">Installment</h5>
-<h5 class="light-text">9:00 pm</h5>
-</div>
-</div>
-</a>
-</div>
-</div>
-<div class="col-12">
-<div class="transaction-box">
-<a class="d-flex gap-3" data-bs-toggle="modal" href="#transaction-detail">
-<div class="transaction-image">
-<img alt="p3" class="img-fluid transaction-icon"src="{% themed_static 'assets/images/svg/3.svg' %}"/>
-</div>
-<div class="transaction-details">
-<div class="transaction-name">
-<h5>Grocery shop</h5>
-<h3 class="error-color">$55.<span>20</span></h3>
-</div>
-<div class="d-flex justify-content-between">
-<h5 class="light-text">Purchase</h5>
-<h5 class="light-text">3:45 pm</h5>
-</div>
-</div>
-</a>
-</div>
-</div>
-</div>
-</div>
-</section>
- transaction history section end 
- panel-space start 
-<section class="panel-space"></section>
- panel-space end 
- bottom navbar start 
-<div class="navbar-menu">
-<div class="scanner-bg">
-<a class="scanner-btn" href="scan-pay.html">
-<img alt="scan" class="img-fluid"src="{% themed_static 'assets/images/svg/scan.svg' %}"/>
-</a>
-</div>
-<ul>
-<li>
-<a href="landing.html">
-<div class="icon">
-<img alt="mPay" class="unactive"src="{% themed_static 'assets/images/svg/mpay.svg' %}"/>
-<img alt="mPay" class="active"src="{% themed_static 'assets/images/svg/mpay-fill.svg' %}"/>
-</div>
-<h5>mPay</h5>
-</a>
-</li>
-<li>
-<a href="crypto.html">
-<div class="icon">
-<img alt="categories" class="unactive"src="{% themed_static 'assets/images/svg/bitcoin.svg' %}"/>
-<img alt="categories" class="active"src="{% themed_static 'assets/images/svg/bitcoin-fill.svg' %}"/>
-</div>
-<h5>Crypto</h5>
-</a>
-</li>
-<li></li>
-<li class="active">
-<a href="insight.html">
-<div class="icon">
-<img alt="bag" class="unactive"src="{% themed_static 'assets/images/svg/bar-chart.svg' %}"/>
-<img alt="bag" class="active"src="{% themed_static 'assets/images/svg/bar-chart-fill.svg' %}"/>
-</div>
-<h5>Insight</h5>
-</a>
-</li>
-<li>
-<a href="profile.html">
-<div class="icon">
-<img alt="profile" class="unactive"src="{% themed_static 'assets/images/svg/user.svg' %}"/>
-<img alt="profile" class="active"src="{% themed_static 'assets/images/svg/user-fill.svg' %}"/>
-</div>
-<h5>Profile</h5>
-</a>
-</li>
-</ul>
-</div>
- bottom navbar end 
- transaction detail modal start 
-<div class="modal successful-modal transfer-details fade" id="transaction-detail" tabindex="-1">
-<div class="modal-dialog modal-dialog-centered">
-<div class="modal-content">
-<div class="modal-header">
-<h2 class="modal-title">Transaction Detail</h2>
-</div>
-<div class="modal-body">
-<ul class="details-list">
-<li>
-<h3 class="fw-normal dark-text">Payment status</h3>
-<h3 class="fw-normal light-text">Success</h3>
-</li>
-<li>
-<h3 class="fw-normal dark-text">Date</h3>
-<h3 class="fw-normal light-text">18 May, 2023</h3>
-</li>
-<li>
-<h3 class="fw-normal dark-text">From</h3>
-<h3 class="fw-normal light-text">**** **** **** 2563</h3>
-</li>
-<li>
-<h3 class="fw-normal dark-text">To</h3>
-<h3 class="fw-normal light-text">Amazon prime</h3>
-</li>
-<li>
-<h3 class="fw-normal dark-text">Transaction category</h3>
-<h3 class="fw-normal light-text">Bill Pay</h3>
-</li>
-<li class="amount">
-<h3 class="fw-normal dark-text">Amount</h3>
-<h3 class="fw-semibold error-color">$199.99</h3>
-</li>
-</ul>
-</div>
-<button class="btn close-btn" data-bs-dismiss="modal" type="button">
-<i class="icon" data-feather="x"></i>
-</button>
-</div>
-</div>
-</div>
- successful transfer modal end 
- calendar modal starts 
-<div class="modal add-money-modal fade" id="calendar" tabindex="-1">
-<div class="modal-dialog modal-dialog-centered">
-<div class="modal-content">
-<div class="modal-header">
-<h2 class="modal-title">Select Custom Month</h2>
-</div>
-<div class="modal-body">
-<div class="form-group">
-<label class="form-label mb-2" for="inputstartmonth">Start Month</label>
-<div class="d-flex gap-2">
-<select class="form-select" id="inputstartmonth">
-<option selected="">Select start month</option>
-<option>January</option>
-<option>February</option>
-<option>March</option>
-<option>April</option>
-<option>May</option>
-<option>June</option>
-<option>July</option>
-<option>August</option>
-<option>September</option>
-<option>October</option>
-<option>November</option>
-<option>December</option>
-</select>
-</div>
-</div>
-<div class="form-group">
-<label class="form-label mb-2" for="inputendmonth">End Month</label>
-<div class="d-flex gap-2">
-<select class="form-select" id="inputendmonth">
-<option selected="">Select start month</option>
-<option>January</option>
-<option>February</option>
-<option>March</option>
-<option>April</option>
-<option>May</option>
-<option>June</option>
-<option>July</option>
-<option>August</option>
-<option>September</option>
-<option>October</option>
-<option>November</option>
-<option>December</option>
-</select>
-</div>
-</div>
-<div class="form-group">
-<label class="form-label mb-2" for="inputyear">Year</label>
-<div class="d-flex gap-2">
-<select class="form-select" id="inputyear">
-<option selected="">Year</option>
-<option>2011</option>
-<option>2012</option>
-<option>2013</option>
-<option>2014</option>
-<option>2015</option>
-<option>2016</option>
-<option>2017</option>
-<option>2018</option>
-<option>2019</option>
-<option>2020</option>
-<option>2021</option>
-<option>2022</option>
-<option>2023</option>
-</select>
-</div>
-</div>
-<a class="btn theme-btn w-100" href="insight.html">View details</a>
-</div>
-<button class="btn close-btn" data-bs-dismiss="modal" type="button">
-<i class="icon" data-feather="x"></i>
-</button>
-</div>
-</div>
-</div>
- calendar modal end 
- swiper js 
-<scriptsrc="{% themed_static 'assets/js/swiper-bundle.min.js' %}"></script>
-<scriptsrc="{% themed_static 'assets/js/custom-swiper.js' %}"></script>
- feather js 
-<scriptsrc="{% themed_static 'assets/js/feather.min.js' %}"></script>
-<scriptsrc="{% themed_static 'assets/js/custom-feather.js' %}"></script>
- apexcharts js 
-<scriptsrc="{% themed_static 'assets/js/apexcharts.js' %}"></script>
-<scriptsrc="{% themed_static 'assets/js/custom-chart2.js' %}"></script>
- bootstrap js 
-<scriptsrc="{% themed_static 'assets/js/bootstrap.bundle.min.js' %}"></script>
- script js 
-<scriptsrc="{% themed_static 'assets/js/script.js' %}"></script>
+  <!-- card start -->
+  <section>
+    <div class="custom-container">
+      <div class="Cripto-Carteira-box">
+        <div class="card-details">
+          <div class="d-block w-75">
+            <h5 class="fw-semibold">Current Saldo</h5>
+            <h2 class="mt-2">$ 1,06,786.65</h2>
+          </div>
+          <div class="price-difference">
+            <i class="menu-icon" data-feather="arrow-up"></i>
+            <h6>8.56% (+253BTC)</h6>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <!-- card end -->
+  <section>
+    <div class="custom-container">
+      <div class="chart mb-3">
+        <ul class="day-list">
 
+          <li class="active">Today</li>
+          <li>Week</li>
+          <li>Month</li>
+          <li>Year</li>
+        </ul>
+        <div id="Carteira"></div>
+      </div>
+    </div>
+  </section>
+  <!-- categories section starts -->
+  <section class="categories-section section-b-space">
+    <div class="custom-container">
+      <ul class="categories-list">
+        <li>
+          <a href="Cripto-Enviar.html">
+            <div class="categories-box">
+              <i class="categories-icon" data-feather="arrow-up"></i>
+            </div>
+            <h5 class="mt-2 text-center">Enviar</h5>
+          </a>
+        </li>
+        <li>
+          <a href="Cripto-request.html">
+            <div class="categories-box">
+              <i class="categories-icon" data-feather="arrow-down"></i>
+            </div>
+            <h5 class="mt-2 text-center">Request</h5>
+          </a>
+        </li>
+        <li>
+          <a href="Cripto-exchange.html">
+            <div class="categories-box">
+              <i class="categories-icon" data-feather="repeat"></i>
+            </div>
+            <h5 class="mt-2 text-center">Exchange</h5>
+          </a>
+        </li>
+
+        <li>
+          <a href="Cripto-Sacar.html">
+            <div class="categories-box">
+              <i class="iconsax categories-icon" data-icon="bank"></i>
+            </div>
+            <h5 class="mt-2 text-center">Sacar</h5>
+          </a>
+        </li>
+      </ul>
+    </div>
+  </section>
+  <!-- categories section end -->
+
+  <!-- my-portfolio section starts -->
+  <section>
+    <div class="custom-container">
+      <div class="title">
+        <h2>My Portfolio</h2>
+        <a href="my-portfolio.html">See all</a>
+      </div>
+      <div class="swiper portfolio">
+        <div class="swiper-wrapper">
+          <div class="swiper-slide">
+            <div class="portfolio-box">
+              <a href="coin-details.html">
+                <div class="d-flex align-items-center gap-2 pb-3">
+                  <div class="portfolio-img">
+                    <img class="img-fluid img" src="{% themed_static 'images/svg/bitcoins.svg' %}" alt="bitcoins" />
+                  </div>
+                  <div class="portfolio-details">
+                    <div>
+                      <h3>Bitcoin</h3>
+                      <h6 class="success-color fw-normal">+11%</h6>
+                    </div>
+                    <img class="img-fluid" src="{% themed_static 'images/svg/success-chart.svg' %}" alt="success-chart" />
+                  </div>
+                </div>
+                <ul class="currency-amount">
+                  <li class="light-text">$45,875.98</li>
+                  <li class="dark-text">-12.77 <span>(8%)</span></li>
+                </ul>
+              </a>
+            </div>
+          </div>
+          <div class="swiper-slide">
+            <div class="portfolio-box">
+              <a href="coin-details.html">
+                <div class="d-flex align-items-center gap-2 pb-3">
+                  <div class="portfolio-img">
+                    <img class="img-fluid img" src="{% themed_static 'images/svg/ethereum.svg' %}" alt="ethereum" />
+                  </div>
+                  <div class="portfolio-details">
+                    <div>
+                      <h3>Ethereum</h3>
+                      <h6 class="error-color fw-normal">-25%</h6>
+                    </div>
+                    <img class="img-fluid" src="{% themed_static 'images/svg/lost-chart.svg' %}" alt="lost-chart" />
+                  </div>
+                </div>
+                <ul class="currency-amount">
+                  <li class="light-text">$20,256.28</li>
+                  <li class="dark-text">+10.77 <span>(20%)</span></li>
+                </ul>
+              </a>
+            </div>
+          </div>
+          <div class="swiper-slide">
+            <div class="portfolio-box">
+              <a href="coin-details.html">
+                <div class="d-flex align-items-center gap-2 pb-3">
+                  <div class="portfolio-img">
+                    <img class="img-fluid img" src="{% themed_static 'images/svg/tether.svg' %}" alt="tether" />
+                  </div>
+                  <div class="portfolio-details">
+                    <div>
+                      <h3>Tether</h3>
+                      <h6 class="success-color fw-normal">+30%</h6>
+                    </div>
+                    <img class="img-fluid" src="{% themed_static 'images/svg/success-chart.svg' %}" alt="success-chart" />
+                  </div>
+                </div>
+                <ul class="currency-amount">
+                  <li class="light-text">$10,256.30</li>
+                  <li class="dark-text">-20.05 <span>(12%)</span></li>
+                </ul>
+              </a>
+            </div>
+          </div>
+          <div class="swiper-slide">
+            <div class="portfolio-box">
+              <a href="coin-details.html">
+                <div class="d-flex align-items-center gap-2 pb-3">
+                  <div class="portfolio-img">
+                    <img class="img-fluid img" src="{% themed_static 'images/svg/doge.svg' %}" alt="doge" />
+                  </div>
+                  <div class="portfolio-details">
+                    <div>
+                      <h3>Doge</h3>
+                      <h6 class="error-color fw-normal">-18%</h6>
+                    </div>
+                    <img class="img-fluid" src="{% themed_static 'images/svg/lost-chart.svg' %}" alt="lost-chart" />
+                  </div>
+                </div>
+                <ul class="currency-amount">
+                  <li class="light-text">$20,256.28</li>
+                  <li class="dark-text">+10.77 <span>(20%)</span></li>
+                </ul>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <!-- banner section end -->
+
+  <!-- Comprar & Vender Histórico section starts -->
+  <section>
+    <div class="custom-container">
+      <div class="title">
+        <h2>Comprar & Vender Histórico</h2>
+        <a href="Cripto-Transações.html">See all</a>
+      </div>
+
+      <div class="row gy-3">
+        <div class="col-12">
+          <div class="Transações-box">
+            <a href="Transações-Histórico.html" class="d-flex gap-3">
+              <div class="Transações-image color1">
+                <img class="img-fluid icon" src="{% themed_static 'images/svg/bitcoins.svg' %}" alt="bitcoins" />
+              </div>
+              <div class="Transações-details">
+                <div class="Transações-name">
+                  <h5>Bitcoin</h5>
+                  <h3 class="dark-text">$10,265.16</h3>
+                </div>
+                <div class="d-flex justify-content-between">
+                  <h5 class="light-text">BTC</h5>
+                  <h5 class="success-color">+5.17% <span class="light-text">(24H)</span></h5>
+                </div>
+              </div>
+            </a>
+          </div>
+        </div>
+        <div class="col-12">
+          <div class="Transações-box">
+            <a href="Transações-Histórico.html" class="d-flex gap-3">
+              <div class="Transações-image color2">
+                <img class="img-fluid icon" src="{% themed_static 'images/svg/ethereum.svg' %}" alt="ethereum" />
+              </div>
+              <div class="Transações-details">
+                <div class="Transações-name">
+                  <h5>Ethereum</h5>
+                  <h3 class="dark-text">$59.85</h3>
+                </div>
+                <div class="d-flex justify-content-between">
+                  <h5 class="light-text">ETH</h5>
+                  <h5 class="success-color">+1.51% <span class="light-text">(24H)</span></h5>
+                </div>
+              </div>
+            </a>
+          </div>
+        </div>
+        <div class="col-12">
+          <div class="Transações-box">
+            <a href="Transações-Histórico.html" class="d-flex gap-3">
+              <div class="Transações-image color3">
+                <img class="img-fluid icon" src="{% themed_static 'images/svg/litecoin.svg' %}" alt="litecoin" />
+              </div>
+              <div class="Transações-details">
+                <div class="Transações-name">
+                  <h5>Litecoin</h5>
+                  <h3 class="dark-text">$18.01</h3>
+                </div>
+                <div class="d-flex justify-content-between">
+                  <h5 class="light-text">LTC</h5>
+                  <h5 class="error-color">-0.26% <span class="light-text">(24H)</span></h5>
+                </div>
+              </div>
+            </a>
+          </div>
+        </div>
+        <div class="col-12">
+          <div class="Transações-box">
+            <a href="Transações-Histórico.html" class="d-flex gap-3">
+              <div class="Transações-image color4">
+                <img class="img-fluid icon" src="{% themed_static 'images/svg/binance.svg' %}" alt="binance" />
+              </div>
+              <div class="Transações-details">
+                <div class="Transações-name">
+                  <h5>Binance</h5>
+                  <h3 class="dark-text">$55.30</h3>
+                </div>
+                <div class="d-flex justify-content-between">
+                  <h5 class="light-text">BNB</h5>
+                  <h5 class="success-color">+4.75% <span class="light-text">(24H)</span></h5>
+                </div>
+              </div>
+            </a>
+          </div>
+        </div>
+        <div class="col-12">
+          <div class="Transações-box">
+            <a href="Transações-Histórico.html" class="d-flex gap-3">
+              <div class="Transações-image color5">
+                <img class="img-fluid icon" src="{% themed_static 'images/svg/tether.svg' %}" alt="tether" />
+              </div>
+              <div class="Transações-details">
+                <div class="Transações-name">
+                  <h5>Tether</h5>
+                  <h3 class="dark-text">$19.20</h3>
+                </div>
+                <div class="d-flex justify-content-between">
+                  <h5 class="light-text">USDT</h5>
+                  <h5 class="error-color">-0.03% <span class="light-text">(24H)</span></h5>
+                </div>
+              </div>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <!-- Transações section end -->
+
+  <!-- banner section starts -->
+  <section>
+    <div class="custom-container">
+      <div class="swiper banner">
+        <div class="swiper-wrapper">
+          <div class="swiper-slide">
+            <a href="coin-details.html">
+              <img class="img-fluid banner-img" src="{% themed_static 'images/banner/banner1.png' %}" alt="banner1" />
+            </a>
+          </div>
+
+          <div class="swiper-slide">
+            <a href="Perfil.html">
+              <img class="img-fluid banner-img" src="{% themed_static 'images/banner/banner2.png' %}" alt="banner2" />
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+    </div>
+  </section>
+  <!-- banner section end -->
+
+  <!-- news-update section starts -->
+  <section class="section-b-space">
+    <div class="custom-container">
+      <div class="title">
+        <h2>News Update</h2>
+        <a href="news-update.html">See all</a>
+      </div>
+      <div class="row gy-3">
+        <div class="col-12">
+          <div class="news-update-box">
+            <div class="d-flex align-items-center gap-3">
+              <a href="news-update-details.html">
+                <img class="img-fluid news-update-image" src="{% themed_static 'images/1.jpg' %}" alt="img1" />
+              </a>
+              <div class="news-update-content">
+                <a href="news-update-details.html">
+                  <h3>Salvar and invest to obtain more</h3>
+                </a>
+                <div class="news-writer">
+                  <h6>13 May, 23</h6>
+                  <h6>-Smith</h6>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-12">
+          <div class="news-update-box">
+            <div class="d-flex align-items-center gap-3">
+              <a href="news-update-details.html">
+                <img class="img-fluid news-update-image" src="{% themed_static 'images/2.jpg' %}" alt="img2" />
+              </a>
+              <div class="news-update-content">
+                <a href="news-update-details.html">
+                  <h3>How to get more money from savings</h3>
+                </a>
+                <div class="news-writer">
+                  <h6>10 May, 23</h6>
+                  <h6>-Laila</h6>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-12">
+          <div class="news-update-box">
+            <div class="d-flex align-items-center gap-3">
+              <a href="news-update-details.html">
+                <img class="img-fluid news-update-image" src="{% themed_static 'images/3.jpg' %}" alt="img3" />
+              </a>
+              <div class="news-update-content">
+                <a href="news-update-details.html">
+                  <h3>5 Tips on expand your business</h3>
+                </a>
+                <div class="news-writer">
+                  <h6>6 May, 23</h6>
+                  <h6>-Brunt</h6>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <!-- news-update section end -->
+
+  <!-- panel-space start -->
+  <section class="panel-space"></section>
+  <!-- panel-space end -->
+
+  <!-- bottom navbar start -->
+  <div class="navbar-menu">
+    <div class="scanner-bg">
+      <a href="scan-pay.html" class="scanner-btn">
+        <img class="img-fluid" src="{% themed_static 'images/svg/scan.svg' %}" alt="scan" />
+      </a>
+    </div>
+
+    <ul>
+      <li>
+        <a href="Início.html">
+          <div class="icon">
+            <img class="unactive" src="{% themed_static 'images/svg/mpay.svg' %}" alt="mPay" />
+            <img class="active" src="{% themed_static 'images/svg/mpay-fill.svg' %}" alt="mPay" />
+          </div>
+          <h5>mPay</h5>
+        </a>
+      </li>
+
+      <li class="active">
+        <a href="Cripto.html">
+          <div class="icon">
+            <img class="unactive" src="{% themed_static 'images/svg/bitcoin.svg' %}" alt="categories" />
+            <img class="active" src="{% themed_static 'images/svg/bitcoin-fill.svg' %}" alt="categories" />
+          </div>
+          <h5>Cripto</h5>
+        </a>
+      </li>
+
+      <li></li>
+
+      <li>
+        <a href="Insights.html">
+          <div class="icon">
+            <img class="unactive" src="{% themed_static 'images/svg/bar-chart.svg' %}" alt="bag" />
+            <img class="active" src="{% themed_static 'images/svg/bar-chart-fill.svg' %}" alt="bag" />
+          </div>
+          <h5>Insights</h5>
+        </a>
+      </li>
+
+      <li>
+        <a href="Perfil.html">
+          <div class="icon">
+            <img class="unactive" src="{% themed_static 'images/svg/user.svg' %}" alt="Perfil" />
+            <img class="active" src="{% themed_static 'images/svg/user-fill.svg' %}" alt="Perfil" />
+          </div>
+          <h5>Perfil</h5>
+        </a>
+      </li>
+    </ul>
   </div>
-</section>
+  <!-- bottom navbar end -->
 
-<section id="page-profile" class="page">
-  <div class="page-inner">
+  <!-- bootstrap js -->
+  
 
- side bar start 
-<div class="offcanvas sidebar-offcanvas offcanvas-start" id="offcanvasLeft" tabindex="-1">
-<div class="offcanvas-header sidebar-header">
-<div class="sidebar-logo">
-<img alt="logo" class="img-fluid logo"src="{% themed_static 'assets/images/logo/logo.png' %}"/>
-</div>
-<div class="balance">
-<img alt="auth-bg" class="img-fluid balance-bg"src="{% themed_static 'assets/images/background/auth-bg.jpg' %}"/>
-<h5>Balance</h5>
-<h2>$1,06,786.65</h2>
-</div>
-</div>
-<div class="offcanvas-body">
-<div class="sidebar-content">
-<ul class="link-section">
-<li>
-<a class="pages" href="landing.html">
-<i class="sidebar-icon" data-feather="credit-card"></i>
-<h3>mPay</h3>
-</a>
-</li>
-<li>
-<a class="pages" href="crypto.html">
-<i class="sidebar-icon" data-feather="dollar-sign"></i>
-<h3>Crypto</h3>
-</a>
-</li>
-<li>
-<a class="pages" href="page-list.html">
-<i class="sidebar-icon" data-feather="file-text"></i>
-<h3>Theme Pages</h3>
-</a>
-</li>
-<li>
-<a class="pages" href="component.html">
-<i class="sidebar-icon" data-feather="command"></i>
-<h3>Theme Components</h3>
-</a>
-</li>
-<li>
-<a class="pages" href="profile.html">
-<i class="sidebar-icon" data-feather="user"></i>
-<h3>Profile</h3>
-</a>
-</li>
-<li>
-<a class="pages" href="signin.html">
-<i class="sidebar-icon" data-feather="log-out"></i>
-<h3>Log out</h3>
-</a>
-</li>
-</ul>
-<div class="mode-switch">
-<ul class="switch-section">
-<li>
-<h3>RTL</h3>
-<div class="switch-btn">
-<input id="dir-switch" type="checkbox"/>
-</div>
-</li>
-<li>
-<h3>Dark</h3>
-<div class="switch-btn">
-<input id="dark-switch" type="checkbox"/>
-</div>
-</li>
-</ul>
-</div>
-</div>
-</div>
-</div>
- side bar end 
- header start 
-<header class="section-t-space">
-<div class="custom-container">
-<div class="header-panel">
-<a class="sidebar-btn" data-bs-target="#offcanvasLeft" data-bs-toggle="offcanvas">
-<i class="menu-icon" data-feather="menu"></i>
-</a>
-<h2>Profile</h2>
-</div>
-</div>
-</header>
- header end 
- profile section start 
-<section class="section-b-space">
-<div class="custom-container">
-<div class="profile-section">
-<div class="profile-banner">
-<div class="profile-image">
-<img alt="p3" class="img-fluid profile-pic"src="{% themed_static 'assets/images/person/p3.png' %}"/>
-</div>
-</div>
-<h2>Survana Williams</h2>
-<h5>+62 78459 25623</h5>
-</div>
-<ul class="profile-list">
-<li>
-<a class="profile-box" href="my-account.html">
-<div class="profile-img">
-<i class="icon" data-feather="user"></i>
-</div>
-<div class="profile-details">
-<h4>My Account</h4>
-<img alt="arrow" class="img-fluid arrow"src="{% themed_static 'assets/images/svg/arrow.svg' %}"/>
-</div>
-</a>
-</li>
-<li>
-<a class="profile-box" href="cards.html">
-<div class="profile-img">
-<i class="icon" data-feather="credit-card"></i>
-</div>
-<div class="profile-details">
-<h4>My Cards</h4>
-<img alt="arrow" class="img-fluid arrow"src="{% themed_static 'assets/images/svg/arrow.svg' %}"/>
-</div>
-</a>
-</li>
-<li>
-<a class="profile-box" href="change-password.html">
-<div class="profile-img">
-<i class="icon" data-feather="settings"></i>
-</div>
-<div class="profile-details">
-<h4>Change Password</h4>
-<img alt="arrow" class="img-fluid arrow"src="{% themed_static 'assets/images/svg/arrow.svg' %}"/>
-</div>
-</a>
-</li>
-<li>
-<a class="profile-box" href="setting.html">
-<div class="profile-img">
-<i class="icon" data-feather="lock"></i>
-</div>
-<div class="profile-details">
-<h4>Settings</h4>
-<img alt="arrow" class="img-fluid arrow"src="{% themed_static 'assets/images/svg/arrow.svg' %}"/>
-</div>
-</a>
-</li>
-<li>
-<a class="profile-box" href="help.html">
-<div class="profile-img">
-<i class="icon" data-feather="help-circle"></i>
-</div>
-<div class="profile-details">
-<h4>Help Center</h4>
-<img alt="arrow" class="img-fluid arrow"src="{% themed_static 'assets/images/svg/arrow.svg' %}"/>
-</div>
-</a>
-</li>
-<li>
-<a class="profile-box" href="signin.html">
-<div class="profile-img">
-<i class="icon" data-feather="log-out"></i>
-</div>
-<div class="profile-details">
-<h4>Log Out</h4>
-</div>
-</a>
-</li>
-</ul>
-</div>
-</section>
- profile section end 
- panel-space start 
-<section class="panel-space"></section>
- panel-space end 
- bottom navbar start 
-<div class="navbar-menu">
-<div class="scanner-bg">
-<a class="scanner-btn" href="scan-pay.html">
-<img alt="scan" class="img-fluid"src="{% themed_static 'assets/images/svg/scan.svg' %}"/>
-</a>
-</div>
-<ul>
-<li>
-<a href="landing.html">
-<div class="icon">
-<img alt="mPay" class="unactive"src="{% themed_static 'assets/images/svg/mpay.svg' %}"/>
-<img alt="mPay" class="active"src="{% themed_static 'assets/images/svg/mpay-fill.svg' %}"/>
-</div>
-<h5>mPay</h5>
-</a>
-</li>
-<li>
-<a href="crypto.html">
-<div class="icon">
-<img alt="categories" class="unactive"src="{% themed_static 'assets/images/svg/bitcoin.svg' %}"/>
-<img alt="categories" class="active"src="{% themed_static 'assets/images/svg/bitcoin-fill.svg' %}"/>
-</div>
-<h5>Crypto</h5>
-</a>
-</li>
-<li></li>
-<li>
-<a href="insight.html">
-<div class="icon">
-<img alt="bag" class="unactive"src="{% themed_static 'assets/images/svg/bar-chart.svg' %}"/>
-<img alt="bag" class="active"src="{% themed_static 'assets/images/svg/bar-chart-fill.svg' %}"/>
-</div>
-<h5>Insight</h5>
-</a>
-</li>
-<li class="active">
-<a href="profile.html">
-<div class="icon">
-<img alt="profile" class="unactive"src="{% themed_static 'assets/images/svg/user.svg' %}"/>
-<img alt="profile" class="active"src="{% themed_static 'assets/images/svg/user-fill.svg' %}"/>
-</div>
-<h5>Profile</h5>
-</a>
-</li>
-</ul>
-</div>
- bottom navbar end 
- swiper js 
-<scriptsrc="{% themed_static 'assets/js/swiper-bundle.min.js' %}"></script>
-<scriptsrc="{% themed_static 'assets/js/custom-swiper.js' %}"></script>
- feather js 
-<scriptsrc="{% themed_static 'assets/js/feather.min.js' %}"></script>
-<scriptsrc="{% themed_static 'assets/js/custom-feather.js' %}"></script>
- bootstrap js 
-<scriptsrc="{% themed_static 'assets/js/bootstrap.bundle.min.js' %}"></script>
- script js 
-<scriptsrc="{% themed_static 'assets/js/script.js' %}"></script>
+  <!-- swiper js -->
+  
+  
 
+  <!-- apexcharts js -->
+  
+  
+
+  <!-- feather js -->
+  
+  
+
+  <!-- iconsax js -->
+  
+  <!-- script js -->
+  
+
+      </div>
+    </section>
+
+    <section id="page-insight" class="page">
+      <div class="page-inner">
+        
+  <!-- side bar start -->
+  <div class="offcanvas sidebar-offcanvas offcanvas-start" tabindex="-1" id="offcanvasLeft">
+    <div class="offcanvas-header sidebar-header">
+      <div class="sidebar-logo">
+        <img class="img-fluid logo" src="{% themed_static 'images/logo/logo.png' %}" alt="logo" />
+      </div>
+      <div class="Saldo">
+        <img class="img-fluid Saldo-bg" src="{% themed_static 'images/background/auth-bg.jpg' %}" alt="auth-bg" />
+        <h5>Saldo</h5>
+        <h2>$1,06,786.65</h2>
+      </div>
+    </div>
+    <div class="offcanvas-body">
+      <div class="sidebar-content">
+        <ul class="link-section">
+          <li>
+            <a href="Início.html" class="pages">
+              <i class="sidebar-icon" data-feather="credit-card"></i>
+              <h3>mPay</h3>
+            </a>
+          </li>
+          <li>
+            <a href="Cripto.html" class="pages">
+              <i class="sidebar-icon" data-feather="dollar-sign"></i>
+              <h3>Cripto</h3>
+            </a>
+          </li>
+          <li>
+            <a href="page-list.html" class="pages">
+              <i class="sidebar-icon" data-feather="file-text"></i>
+              <h3>Theme Pages</h3>
+            </a>
+          </li>
+          <li>
+            <a href="component.html" class="pages">
+              <i class="sidebar-icon" data-feather="command"></i>
+              <h3>Theme Components</h3>
+            </a>
+          </li>
+
+          <li>
+            <a href="Perfil.html" class="pages">
+              <i class="sidebar-icon" data-feather="user"></i>
+              <h3>Perfil</h3>
+            </a>
+          </li>
+
+          <li>
+            <a href="signin.html" class="pages">
+              <i class="sidebar-icon" data-feather="log-out"></i>
+              <h3>Sair</h3>
+            </a>
+          </li>
+        </ul>
+        <div class="mode-switch">
+          <ul class="switch-section">
+            <li>
+              <h3>RTL</h3>
+              <div class="switch-btn">
+                <input id="dir-switch" type="checkbox" />
+              </div>
+            </li>
+            <li>
+              <h3>Dark</h3>
+              <div class="switch-btn">
+                <input id="dark-switch" type="checkbox" />
+              </div>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
   </div>
-</section>
+  <!-- side bar end -->
 
-</main>
+  <!-- header start -->
+  <header class="section-t-space">
+    <div class="custom-container">
+      <div class="header-panel">
+        <a class="sidebar-btn" data-bs-toggle="offcanvas" data-bs-target="#offcanvasLeft">
+          <i class="menu-icon" data-feather="menu"></i>
+        </a>
+        <h2>Insights</h2>
+        <a href="#calendar" class="back-btn" data-bs-toggle="modal">
+          <i class="icon" data-feather="calendar"></i>
+        </a>
+      </div>
+    </div>
+  </header>
+  <!-- header end -->
 
-<nav class="app-nav navbar navbar-expand fixed-bottom p-0" style="background:#0b1924;border-top:1px solid rgba(255,255,255,.06)">
-  <ul class="navbar-nav nav-justified w-100 text-center">
-    <li class="nav-item"><a class="nav-link py-2 active" data-target="landing" href="#landing">
-      <i data-feather="home"></i><div style="font-size:.75rem">Início</div>
-    </a></li>
-    <li class="nav-item"><a class="nav-link py-2" data-target="crypto" href="#crypto">
-      <i data-feather="activity"></i><div style="font-size:.75rem">Cripto</div>
-    </a></li>
-    <li class="nav-item"><a class="nav-link py-2" data-target="insight" href="#insight">
-      <i data-feather="pie-chart"></i><div style="font-size:.75rem">Insights</div>
-    </a></li>
-    <li class="nav-item"><a class="nav-link py-2" data-target="profile" href="#profile">
-      <i data-feather="user"></i><div style="font-size:.75rem">Perfil</div>
-    </a></li>
-  </ul>
-</nav>
+  <!-- Saldo section starts -->
+  <section>
+    <div class="custom-container">
+      <div class="statistics-banner">
+        <div class="d-flex justify-content-center gap-3">
+          <div class="statistics-content">
+            <h5>Total Saldo</h5>
+            <h3 class="text-white fw-semibold">$ 1,06,786.65</h3>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <!-- Saldo statistics section end -->
 
-<script src="{% themed_static 'assets/js/jquery-3.3.1.min.js' %}"></script>
-<script src="{% themed_static 'assets/js/bootstrap.bundle.min.js' %}"></script>
-<script src="{% themed_static 'assets/js/feather.min.js' %}"></script>
-<script src="{% themed_static 'assets/js/script.js' %}"></script>
+  <!-- Análises-chart section starts -->
+  <section>
+    <div class="custom-container">
+      <div class="chart">
+        <div class="d-flex justify-content-between">
+          <h3 class="fw-semibold dark-text">Análises | <span class="light-text fw-normal">Mar- Jul</span></h3>
+          <ul class="listing">
+            <li>W</li>
+            <li class="active">M</li>
+            <li>Y</li>
+          </ul>
+        </div>
 
-<script>
-(function() {
-  const PAGES = ['landing','crypto','insight','profile'];
-  const $$ = (sel, ctx=document) => Array.from(ctx.querySelectorAll(sel));
+        <div id="Análises-chart"></div>
+      </div>
+    </div>
+  </section>
+  <!-- Análises-chart section end -->
 
-  function showPage(name) {
-    PAGES.forEach(p => {
-      const el = document.getElementById('page-' + p);
-      if (el) el.classList.toggle('active', p === name);
-    });
-    $$('.app-nav .nav-link').forEach(a => a.classList.toggle('active', a.dataset.target === name));
-    try { if (window.fbq) fbq('trackCustom', 'NavTab', { tab: name }); } catch(e){}
-  }
-  function fromHash() {
-    const h = (location.hash || '').replace('#','').toLowerCase();
-    return PAGES.includes(h) ? h : 'landing';
-  }
-  document.addEventListener('DOMContentLoaded', () => {
-    if (window.feather) window.feather.replace();
-    showPage(fromHash());
-    $$('.app-nav .nav-link').forEach(a => {
-      a.addEventListener('click', ev => {
-        ev.preventDefault();
-        const target = a.dataset.target;
-        history.replaceState(null, '', '#' + target);
-        showPage(target);
+  <!-- Carteira details section starts-->
+  <section>
+    <div class="Carteira-details">
+      <div class="amount w-50 text-center">
+        <div class="d-flex align-items-center justify-content-center">
+          <img class="img-fluid Transações-icon" src="{% themed_static 'images/svg/income.svg' %}" alt="down" />
+          <h5>Income</h5>
+        </div>
+        <h3 class="dark-text fw-semibold">$ 15,256.33</h3>
+      </div>
+      <div class="amount w-50 text-center border-0">
+        <div class="d-flex align-items-center justify-content-center">
+          <img class="img-fluid Transações-icon" src="{% themed_static 'images/svg/expense.svg' %}" alt="up" />
+          <h5>Expense</h5>
+        </div>
+        <h3 class="dark-text fw-semibold">$ 91,530.32</h3>
+      </div>
+    </div>
+  </section>
+  <!-- Carteira details section end-->
+
+  <!-- categories section starts -->
+  <section>
+    <div class="custom-container">
+      <div class="title">
+        <h2>Categories</h2>
+      </div>
+      
+      <div class="chart mb-3">
+        <div id="category-chart"></div>
+      </div>
+
+      <div class="row gy-3">
+        <div class="col-12">
+          <div class="Transações-box">
+            <a href="#Transações-detail" data-bs-toggle="modal" class="d-flex gap-3">
+              <div class="categories-image color1">
+                <img class="img-fluid Transações-icon" src="{% themed_static 'images/svg/16.svg' %}" alt="p16" />
+              </div>
+              <div class="Transações-details">
+                <div class="Transações-name pb-0">
+                  <h5>Shopping</h5>
+                  <h5 class="dark-text fw-semibold">$15,000.10</h5>
+                </div>
+              </div>
+            </a>
+          </div>
+        </div>
+        <div class="col-12">
+          <div class="Transações-box">
+            <a href="#Transações-detail" data-bs-toggle="modal" class="d-flex gap-3">
+              <div class="categories-image color2">
+                <img class="img-fluid Transações-icon" src="{% themed_static 'images/svg/17.svg' %}" alt="p17" />
+              </div>
+              <div class="Transações-details">
+                <div class="Transações-name pb-0">
+                  <h5>Food</h5>
+                  <h5 class="dark-text fw-semibold">$25,200.00</h5>
+                </div>
+              </div>
+            </a>
+          </div>
+        </div>
+        <div class="col-12">
+          <div class="Transações-box">
+            <a href="#Transações-detail" data-bs-toggle="modal" class="d-flex gap-3">
+              <div class="categories-image color3">
+                <img class="img-fluid Transações-icon" src="{% themed_static 'images/svg/18.svg' %}" alt="p18" />
+              </div>
+              <div class="Transações-details">
+                <div class="Transações-name pb-0">
+                  <h5>Health</h5>
+                  <h5 class="dark-text fw-semibold">$5,000.03</h5>
+                </div>
+              </div>
+            </a>
+          </div>
+        </div>
+        <div class="col-12">
+          <div class="Transações-box">
+            <a href="#Transações-detail" data-bs-toggle="modal" class="d-flex gap-3">
+              <div class="categories-image color4">
+                <img class="img-fluid Transações-icon" src="{% themed_static 'images/svg/19.svg' %}" alt="p19" />
+              </div>
+              <div class="Transações-details">
+                <div class="Transações-name pb-0">
+                  <h5>Entertainment</h5>
+                  <h5 class="dark-text fw-semibold">$7,053.00</h5>
+                </div>
+              </div>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <!-- categories section end -->
+
+  <!-- Transações Histórico section starts -->
+  <section class="section-b-space">
+    <div class="custom-container">
+      <div class="title">
+        <h2>Transações Histórico</h2>
+      </div>
+
+      <div class="row gy-3">
+        <div class="col-12">
+          <div class="Transações-box">
+            <a href="#Transações-detail" data-bs-toggle="modal" class="d-flex gap-3">
+              <div class="Transações-image">
+                <img class="img-fluid Transações-icon" src="{% themed_static 'images/svg/1.svg' %}" alt="p1" />
+              </div>
+              <div class="Transações-details">
+                <div class="Transações-name">
+                  <h5>Amazon prime</h5>
+                  <h3 class="error-color">$199.<span>99</span></h3>
+                </div>
+                <div class="d-flex justify-content-between">
+                  <h5 class="light-text">Subscription</h5>
+                  <h5 class="light-text">8:45 am</h5>
+                </div>
+              </div>
+            </a>
+          </div>
+        </div>
+        <div class="col-12">
+          <div class="Transações-box">
+            <a href="#Transações-detail" data-bs-toggle="modal" class="d-flex gap-3">
+              <div class="Transações-image">
+                <img class="img-fluid Transações-icon" src="{% themed_static 'images/svg/2.svg' %}" alt="p2" />
+              </div>
+              <div class="Transações-details">
+                <div class="Transações-name">
+                  <h5>Apple store</h5>
+                  <h3 class="success-color">$60.<span>30</span></h3>
+                </div>
+                <div class="d-flex justify-content-between">
+                  <h5 class="light-text">Installment</h5>
+                  <h5 class="light-text">9:00 pm</h5>
+                </div>
+              </div>
+            </a>
+          </div>
+        </div>
+        <div class="col-12">
+          <div class="Transações-box">
+            <a href="#Transações-detail" data-bs-toggle="modal" class="d-flex gap-3">
+              <div class="Transações-image">
+                <img class="img-fluid Transações-icon" src="{% themed_static 'images/svg/3.svg' %}" alt="p3" />
+              </div>
+              <div class="Transações-details">
+                <div class="Transações-name">
+                  <h5>Grocery shop</h5>
+                  <h3 class="error-color">$55.<span>20</span></h3>
+                </div>
+                <div class="d-flex justify-content-between">
+                  <h5 class="light-text">Purchase</h5>
+                  <h5 class="light-text">3:45 pm</h5>
+                </div>
+              </div>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <!-- Transações Histórico section end -->
+
+  <!-- panel-space start -->
+  <section class="panel-space"></section>
+  <!-- panel-space end -->
+
+  <!-- bottom navbar start -->
+  <div class="navbar-menu">
+    <div class="scanner-bg">
+      <a href="scan-pay.html" class="scanner-btn">
+        <img class="img-fluid" src="{% themed_static 'images/svg/scan.svg' %}" alt="scan" />
+      </a>
+    </div>
+
+    <ul>
+      <li>
+        <a href="Início.html">
+          <div class="icon">
+            <img class="unactive" src="{% themed_static 'images/svg/mpay.svg' %}" alt="mPay" />
+            <img class="active" src="{% themed_static 'images/svg/mpay-fill.svg' %}" alt="mPay" />
+          </div>
+          <h5>mPay</h5>
+        </a>
+      </li>
+
+      <li>
+        <a href="Cripto.html">
+          <div class="icon">
+            <img class="unactive" src="{% themed_static 'images/svg/bitcoin.svg' %}" alt="categories" />
+            <img class="active" src="{% themed_static 'images/svg/bitcoin-fill.svg' %}" alt="categories" />
+          </div>
+          <h5>Cripto</h5>
+        </a>
+      </li>
+
+      <li></li>
+
+      <li class="active">
+        <a href="Insights.html">
+          <div class="icon">
+            <img class="unactive" src="{% themed_static 'images/svg/bar-chart.svg' %}" alt="bag" />
+            <img class="active" src="{% themed_static 'images/svg/bar-chart-fill.svg' %}" alt="bag" />
+          </div>
+          <h5>Insights</h5>
+        </a>
+      </li>
+
+      <li>
+        <a href="Perfil.html">
+          <div class="icon">
+            <img class="unactive" src="{% themed_static 'images/svg/user.svg' %}" alt="Perfil" />
+            <img class="active" src="{% themed_static 'images/svg/user-fill.svg' %}" alt="Perfil" />
+          </div>
+          <h5>Perfil</h5>
+        </a>
+      </li>
+    </ul>
+  </div>
+  <!-- bottom navbar end -->
+
+  <!-- Transações detail modal start -->
+  <div class="modal successful-modal transfer-details fade" id="Transações-detail" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title">Transações Detail</h2>
+        </div>
+        <div class="modal-body">
+          <ul class="details-list">
+            <li>
+              <h3 class="fw-normal dark-text">Payment status</h3>
+              <h3 class="fw-normal light-text">Success</h3>
+            </li>
+            <li>
+              <h3 class="fw-normal dark-text">Date</h3>
+              <h3 class="fw-normal light-text">18 May, 2023</h3>
+            </li>
+            <li>
+              <h3 class="fw-normal dark-text">From</h3>
+              <h3 class="fw-normal light-text">**** **** **** 2563</h3>
+            </li>
+            <li>
+              <h3 class="fw-normal dark-text">To</h3>
+              <h3 class="fw-normal light-text">Amazon prime</h3>
+            </li>
+            <li>
+              <h3 class="fw-normal dark-text">Transações category</h3>
+              <h3 class="fw-normal light-text">Bill Pay</h3>
+            </li>
+            <li class="amount">
+              <h3 class="fw-normal dark-text">Amount</h3>
+              <h3 class="fw-semibold error-color">$199.99</h3>
+            </li>
+          </ul>
+        </div>
+        <button type="button" class="btn close-btn" data-bs-dismiss="modal">
+          <i class="icon" data-feather="x"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+  <!-- successful transfer modal end -->
+
+  <!-- calendar modal starts -->
+  <div class="modal add-money-modal fade" id="calendar" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title">Select Custom Month</h2>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="inputstartmonth" class="form-label mb-2">Start Month</label>
+            <div class="d-flex gap-2">
+              <select id="inputstartmonth" class="form-select">
+                <option selected>Select start month</option>
+                <option>January</option>
+                <option>February</option>
+                <option>March</option>
+                <option>April</option>
+                <option>May</option>
+                <option>June</option>
+                <option>July</option>
+                <option>August</option>
+                <option>September</option>
+                <option>October</option>
+                <option>November</option>
+                <option>December</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="inputendmonth" class="form-label mb-2">End Month</label>
+            <div class="d-flex gap-2">
+              <select id="inputendmonth" class="form-select">
+                <option selected>Select start month</option>
+                <option>January</option>
+                <option>February</option>
+                <option>March</option>
+                <option>April</option>
+                <option>May</option>
+                <option>June</option>
+                <option>July</option>
+                <option>August</option>
+                <option>September</option>
+                <option>October</option>
+                <option>November</option>
+                <option>December</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="inputyear" class="form-label mb-2">Year</label>
+            <div class="d-flex gap-2">
+              <select id="inputyear" class="form-select">
+                <option selected>Year</option>
+                <option>2011</option>
+                <option>2012</option>
+                <option>2013</option>
+                <option>2014</option>
+                <option>2015</option>
+                <option>2016</option>
+                <option>2017</option>
+                <option>2018</option>
+                <option>2019</option>
+                <option>2020</option>
+                <option>2021</option>
+                <option>2022</option>
+                <option>2023</option>
+              </select>
+            </div>
+          </div>
+
+          <a href="Insights.html" class="btn theme-btn w-100">View details</a>
+        </div>
+        <button type="button" class="btn close-btn" data-bs-dismiss="modal">
+          <i class="icon" data-feather="x"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+  <!-- calendar modal end -->
+
+  <!-- swiper js -->
+  
+  
+
+  <!-- feather js -->
+  
+  
+
+  <!-- apexcharts js -->
+  
+  
+
+  <!-- bootstrap js -->
+  
+
+  <!-- script js -->
+  
+
+      </div>
+    </section>
+
+    <section id="page-profile" class="page">
+      <div class="page-inner">
+        
+  <!-- side bar start -->
+  <div class="offcanvas sidebar-offcanvas offcanvas-start" tabindex="-1" id="offcanvasLeft">
+    <div class="offcanvas-header sidebar-header">
+      <div class="sidebar-logo">
+        <img class="img-fluid logo" src="{% themed_static 'images/logo/logo.png' %}" alt="logo" />
+      </div>
+      <div class="Saldo">
+        <img class="img-fluid Saldo-bg" src="{% themed_static 'images/background/auth-bg.jpg' %}" alt="auth-bg" />
+        <h5>Saldo</h5>
+        <h2>$1,06,786.65</h2>
+      </div>
+    </div>
+    <div class="offcanvas-body">
+      <div class="sidebar-content">
+        <ul class="link-section">
+          <li>
+            <a href="Início.html" class="pages">
+              <i class="sidebar-icon" data-feather="credit-card"></i>
+              <h3>mPay</h3>
+            </a>
+          </li>
+          <li>
+            <a href="Cripto.html" class="pages">
+              <i class="sidebar-icon" data-feather="dollar-sign"></i>
+              <h3>Cripto</h3>
+            </a>
+          </li>
+          <li>
+            <a href="page-list.html" class="pages">
+              <i class="sidebar-icon" data-feather="file-text"></i>
+              <h3>Theme Pages</h3>
+            </a>
+          </li>
+          <li>
+            <a href="component.html" class="pages">
+              <i class="sidebar-icon" data-feather="command"></i>
+              <h3>Theme Components</h3>
+            </a>
+          </li>
+
+          <li>
+            <a href="Perfil.html" class="pages">
+              <i class="sidebar-icon" data-feather="user"></i>
+              <h3>Perfil</h3>
+            </a>
+          </li>
+
+          <li>
+            <a href="signin.html" class="pages">
+              <i class="sidebar-icon" data-feather="log-out"></i>
+              <h3>Sair</h3>
+            </a>
+          </li>
+        </ul>
+        <div class="mode-switch">
+          <ul class="switch-section">
+            <li>
+              <h3>RTL</h3>
+              <div class="switch-btn">
+                <input id="dir-switch" type="checkbox" />
+              </div>
+            </li>
+            <li>
+              <h3>Dark</h3>
+              <div class="switch-btn">
+                <input id="dark-switch" type="checkbox" />
+              </div>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- side bar end -->
+
+  <!-- header start -->
+  <header class="section-t-space">
+    <div class="custom-container">
+      <div class="header-panel">
+        <a class="sidebar-btn" data-bs-toggle="offcanvas" data-bs-target="#offcanvasLeft">
+          <i class="menu-icon" data-feather="menu"></i>
+        </a>
+        <h2>Perfil</h2>
+      </div>
+    </div>
+  </header>
+  <!-- header end -->
+
+  <!-- Perfil section start -->
+  <section class="section-b-space">
+    <div class="custom-container">
+      <div class="Perfil-section">
+        <div class="Perfil-banner">
+          <div class="Perfil-image">
+            <img class="img-fluid Perfil-pic" src="{% themed_static 'images/person/p3.png' %}" alt="p3" />
+          </div>
+        </div>
+        <h2>Survana Williams</h2>
+        <h5>+62 78459 25623</h5>
+      </div>
+
+      <ul class="Perfil-list">
+        <li>
+          <a href="my-account.html" class="Perfil-box">
+            <div class="Perfil-img">
+              <i class="icon" data-feather="user"></i>
+            </div>
+            <div class="Perfil-details">
+              <h4>My Account</h4>
+              <img class="img-fluid arrow" src="{% themed_static 'images/svg/arrow.svg' %}" alt="arrow" />
+            </div>
+          </a>
+        </li>
+        <li>
+          <a href="cards.html" class="Perfil-box">
+            <div class="Perfil-img">
+              <i class="icon" data-feather="credit-card"></i>
+            </div>
+            <div class="Perfil-details">
+              <h4>My Cards</h4>
+              <img class="img-fluid arrow" src="{% themed_static 'images/svg/arrow.svg' %}" alt="arrow" />
+            </div>
+          </a>
+        </li>
+        <li>
+          <a href="change-password.html" class="Perfil-box">
+            <div class="Perfil-img">
+              <i class="icon" data-feather="Configurações"></i>
+            </div>
+            <div class="Perfil-details">
+              <h4>Change Password</h4>
+              <img class="img-fluid arrow" src="{% themed_static 'images/svg/arrow.svg' %}" alt="arrow" />
+            </div>
+          </a>
+        </li>
+        <li>
+          <a href="setting.html" class="Perfil-box">
+            <div class="Perfil-img">
+              <i class="icon" data-feather="lock"></i>
+            </div>
+            <div class="Perfil-details">
+              <h4>Configurações</h4>
+              <img class="img-fluid arrow" src="{% themed_static 'images/svg/arrow.svg' %}" alt="arrow" />
+            </div>
+          </a>
+        </li>
+
+        <li>
+          <a href="Ajuda.html" class="Perfil-box">
+            <div class="Perfil-img">
+              <i class="icon" data-feather="Ajuda-circle"></i>
+            </div>
+            <div class="Perfil-details">
+              <h4>Ajuda Center</h4>
+              <img class="img-fluid arrow" src="{% themed_static 'images/svg/arrow.svg' %}" alt="arrow" />
+            </div>
+          </a>
+        </li>
+        <li>
+          <a href="signin.html" class="Perfil-box">
+            <div class="Perfil-img">
+              <i class="icon" data-feather="log-out"></i>
+            </div>
+            <div class="Perfil-details">
+              <h4>Sair</h4>
+            </div>
+          </a>
+        </li>
+      </ul>
+    </div>
+  </section>
+  <!-- Perfil section end -->
+
+  <!-- panel-space start -->
+  <section class="panel-space"></section>
+  <!-- panel-space end -->
+
+  <!-- bottom navbar start -->
+  <div class="navbar-menu">
+    <div class="scanner-bg">
+      <a href="scan-pay.html" class="scanner-btn">
+        <img class="img-fluid" src="{% themed_static 'images/svg/scan.svg' %}" alt="scan" />
+      </a>
+    </div>
+
+    <ul>
+      <li>
+        <a href="Início.html">
+          <div class="icon">
+            <img class="unactive" src="{% themed_static 'images/svg/mpay.svg' %}" alt="mPay" />
+            <img class="active" src="{% themed_static 'images/svg/mpay-fill.svg' %}" alt="mPay" />
+          </div>
+          <h5>mPay</h5>
+        </a>
+      </li>
+
+      <li>
+        <a href="Cripto.html">
+          <div class="icon">
+            <img class="unactive" src="{% themed_static 'images/svg/bitcoin.svg' %}" alt="categories" />
+            <img class="active" src="{% themed_static 'images/svg/bitcoin-fill.svg' %}" alt="categories" />
+          </div>
+          <h5>Cripto</h5>
+        </a>
+      </li>
+
+      <li></li>
+
+      <li>
+        <a href="Insights.html">
+          <div class="icon">
+            <img class="unactive" src="{% themed_static 'images/svg/bar-chart.svg' %}" alt="bag" />
+            <img class="active" src="{% themed_static 'images/svg/bar-chart-fill.svg' %}" alt="bag" />
+          </div>
+          <h5>Insights</h5>
+        </a>
+      </li>
+
+      <li class="active">
+        <a href="Perfil.html">
+          <div class="icon">
+            <img class="unactive" src="{% themed_static 'images/svg/user.svg' %}" alt="Perfil" />
+            <img class="active" src="{% themed_static 'images/svg/user-fill.svg' %}" alt="Perfil" />
+          </div>
+          <h5>Perfil</h5>
+        </a>
+      </li>
+    </ul>
+  </div>
+  <!-- bottom navbar end -->
+
+  <!-- swiper js -->
+  
+  
+
+  <!-- feather js -->
+  
+  
+
+  <!-- bootstrap js -->
+  
+
+  <!-- script js -->
+  
+
+      </div>
+    </section>
+
+  </main>
+
+  <nav class="app-nav navbar navbar-expand fixed-bottom p-0" style="background:#0b1924;border-top:1px solid rgba(255,255,255,.06)">
+    <ul class="navbar-nav nav-justified w-100 text-center">
+      <li class="nav-item"><a class="nav-link py-2 active" data-target="landing" href="#landing">
+        <i data-feather="home"></i><div style="font-size:.75rem">Início</div>
+      </a></li>
+      <li class="nav-item"><a class="nav-link py-2" data-target="crypto" href="#crypto">
+        <i data-feather="activity"></i><div style="font-size:.75rem">Cripto</div>
+      </a></li>
+      <li class="nav-item"><a class="nav-link py-2" data-target="insight" href="#insight">
+        <i data-feather="pie-chart"></i><div style="font-size:.75rem">Insights</div>
+      </a></li>
+      <li class="nav-item"><a class="nav-link py-2" data-target="profile" href="#profile">
+        <i data-feather="user"></i><div style="font-size:.75rem">Perfil</div>
+      </a></li>
+    </ul>
+  </nav>
+
+  
+  <script src="{% themed_static 'js/jquery-3.3.1.min.js' %}"></script>
+  <script src="{% themed_static 'js/bootstrap.bundle.min.js' %}"></script>
+  <script src="{% themed_static 'js/feather.min.js' %}"></script>
+  <script src="{% themed_static 'js/script.js' %}"></script>
+  <script>
+    (function() {
+      const PAGES = ['landing','crypto','insight','profile'];
+      const $$ = (sel, ctx=document) => Array.from(ctx.querySelectorAll(sel));
+      function showPage(name) {
+        PAGES.forEach(p => {
+          const el = document.getElementById('page-' + p);
+          if (el) el.classList.toggle('active', p === name);
+        });
+        $$('.app-nav .nav-link').forEach(a => a.classList.toggle('active', a.dataset.target === name));
+      }
+      function fromHash() {
+        const h = (location.hash || '').replace('#','').toLowerCase();
+        return PAGES.includes(h) ? h : 'landing';
+      }
+      document.addEventListener('DOMContentLoaded', () => {
+        if (window.feather && window.feather.replace) window.feather.replace();
+        showPage(fromHash());
+        $$('.app-nav .nav-link').forEach(a => {
+          a.addEventListener('click', (ev) => {
+            const target = a.dataset.target;
+            if (!target) return;
+            ev.preventDefault();
+            history.replaceState(null, '', '#' + target);
+            showPage(target);
+          });
+        });
+        window.addEventListener('hashchange', () => showPage(fromHash()));
       });
-    });
-    window.addEventListener('hashchange', () => showPage(fromHash()));
-  });
-})();
-</script>
+    })();
+  </script>
 
 </body>
 </html>
