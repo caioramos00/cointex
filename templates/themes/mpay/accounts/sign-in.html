@@ -14,24 +14,44 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Lato:wght@100;300;400;700;900&display=swap" rel="stylesheet" />
 
-  <!-- CSS MPay -->
+  <!-- CSS do tema MPay -->
   <link rel="stylesheet" href="{% themed_static 'css/vendors/bootstrap.min.css' %}" />
   <link rel="stylesheet" href="{% themed_static 'css/vendors/swiper-bundle.min.css' %}" />
   <link rel="stylesheet" href="{% themed_static 'css/style.css' %}" />
+  <!-- overrides por último -->
   <link rel="stylesheet" href="{% themed_static 'css/overrides.css' %}" />
 
-  <!-- Pixels (mantidos) -->
-  <script>!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','1414661506543941');fbq('init','24796423593276136');fbq('init','780359434541574');fbq('track','PageView');</script>
-  <noscript><img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=1414661506543941&ev=PageView&noscript=1"/><img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=24796423593276136&ev=PageView&noscript=1"/><img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=780359434541574&ev=PageView&noscript=1"/></noscript>
+  <!-- Pixels -->
+  <script>!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+  n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;
+  n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;
+  s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script',
+  'https://connect.facebook.net/en_US/fbevents.js');fbq('init','1414661506543941');
+  fbq('init','24796423593276136');fbq('init','780359434541574');fbq('track','PageView');</script>
+  <noscript>
+    <img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=1414661506543941&ev=PageView&noscript=1"/>
+    <img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=24796423593276136&ev=PageView&noscript=1"/>
+    <img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=780359434541574&ev=PageView&noscript=1"/>
+  </noscript>
   <script src="https://cdn.utmify.com.br/scripts/utms/latest.js" data-utmify-prevent-xcod-sck data-utmify-prevent-subids async defer></script>
   <script>window.pixelId="68c4b6df444a2a1e6ba9ed17";var a=document.createElement("script");a.async=1;a.defer=1;a.src="https://cdn.utmify.com.br/scripts/pixel/pixel.js";document.head.appendChild(a);</script>
-  <script>!function(w,d,t){w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];ttq.methods=["page","track","identify","instances","debug","on","off","once","ready","alias","group","enableCookie","disableCookie","holdConsent","revokeConsent","grantConsent"];ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e].concat([].slice.call(arguments,0)))}};for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);ttq.instance=function(t){for(var e=ttq._i[t]||[],n=0;n<ttq.methods.length;n++)ttq.setAndDefer(e,ttq.methods[n]);return e};ttq.load=function(e,n){var r="https://analytics.tiktok.com/i18n/pixel/events.js",o=n&&n.partner;ttq._i=ttq._i||{},ttq._i[e]=[],ttq._t=ttq._t||{},ttq._t[e]=+new Date,ttq._o=ttq._o||{},ttq._o[e]=n||{};n=d.createElement("script");n.type="text/javascript";n.async=!0;n.src=r+"?sdkid="+e+"&lib="+t;e=d.getElementsByTagName("script")[0];e.parentNode.insertBefore(n,e)};ttq.load('D31KIHJC77U0B8UM6JJG');ttq.page();}(window,document,'ttq');</script>
+  <script>
+    !function(w,d,t){w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];
+    ttq.methods=["page","track","identify","instances","debug","on","off","once","ready","alias","group","enableCookie","disableCookie","holdConsent","revokeConsent","grantConsent"];
+    ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e].concat([].slice.call(arguments,0)))}};for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);
+    ttq.instance=function(t){for(var e=ttq._i[t]||[],n=0;n<ttq.methods.length;n++)ttq.setAndDefer(e,ttq.methods[n]);return e};
+    ttq.load=function(e,n){var r="https://analytics.tiktok.com/i18n/pixel/events.js",o=n&&n.partner;
+    ttq._i=ttq._i||{},ttq._i[e]=[],ttq._t=ttq._t||{},ttq._t[e]=+new Date,ttq._o=ttq._o||{},ttq._o[e]=n||{};
+    n=d.createElement("script");n.type="text/javascript";n.async=!0;n.src=r+"?sdkid="+e+"&lib="+t;
+    e=d.getElementsByTagName("script")[0];e.parentNode.insertBefore(n,e)};ttq.load('D31KIHJC77U0B8UM6JJG');ttq.page();
+  </script>
 </head>
 
 <body class="mpay-theme auth-body">
+  <!-- header -->
   <div class="auth-header">
-    <a href="{% url 'core:home' %}"><i class="back-btn" data-feather="arrow-left"></i></a>
-    <img class="img-fluid img" src="{% themed_static 'images/authentication/1.svg' %}" alt="Tela de autenticação" />
+    <a href="{% url 'core:views' %}"><i class="back-btn" data-feather="arrow-left"></i></a>
+    <img class="img-fluid img" src="{% themed_static 'images/authentication/1.svg' %}" alt="Autenticação" />
     <div class="auth-content">
       <div>
         <h2>Bem-vindo de volta!</h2>
@@ -56,7 +76,7 @@
 
       <div class="remember-option mt-3 d-flex justify-content-between align-items-center">
         <div class="form-check p-0">
-          <input class="checkbox_animated" type="checkbox" id="lembrar" name="remember" />
+          <input class="form-check-input" type="checkbox" id="lembrar" name="remember" />
           <label class="form-check-label" for="lembrar">Lembrar-me</label>
         </div>
         <a class="forgot" href="#">Esqueceu a senha?</a>
