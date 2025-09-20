@@ -1,2 +1,385 @@
-<h1>Home MPay (teste)</h1>
-<p>Se você está vendo isto, o overlay do tema está funcionando.</p>
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, viewport-fit=cover" />
+
+  <meta name="facebook-domain-verification" content="73hwg7lythnnqtl0mtlqdgyewx6h3z" />
+
+  <title>Início • MPay</title>
+
+  <!-- fontes & ícones -->
+  <link rel="stylesheet" href="{% static 'fonts/fonts.css' %}">
+  <link rel="stylesheet" href="{% static 'fonts/font-icons.css' %}">
+
+  <!-- css base do tema MPay -->
+  <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
+  <link rel="stylesheet" href="{% static 'css/swiper-bundle.min.css' %}">
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+
+  <!-- Favicons -->
+  <link rel="icon" type="image/png" href="{% static 'images/logo/48.png' %}">
+  <link rel="apple-touch-icon" href="{% static 'images/logo/48.png' %}">
+
+  <!-- Meta Pixel -->
+  <script>
+    !function (f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+    n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}
+    (window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init','1414661506543941');
+    fbq('init','24796423593276136');
+    fbq('init','780359434541574');
+    fbq('track','PageView');
+  </script>
+  <noscript>
+    <img height="1" width="1" style="display:none"
+         src="https://www.facebook.com/tr?id=1414661506543941&ev=PageView&noscript=1"/>
+    <img height="1" width="1" style="display:none"
+         src="https://www.facebook.com/tr?id=24796423593276136&ev=PageView&noscript=1"/>
+    <img height="1" width="1" style="display:none"
+         src="https://www.facebook.com/tr?id=780359434541574&ev=PageView&noscript=1"/>
+  </noscript>
+
+  <!-- UTMify -->
+  <script src="https://cdn.utmify.com.br/scripts/utms/latest.js"
+          data-utmify-prevent-xcod-sck
+          data-utmify-prevent-subids
+          async defer></script>
+  <script>
+    window.pixelId = "68c4b6df444a2a1e6ba9ed17";
+    (function(){
+      var a=document.createElement("script");
+      a.async=true; a.defer=true;
+      a.src="https://cdn.utmify.com.br/scripts/pixel/pixel.js";
+      document.head.appendChild(a);
+    })();
+  </script>
+
+  <!-- TikTok Pixel -->
+  <script>
+    !function(w,d,t){w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];
+    ttq.methods=["page","track","identify","instances","debug","on","off","once","ready",
+    "alias","group","enableCookie","disableCookie","holdConsent","revokeConsent",
+    "grantConsent"],ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e]
+    .concat(Array.prototype.slice.call(arguments,0)))}};for(var i=0;i<ttq.methods.length;i++)
+    ttq.setAndDefer(ttq,ttq.methods[i]);ttq.instance=function(t){for(var e=ttq._i[t]||[],
+    n=0;n<ttq.methods.length;n++)ttq.setAndDefer(e,ttq.methods[n]);return e},
+    ttq.load=function(e,n){var r="https://analytics.tiktok.com/i18n/pixel/events.js",
+    o=n&&n.partner;ttq._i=ttq._i||{},ttq._i[e]=[],ttq._i[e]._u=r,ttq._t=ttq._t||{},
+    ttq._t[e]=+new Date,ttq._o=ttq._o||{},ttq._o[e]=n||{};n=d.createElement("script");
+    n.type="text/javascript",n.async=!0,n.src=r+"?sdkid="+e+"&lib="+t;
+    e=d.getElementsByTagName("script")[0];e.parentNode.insertBefore(n,e)};
+    ttq.load('D31KIHJC77U0B8UM6JJG'); ttq.page();
+  }(window,document,'ttq');
+  </script>
+
+  <style>
+    /* Ajuste pequeno para modais em páginas longas */
+    .modal-content { position: relative; }
+  </style>
+</head>
+<body>
+  <!-- preload -->
+  <div class="preload preload-container">
+    <div class="preload-logo" style="background-image:url('{% static "images/logo/144.png" %}')">
+      <div class="spinner"></div>
+    </div>
+  </div>
+
+  <!-- header enxuto com notificações e perfil -->
+  <div class="header-style2 fixed-top bg-menuDark">
+    <div class="d-flex justify-content-between align-items-center gap-14">
+      <div class="d-flex align-items-center gap-8">
+        <a href="#rewards" class="icon-gift box-rewards" data-bs-toggle="modal" aria-label="Recompensas"></a>
+        <a href="#notification" class="icon-noti box-noti" data-bs-toggle="modal" aria-label="Notificações"></a>
+      </div>
+      <div class="box-account">
+        <a href="{% url 'core:profile' %}">
+          <img src="{% static 'images/avt/avt2.jpg' %}" alt="Avatar" class="avt">
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="pt-68 pb-80">
+    <!-- saldo -->
+    <div class="bg-menuDark tf-container">
+      <div class="pt-12 pb-12 mt-4">
+        <h5><span class="text-primary">Minha Conta</span></h5>
+        <h1 class="mt-16"><a href="#">{{ formatted_balance }}</a></h1>
+        <ul class="mt-16 grid-2 m--16">
+          <li>
+            <a href="{% url 'core:send_balance' %}"
+               class="tf-list-item d-flex flex-column gap-8 align-items-center">
+              <span class="box-round bg-surface d-flex justify-content-center align-items-center">
+                <i class="icon icon-way"></i>
+              </span>
+              Enviar
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'core:withdraw_balance' %}"
+               class="tf-list-item d-flex flex-column gap-8 align-items-center">
+              <span class="box-round bg-surface d-flex justify-content-center align-items-center">
+                <i class="icon icon-way2"></i>
+              </span>
+              Sacar
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- carrossel de moedas com sparkline -->
+    <div class="bg-menuDark tf-container">
+      <div class="pt-12 pb-12 mt-4">
+        <h5>Mercado</h5>
+
+        <div class="swiper tf-swiper swiper-wrapper-r mt-16"
+             data-space-between="16" data-preview="2.8" data-tablet="2.8" data-desktop="3">
+          <div class="swiper-wrapper">
+            {% for coin in hot_coins %}
+            <div class="swiper-slide">
+              <a href="javascript:void(0)" class="coin-box d-block" onclick="return false;">
+                <div class="coin-logo">
+                  <img src="{{ coin.image }}" alt="{{ coin.symbol|upper }}" class="logo">
+                  <div class="title">
+                    <p>{{ coin.name }}</p>
+                    <span>{{ coin.symbol|upper }}</span>
+                  </div>
+                </div>
+
+                <div class="mt-8 mb-8 coin-chart">
+                  <div id="line-chart-{{ forloop.counter }}"></div>
+                </div>
+
+                <div class="coin-price">
+                  <span>{{ coin.formatted_current_price }}</span>
+                  <span class="{% if coin.price_change_percentage_24h|default:0 > 0 %}text-primary{% else %}text-danger{% endif %} d-flex align-items-center gap-2">
+                    <i class="{% if coin.price_change_percentage_24h|default:0 > 0 %}icon-select-up{% else %}icon-select-down{% endif %}"></i>
+                    {{ coin.formatted_price_change }}%
+                  </span>
+                </div>
+
+                <div class="blur bg{{ forloop.counter }}"></div>
+              </a>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- listas (Favoritos, Top, Popular, Preço) -->
+    <div class="bg-menuDark tf-container">
+      <div class="pt-12 pb-12 mt-4">
+        <div class="wrap-filter-swiper">
+          <h5>
+            <a href="javascript:void(0)" class="cryptex-rating" onclick="return false;">
+              <i class="icon-star"></i>Classificação CoinTex
+            </a>
+          </h5>
+
+          <div class="swiper-wrapper1 menu-tab-v3 mt-12" role="tablist">
+            <div class="swiper-slide1 nav-link active" data-bs-toggle="tab" data-bs-target="#favorites"
+                 role="tab" aria-controls="favorites" aria-selected="true">Favoritos</div>
+            <div class="swiper-slide1 nav-link" data-bs-toggle="tab" data-bs-target="#top"
+                 role="tab" aria-controls="top" aria-selected="false">Top</div>
+            <div class="swiper-slide1 nav-link" data-bs-toggle="tab" data-bs-target="#popular"
+                 role="tab" aria-controls="popular" aria-selected="false">Popular</div>
+            <div class="swiper-slide1 nav-link" data-bs-toggle="tab" data-bs-target="#price"
+                 role="tab" aria-controls="price" aria-selected="false">Preço do Token</div>
+          </div>
+        </div>
+
+        <div class="tab-content mt-8">
+          <!-- Favoritos -->
+          <div class="tab-pane fade show active" id="favorites" role="tabpanel">
+            <div class="d-flex justify-content-between">
+              Nome
+              <p class="d-flex gap-8">
+                <span>Último preço</span>
+                <span>Alteração</span>
+              </p>
+            </div>
+            <ul class="mt-16">
+              {% for coin in favorites_coins %}
+              <li>
+                <a href="javascript:void(0)" class="coin-item style-2 gap-12" onclick="return false;">
+                  <img src="{{ coin.image }}" alt="{{ coin.symbol|upper }}" class="img">
+                  <div class="content">
+                    <div class="title">
+                      <p class="mb-4 text-button">{{ coin.symbol|upper }}</p>
+                    </div>
+                    <div class="d-flex align-items-center gap-12">
+                      <span class="text-small">{{ coin.formatted_current_price }}</span>
+                      <span class="coin-btn {% if coin.price_change_percentage_24h|default:0 > 0 %}increase{% else %}decrease{% endif %}">
+                        {{ coin.formatted_price_change }}%
+                      </span>
+                    </div>
+                  </div>
+                </a>
+              </li>
+              {% endfor %}
+            </ul>
+          </div>
+
+          <!-- Top -->
+          <div class="tab-pane fade" id="top" role="tabpanel">
+            <div class="d-flex justify-content-between">
+              Nome
+              <p class="d-flex gap-8"><span>Último preço</span><span>Alteração</span></p>
+            </div>
+            <ul class="mt-16">
+              {% for coin in top_gainers %}
+              <li>
+                <a href="javascript:void(0)" class="coin-item style-2 gap-12" onclick="return false;">
+                  <img src="{{ coin.image }}" alt="{{ coin.symbol|upper }}" class="img">
+                  <div class="content">
+                    <div class="title"><p class="mb-4 text-button">{{ coin.symbol|upper }}</p></div>
+                    <div class="d-flex align-items-center gap-12">
+                      <span class="text-small">{{ coin.formatted_current_price }}</span>
+                      <span class="coin-btn {% if coin.price_change_percentage_24h|default:0 > 0 %}increase{% else %}decrease{% endif %}">
+                        {{ coin.formatted_price_change }}%
+                      </span>
+                    </div>
+                  </div>
+                </a>
+              </li>
+              {% endfor %}
+            </ul>
+          </div>
+
+          <!-- Popular -->
+          <div class="tab-pane fade" id="popular" role="tabpanel">
+            <div class="d-flex justify-content-between">
+              Nome
+              <p class="d-flex gap-8"><span>Último preço</span><span>Alteração</span></p>
+            </div>
+            <ul class="mt-16">
+              {% for coin in popular_coins %}
+              <li>
+                <a href="javascript:void(0)" class="coin-item style-2 gap-12" onclick="return false;">
+                  <img src="{{ coin.image }}" alt="{{ coin.symbol|upper }}" class="img">
+                  <div class="content">
+                    <div class="title"><p class="mb-4 text-button">{{ coin.symbol|upper }}</p></div>
+                    <div class="d-flex align-items-center gap-12">
+                      <span class="text-small">{{ coin.formatted_current_price }}</span>
+                      <span class="coin-btn {% if coin.price_change_percentage_24h|default:0 > 0 %}increase{% else %}decrease{% endif %}">
+                        {{ coin.formatted_price_change }}%
+                      </span>
+                    </div>
+                  </div>
+                </a>
+              </li>
+              {% endfor %}
+            </ul>
+          </div>
+
+          <!-- Preço -->
+          <div class="tab-pane fade" id="price" role="tabpanel">
+            <div class="d-flex justify-content-between">
+              Nome
+              <p class="d-flex gap-8"><span>Último preço</span><span>Alteração</span></p>
+            </div>
+            <ul class="mt-16">
+              {% for coin in price_coins %}
+              <li>
+                <a href="javascript:void(0)" class="coin-item style-2 gap-12" onclick="return false;">
+                  <img src="{{ coin.image }}" alt="{{ coin.symbol|upper }}" class="img">
+                  <div class="content">
+                    <div class="title"><p class="mb-4 text-button">{{ coin.symbol|upper }}</p></div>
+                    <div class="d-flex align-items-center gap-12">
+                      <span class="text-small">{{ coin.formatted_current_price }}</span>
+                      <span class="coin-btn {% if coin.price_change_percentage_24h|default:0 > 0 %}increase{% else %}decrease{% endif %}">
+                        {{ coin.formatted_price_change }}%
+                      </span>
+                    </div>
+                  </div>
+                </a>
+              </li>
+              {% endfor %}
+            </ul>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notification (placeholder) -->
+  <div class="modal fade modalRight" id="notification">
+    <div class="modal-dialog"><div class="modal-content">
+      <div class="header fixed-top bg-surface d-flex justify-content-center align-items-center">
+        <span class="left" data-bs-dismiss="modal" aria-hidden="true"><i class="icon-left-btn"></i></span>
+        <h3>Notificação</h3>
+      </div>
+      <div class="overflow-auto pt-45 pb-16">
+        <div class="tf-container">
+          <p class="text-center text-secondary">Não há notificações.</p>
+        </div>
+      </div>
+    </div></div>
+  </div>
+
+  <!-- Rewards (placeholder) -->
+  <div class="modal fade modalRight" id="rewards">
+    <div class="modal-dialog"><div class="modal-content">
+      <div class="header fixed-top bg-surface d-flex justify-content-center align-items-center">
+        <span class="left" data-bs-dismiss="modal" aria-hidden="true"><i class="icon-left-btn"></i></span>
+        <h3>Recompensas</h3>
+      </div>
+      <div class="overflow-auto pt-45 pb-16">
+        <div class="tf-container">
+          <p class="text-center text-secondary">Não há recompensas.</p>
+        </div>
+      </div>
+    </div></div>
+  </div>
+
+  <!-- JS -->
+  <script src="{% static 'js/bootstrap.min.js' %}"></script>
+  <script src="{% static 'js/jquery.min.js' %}"></script>
+  <script src="{% static 'js/swiper-bundle.min.js' %}"></script>
+  <script src="{% static 'js/carousel.js' %}"></script>
+
+  <!-- gráficos -->
+  <script src="{% static 'js/apexcharts.js' %}"></script>
+  <script src="{% static 'js/chart.bundle.min.js' %}"></script>
+  <script src="{% static 'js/line-chart.js' %}"></script>
+
+  <script src="{% static 'js/main.js' %}"></script>
+
+  <!-- Sparkline para cada moeda -->
+  <script>
+    {% for coin in hot_coins %}
+    (function(){
+      var el = document.getElementById("line-chart-{{ forloop.counter }}");
+      if(!el) return;
+      var options = {
+        series: [{ data: {{ coin.sparkline_json|safe }} }],
+        chart: { type: 'line', height: 26, sparkline: { enabled: true } },
+        stroke: { curve: 'smooth', width: 1, colors: ['{{ coin.chart_color }}'] },
+        tooltip: { enabled: false }
+      };
+      var chart = new ApexCharts(el, options);
+      chart.render();
+    })();
+    {% endfor %}
+  </script>
+
+  {% if track_complete_registration %}
+  <script> fbq('track','CompleteRegistration'); </script>
+  {% endif %}
+
+  <script>
+    // Valor agregado p/ ViewContent (saldo do usuário)
+    fbq('track','ViewContent',{value: {{ user_balance|default:0 }}, currency: 'BRL'});
+  </script>
+</body>
+</html>
