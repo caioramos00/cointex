@@ -1,0 +1,98 @@
+/*=====================
+    page-list CSS start
+==========================*/
+.app-title {
+    padding: 15px;
+    background-color: rgba(var(--light-text), 0.1);
+    border-left: 3px solid rgba(98, 44, 253, 1);
+    [dir="rtl"] & {
+        border-left: unset;
+        border-right: 3px solid rgba(98, 44, 253, 1);
+    }
+
+    h2 {
+        color: rgba(var(--dark-text), 1);
+    }
+
+    h3 {
+        color: rgba(var(--dark-text), 1);
+    }
+}
+
+.page-accordion {
+    margin-bottom: 20px;
+
+    .accordion-item {
+        border: none;
+
+        .accordion-header {
+            background-color: rgba(var(--white), 1);
+
+            .accordion-button {
+                font-size: 16px;
+                font-weight: 400;
+                color: rgba(var(--dark-text), 1);
+                background-color: rgba(var(--white), 1);
+                border-radius: 6px;
+                padding: 10px 15px;
+                box-shadow: none;
+
+                &.collapsed {
+                    &::after {
+                        [class="dark"] & {
+                            filter: contrast(0.5);
+                        }
+                    }
+                }
+
+                &:not(.collapsed) {
+                    &::after {
+                        filter: grayscale(1);
+                    }
+                }
+
+                &:focus {
+                    box-shadow: none;
+                }
+            }
+        }
+
+        .accordion-body {
+            padding: 5px 10px;
+            background-color: rgba(var(--white), 1);
+
+            .page-list {
+                background-color: rgba(var(--white), 1);
+                border: 1px solid rgba(var(--box-bg), 0.15);
+                box-shadow: 0px 4px 22px rgb(23 22 27 / 4%);
+                border-radius: 10px;
+                padding: 15px;
+
+                .pages {
+                    width: 100%;
+                    padding-bottom: 10px;
+
+                    &:last-child {
+                        padding-bottom: 0;
+                    }
+
+                    a {
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        color: rgba(var(--light-text), 1);
+                        font-size: 16px;
+                        font-weight: 400;
+                        text-transform: capitalize;
+
+                        .arrow {
+                            [class="dark"] & {
+                                filter: contrast(0);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

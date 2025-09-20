@@ -1,0 +1,171 @@
+/*=============================
+    Authentication CSS start
+===============================*/
+.auth-header {
+  position: relative;
+  background-image: url(../images/background/auth-bg.jpg);
+  height: 200px;
+  background-repeat: no-repeat;
+  background-size: cover;
+
+  a {
+    .back-btn {
+      color: rgba(255, 255, 255, 1);
+      font-size: 22px;
+      line-height: 1;
+      position: absolute;
+      left: 20px;
+      top: 50px;
+      z-index: 1;
+      [dir="rtl"] & {
+        left: unset;
+        right: 20px;
+      }
+    }
+  }
+
+  .help-head {
+    h2 {
+      color: rgba(255, 255, 255, 1);
+      font-weight: 600;
+      font-size: 18px;
+      line-height: 1;
+      position: absolute;
+      left: 50px;
+      top: 53px;
+      [dir="rtl"] & {
+        left: unset;
+        right: 50px;
+      }
+    }
+  }
+
+  .img {
+    position: absolute;
+    right: 20px;
+    bottom: -20px;
+    z-index: 1;
+    width: calc(115px + (125 - 115) * ((100vw - 320px) / (767 - 320)));
+    [dir="rtl"] & {
+      left: 20px;
+      right: unset;
+    }
+  }
+
+  .img1 {
+    position: absolute;
+    right: 10px;
+    bottom: -20px;
+    z-index: 1;
+    width: 175px;
+    height: 200px;
+    [dir="rtl"] & {
+      left: 10px;
+      right: unset;
+    }
+  }
+
+  .img2 {
+    position: absolute;
+    left: 50%;
+    bottom: -30px;
+    transform: translate(-50%);
+    z-index: 0;
+    width: 165px;
+    height: 200px;
+  }
+
+  .auth-content {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: flex-end;
+    padding: 0 20px 40px;
+    [dir="rtl"] & {
+      left: unset;
+      right: 0;
+    }
+  }
+
+  .auth-bg {
+    width: 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+  }
+
+  h2 {
+    font-size: 22px;
+    color: rgba(255, 255, 255, 1);
+  }
+
+  h4 {
+    color: rgba(255, 255, 255, 1);
+    margin-top: 4px;
+  }
+}
+
+.division {
+  position: relative;
+  text-align: center;
+  margin: calc(20px + (40 - 20) * ((100vw - 320px) / (767 - 320))) 0;
+  z-index: 0;
+
+  span {
+    position: relative;
+    background-color: rgba(var(--white), 1);
+    color: rgba(var(--light-text), 1);
+    padding: 0 10px;
+  }
+
+  &::after {
+    content: " ";
+    position: absolute;
+    top: 50%;
+    left: 0;
+    transform: translateY(-50%);
+    width: 100%;
+    background: linear-gradient(
+      270deg,
+      rgba(155, 166, 184, 0) -2.05%,
+      rgba(155, 166, 184, 1) 50.93%,
+      rgba(155, 166, 184, 0) 101.74%
+    );
+    z-index: -1;
+    height: 2px;
+
+    [dir="rtl"] & {
+      left: unset;
+      right: 0;
+    }
+  }
+}
+
+.social-media {
+  display: flex;
+  justify-content: space-between;
+  gap: calc(7px + (15 - 7) * ((100vw - 320px) / (600 - 320)));
+
+  li {
+    background-color: rgba(var(--box-bg), 1);
+    width: 100%;
+    height: 65px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+.signup {
+  padding-top: 15px;
+  color: rgba(var(--light-text), 1);
+  text-align: center;
+
+  a {
+    color: rgba(var(--dark-text), 1);
+  }
+}

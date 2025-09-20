@@ -1,0 +1,56 @@
+/*=====================
+    insight CSS start
+==========================*/
+.wallet-details {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    padding: 15px 0;
+    background-color: rgba(var(--box-bg), 0.1);
+
+    .amount {
+        border-right: 1px dashed rgba(var(--box-bg), 0.5);
+
+        [dir="rtl"] & {
+            border-left: 1px dashed rgba(var(--box-bg), 0.5);
+            border-right: unset;
+        }
+
+        h5 {
+            color: rgba(var(--light-text), 1);
+        }
+
+        .icon {
+            color: rgba(var(--white), 1);
+        }
+    }
+}
+
+.chart {
+    background: rgba(var(--white), 1);
+    border: 1px solid rgba(var(--box-bg), 0.15);
+    box-shadow: 0px 4px 22px rgba(var(--dark-text), 0.04);
+    border-radius: 10px;
+    padding: calc(10px + (15 - 10) * ((100vw - 320px) / (1920 - 320)));
+
+    .listing {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        li {
+            height: 25px;
+            width: 25px;
+            padding: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(var(--light-text), 1);
+            background-color: rgba(var(--box-bg), 0.15);
+            border-radius: 100%;
+            &.active {
+                color: rgba(255, 255, 255, 1);
+                background-color: rgba(var(--theme-color), 1);
+            }
+        }
+    }
+}

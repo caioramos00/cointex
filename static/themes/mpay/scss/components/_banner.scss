@@ -1,0 +1,98 @@
+/*=====================
+    banner CSS start
+==========================*/
+.banner-wapper {
+    position: relative;
+
+    .banner-bg {
+        position: relative;
+
+        .img-bg {
+            border-radius: 12px;
+        }
+
+        .banner-content {
+            position: absolute;
+            top: 20px;
+            left: 15px;
+            color: rgba(var(--white), 1);
+
+            h2 {
+                color: #fff;
+            }
+
+            h4 {
+                width: 62%;
+                font-weight: 300;
+                margin-top: 4px;
+                color: #fff;
+
+                [dir="rtl"] & {
+                    margin-right: auto;
+                }
+            }
+
+            h3 {
+                width: 60%;
+                line-height: 1.5;
+                color: #fff;
+            }
+        }
+
+        .more-btn {
+            position: absolute;
+            bottom: 20px;
+            color: #fff;
+            left: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 500;
+            line-height: 1;
+
+            .right-arrow {
+                --Iconsax-Color: #fff;
+            }
+        }
+    }
+}
+
+.grid-banner {
+    .banner-bg {
+        .banner-content {
+            top: 15px;
+
+            h3 {
+                font-size: calc(14px + (15 - 14) * ((100vw - 320px) / (1920 - 320)));
+
+                [dir="rtl"] & {
+                    margin-right: auto;
+                }
+            }
+        }
+
+        .more-btn {
+            bottom: 40px;
+
+            [dir="rtl"] & {
+                text-align: left;
+            }
+
+            .right-arrow {
+                --Iconsax-Color: #fff;
+            }
+
+            @media (max-width: 375px) {
+                bottom: 18px;
+            }
+
+            h3 {
+                font-size: 12px;
+            }
+
+            i {
+                font-size: 20px;
+            }
+        }
+    }
+}

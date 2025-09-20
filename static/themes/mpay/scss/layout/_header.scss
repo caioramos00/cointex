@@ -1,0 +1,228 @@
+/*=====================
+    Header CSS start
+==========================*/
+.header-panel {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  line-height: 1;
+  z-index: 1;
+
+  .sidebar-btn {
+    width: 40px;
+    height: 40px;
+    color: rgba(var(--theme-color), 1);
+    padding: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 18px;
+    background: rgba(var(--white), 1);
+    border: 1px solid rgba(var(--box-bg), 0.2);
+    box-shadow: 0px 2px 12px rgba(var(--dark-text), 0.06);
+    border-radius: 6px;
+    z-index: 1;
+
+    .menu-icon {
+      color: rgba(var(--dark-text), 1);
+    }
+  }
+
+  .logo {
+    position: absolute;
+    width: 75px;
+    height: 25px;
+    left: 50%;
+    transform: translate(-50%);
+  }
+
+  .back-btn {
+    width: 40px;
+    height: 40px;
+    color: rgba(var(--theme-color), 1);
+    padding: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 18px;
+    background: rgba(var(--white), 1);
+    border: 1px solid rgba(var(--box-bg), 0.2);
+    box-shadow: 0px 2px 12px rgba(var(--dark-text), 0.06);
+    border-radius: 6px;
+    z-index: 1;
+
+    .icon {
+      color: rgba(var(--dark-text), 1);
+    }
+  }
+
+  h3 {
+    position: absolute;
+    font-weight: 600;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    color: rgba(var(--theme-color), 1);
+  }
+
+  h2 {
+    position: absolute;
+    font-weight: 600;
+    font-size: calc(18px + (20 - 18) * ((100vw - 320px) / (1920 - 320)));
+    width: 100%;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    color: rgba(var(--dark-text), 1);
+  }
+
+  .notification {
+    width: 40px;
+    height: 40px;
+    padding: 10px;
+    border-radius: 6px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-left: auto;
+    background-color: rgba(var(--white), 1);
+    border: 1px solid rgba(var(--box-bg), 0.2);
+    box-shadow: 0px 2px 12px rgba(var(--theme-color), 0.05);
+
+    [dir="rtl"] & {
+      margin-left: unset;
+      margin-right: auto;
+    }
+
+    .notification-icon {
+      position: relative;
+      color: rgba(var(--dark-text), 1);
+
+      &::after {
+        content: "";
+        position: absolute;
+        top: 3px;
+        right: 3px;
+        width: 5px;
+        height: 5px;
+        background-color: rgba(var(--error-color), 1);
+        border-radius: 100%;
+
+        [dir="rtl"] & {
+          right: unset;
+          left: 3px;
+        }
+      }
+    }
+  }
+
+  .dropdown {
+    a {
+      z-index: 1;
+
+      .back-btn {
+        color: rgba(var(--theme-color), 1);
+        font-size: 20px;
+        line-height: 1;
+      }
+    }
+
+    .dropdown-menu {
+      &.show {
+        padding-top: 0;
+      }
+
+      li {
+        width: 100%;
+        padding: 6px 0;
+        border-bottom: 1px solid rgba(var(--box-bg), 0.15);
+
+        &:last-child {
+          border-bottom: none;
+          padding-bottom: 0;
+        }
+
+        .dropdown-item {
+          color: rgba(23, 22, 27, 1);
+          &:active {
+            background-color: transparent;
+          }
+        }
+      }
+    }
+  }
+
+  &.scan-header {
+    position: fixed;
+    left: 0;
+    padding: 0 20px;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+
+    .back-btn {
+      background-color: rgba(23, 22, 27, 0.3);
+
+      .icon {
+        color: rgba(255, 255, 255, 1);
+      }
+    }
+
+    .right-btn {
+      .code {
+        color: rgba(255, 255, 255, 1);
+      }
+    }
+  }
+}
+
+.chatting-header {
+  width: 100%;
+  border: none;
+  border-radius: unset;
+  position: fixed;
+  top: 0;
+  left: 0;
+  max-width: unset;
+  transform: none;
+  bottom: unset;
+  padding: 20px;
+  background-color: rgba(var(--white), 1);
+  border-bottom: 1px solid rgba(var(--box-bg), 0.15);
+
+  [dir="rtl"] & {
+    right: 0;
+    left: unset;
+  }
+
+  .chatting-head {
+    border-bottom: none;
+    padding: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+
+    .back-btn {
+      width: 40px;
+      height: 40px;
+      color: rgba(var(--theme-color), 1);
+      padding: 10px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 18px;
+      background: rgba(var(--white), 1);
+      border: 1px solid rgba(var(--box-bg), 0.2);
+      box-shadow: 0px 2px 12px rgba(var(--dark-text), 0.06);
+      border-radius: 6px;
+
+      .icon {
+        color: rgba(var(--dark-text), 1);
+      }
+    }
+  }
+}

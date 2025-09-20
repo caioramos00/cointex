@@ -1,0 +1,139 @@
+/*=====================
+    accordion CSS start
+==========================*/
+.help-accordion {
+    .accordion-item {
+        margin-top: 20px;
+        border-radius: 6px;
+        border: none;
+        background-color: rgba(var(--box-bg), 0.1);
+
+        .accordion-header {
+            .accordion-button {
+                font-size: 15px;
+                padding: 15px;
+                color: rgba(var(--dark-text), 1);
+                background-color: rgba(var(--box-bg), 0.1);
+                border-bottom: 1px solid rgba(var(--box-bg), 0.1);
+                border-radius: 6px;
+                box-shadow: none;
+
+                &.collapsed {
+                    &::after {
+                        filter: invert(1);
+                    }
+                }
+
+                &:not(.collapsed) {
+                    &::after {
+                        filter: invert(1) grayscale(1);
+                    }
+                }
+
+                &:focus {
+                    box-shadow: none;
+                }
+            }
+        }
+
+        .accordion-body {
+            text-align: justify;
+            font-size: 14px;
+            line-height: 1.5;
+            color: rgba(var(--light-text), 1);
+            background-color: rgba(var(--box-bg), 0.1);
+
+            ul {
+                padding-inline-start: 15px;
+                li {
+                    display: list-item;
+                    list-style-type: decimal;
+                    padding: 10px 0;
+                    text-align: justify;
+                    font-size: 13px;
+                    line-height: 1.5;
+                    color: rgba(var(--light-text), 1);
+                }
+            }
+        }
+    }
+}
+
+.coin-chart-accordion {
+    .accordion-item {
+        border: none;
+        background-color: rgba(var(--white), 1);
+
+        .accordion-header {
+            .accordion-button {
+                padding-top: 0;
+                font-size: 14px;
+                color: rgba(var(--dark-text), 1);
+                background: transparent;
+                border-bottom: 1px solid rgba(var(--box-bg), 0.15);
+                box-shadow: none;
+
+                &:not(.collapsed) {
+                    &::after {
+                        filter: invert(1);
+                    }
+                }
+
+                &::after {
+                    filter: contrast(0);
+                }
+            }
+        }
+
+        .accordion-body {
+            .chart {
+                position: relative;
+                margin-top: 15px;
+
+                .day-list {
+                    display: flex;
+                    justify-content: space-between;
+                    margin-top: 30px;
+
+                    li {
+                        padding: 10px;
+                        color: rgba(var(--light-text), 1);
+                        background-color: rgba(var(--white), 1);
+                        border: 1px solid rgba(var(--box-bg), 0.15);
+                        border-radius: 10px;
+
+                        &.active {
+                            color: rgba(255, 255, 255, 1);
+                            background-color: rgba(var(--theme-color), 1);
+                            transform: translateY(-10px);
+                        }
+                    }
+                }
+
+                .coin-chart-wrapper {
+                    position: relative;
+                    z-index: 1;
+                    margin-top: 25px;
+                }
+
+                .back-bar-container {
+                    position: absolute;
+                    width: calc(100% - 64px);
+                    bottom: 20px;
+                    margin: 0 auto !important;
+                    left: 40px;
+                    bottom: 50px;
+
+                    [dir="rtl"] & {
+                        right: 40px;
+                        left: unset;
+                    }
+
+                    @media (max-width: 382px) {
+                        bottom: 60px;
+                    }
+                }
+            }
+        }
+    }
+}

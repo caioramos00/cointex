@@ -1,0 +1,42 @@
+/*utils scss files */
+@import "utils/animation";
+@import "utils/variables";
+
+/* base scss files */
+@import "base/reset";
+@import "base/typography";
+
+/* components scss files*/
+@import "components/accordion";
+@import "components/_banner";
+@import "components/button";
+@import "components/chatting";
+@import "components/form";
+@import "components/loader";
+@import "components/offcanvas";
+@import "components/ratio";
+@import "components/tab";
+@import "components/title";
+
+/* layout scss files */
+@import "layout/header";
+@import "layout/nav";
+@import "layout/onboarding";
+
+/* pages */
+@import "pages/authentication";
+@import "pages/card";
+@import "pages/crypto";
+@import "pages/elements";
+@import "pages/empty-page";
+@import "pages/home";
+@import "pages/insight";
+@import "pages/news";
+@import "pages/notification";
+@import "pages/page-list";
+@import "pages/profile";
+@import "pages/saving";
+@import "pages/transfer";
+
+/* themes */
+@import "themes/dark";

@@ -1,0 +1,85 @@
+/*=====================
+    Reset CSS start
+==========================*/
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+input {
+  &[type="number"] {
+    appearance: textfield;
+
+    &::-webkit-inner-spin-button,
+    &::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+    }
+  }
+}
+
+.custom-container {
+  padding: 0 20px;
+}
+
+section,
+.section-t-space {
+  padding-top: 25px;
+}
+
+.section-b-space {
+  padding-bottom: 25px;
+}
+
+.section-sm-t-space {
+  padding-top: 15px;
+}
+
+.section-sm-b-space {
+  padding-bottom: 15px;
+}
+
+.panel-space {
+  padding-top: 100px !important;
+}
+
+.theme-color {
+  color: rgba(var(--theme-color), 1) !important;
+}
+
+.theme-bg {
+  background-color: rgba(var(--theme-color), 1) !important;
+}
+
+.dark-text {
+  color: rgba(var(--dark-text), 1) !important;
+}
+
+.light-text {
+  color: rgba(var(--light-text), 1) !important;
+}
+
+.error-color {
+  color: rgba(var(--error-color), 1) !important;
+}
+
+.success-color {
+  color: rgba(var(--success-color), 1) !important;
+}
+
+.swiper {
+  [dir="rtl"] & {
+    direction: ltr;
+  }
+}
+
+.custom-tooltip {
+  .tooltip-inner {
+    background-color: rgba(var(--theme-color), 1);
+  }
+  .tooltip-arrow {
+    &::before {
+      border-top-color: rgba(var(--theme-color), 1) !important;
+    }
+  }
+}

@@ -1,0 +1,213 @@
+/*=====================
+    profile CSS start
+==========================*/
+.profile-section {
+    .profile-banner {
+        background-image: url(../images/background/statistics-bg.jpg);
+        background-size: cover;
+        background-repeat: no-repeat;
+        width: 100%;
+        height: 60px;
+        border-radius: 10px;
+        text-align: center;
+        position: relative;
+        z-index: -1;
+
+        .profile-image {
+            position: relative;
+
+            .profile-pic {
+                position: relative;
+                width: 80px;
+                height: 80px;
+                object-fit: cover;
+                margin-top: 20px;
+                border-radius: 6px;
+                z-index: 1;
+            }
+
+            &::after {
+                content: "";
+                position: absolute;
+                width: 88px;
+                height: 88px;
+                border: 1px solid rgb(230, 231, 236);
+                backdrop-filter: blur(4px);
+                border-radius: 10px;
+                left: 50%;
+                top: 15px;
+                transform: translate(-50%);
+                z-index: 0;
+            }
+
+            .camera {
+                position: absolute;
+                padding: 7px;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                color: rgba(var(--theme-color), 1);
+                background-color: rgba(var(--white), 1);
+                box-shadow: 0px 2px 12px rgb(0 0 0 / 12%);
+                border-radius: 8px;
+                font-size: 20px;
+                height: 30px;
+                width: 30px;
+                bottom: 10px;
+                left: 50%;
+                z-index: 1;
+                transform: translate(50%, 50%);
+            }
+        }
+    }
+
+    h2 {
+        text-align: center;
+        margin-top: 55px;
+        font-size: 20px;
+        font-weight: 600;
+        color: rgba(var(--dark-text), 1);
+    }
+
+    h5 {
+        text-align: center;
+        margin-top: 5px;
+        font-size: 14px;
+        font-weight: 400;
+        color: rgba(var(--light-text), 1);
+    }
+}
+
+.profile-list {
+    background-color: rgba(var(--white), 1);
+    border: 1px solid rgba(var(--box-bg), 0.15);
+    box-shadow: 0px 4px 22px rgba(var(--dark-text), 0.04);
+    border-radius: 10px;
+    padding: 15px;
+    margin-top: 15px;
+
+    li {
+        padding: 15px 0;
+        width: 100%;
+        border-bottom: 1px solid rgba(var(--light-bg), 1);
+
+        &:first-child {
+            padding-top: 0;
+        }
+
+        &:last-child {
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        .profile-box {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+
+            .profile-img {
+                width: 44px;
+                height: 44px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background-color: rgba(var(--box-bg), 0.1);
+                border-radius: 14px;
+                padding: 10px;
+
+                .icon {
+                    color: rgba(var(--dark-text), 1);
+                }
+            }
+        }
+
+        .profile-details {
+            width: calc(100% - 12px - 44px);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+
+            h4 {
+                color: rgba(var(--dark-text), 1);
+                line-height: 1.2;
+            }
+
+            h5 {
+                color: rgba(var(--light-text), 1);
+                overflow: hidden;
+                white-space: nowrap;
+                text-overflow: ellipsis;
+                font-weight: 400;
+                line-height: 1.5;
+            }
+
+            .arrow {
+                width: 24px;
+            }
+        }
+    }
+}
+
+.notification-setting {
+    background-color: rgba(var(--white), 1);
+    border: 1px solid rgba(var(--box-bg), 0.15);
+    box-shadow: 0px 4px 22px rgba(var(--dark-text), 0.04);
+    border-radius: 8px;
+
+    li {
+        display: block;
+        padding: 15px;
+
+        &.setting-title {
+            border-bottom: 1px solid rgba(var(--box-bg), 0.15);
+        }
+
+        .notification {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            h5 {
+                font-size: 15px;
+            }
+            input[type="checkbox"] {
+                position: relative;
+                width: 37px;
+                height: 22px;
+                appearance: none;
+                background: rgba(var(--box-bg), 0.15);
+                outline: none;
+                border-radius: 50px;
+                cursor: pointer;
+
+                &:checked {
+                    background: rgba(var(--theme-color), 0.1);
+
+                    &::before {
+                        transform: translateX(80%) translateY(-50%);
+                        background: rgba(var(--theme-color), 1);
+                    }
+                }
+
+                &:before {
+                    content: "";
+                    width: 15px;
+                    height: 15px;
+                    border-radius: 50%;
+                    background: rgba(var(--light-text), 1);
+                    position: absolute;
+                    top: 50%;
+                    left: 5px;
+                    transform: translateY(-50%);
+                    transition: 0.5s;
+                }
+            }
+        }
+    }
+}
+
+.help-center {
+    h2 {
+        width: 100%;
+    }
+}

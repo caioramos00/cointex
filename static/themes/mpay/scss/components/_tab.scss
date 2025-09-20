@@ -1,0 +1,60 @@
+/*=====================
+    tab CSS start
+==========================*/
+.tab-style1 {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow: hidden;
+    width: 100%;
+    border-bottom: none;
+    overflow-x: auto;
+
+    .nav-item {
+        color: rgba(var(--theme-color), 1);
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        list-style-type: none;
+        cursor: pointer;
+        border-radius: 0px;
+        transition: all 0.3s ease;
+        border-radius: 0;
+        border-bottom: 1px solid rgba(var(--box-bg), 0.15);
+
+        .nav-link {
+            color: rgba(var(--light-text), 1);
+            border-left: none;
+            border-right: none;
+            border-top: none;
+            border-bottom: 1px solid transparent;
+            font-weight: 400;
+            font-size: 16px;
+            white-space: nowrap;
+            padding-top: 0;
+
+            &:hover {
+                border-left: none;
+                border-right: none;
+                border-top: none;
+            }
+
+            &:focus {
+                border-color: transparent;
+            }
+
+            &.active {
+                background-color: transparent;
+                color: rgba(var(--theme-color), 1);
+                border-left: none;
+                border-right: none;
+                border-top: none;
+                border-bottom: 1px solid rgba(var(--theme-color), 1);
+                padding-left: 15px;
+                padding-right: 15px;
+                border-radius: 0;
+                width: 100%;
+            }
+        }
+    }
+}

@@ -1,0 +1,82 @@
+/*=====================
+    Typography CSS start
+==========================*/
+
+* {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Lato',
+    sans-serif;
+  width: 100%;
+  margin: 0 auto;
+  height: 100vh;
+  background-color: rgba(var(--white), 1);
+
+  & {
+    scrollbar-width: none;
+  }
+
+  &::-webkit-scrollbar {
+    width: 0px;
+  }
+} 
+
+h1 {
+  font-weight: 600;
+  font-size: 22px;
+  margin-bottom: 0;
+}
+
+h2 {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 0;
+}
+
+h3 {
+  font-size: 16px;
+  font-weight: 400;
+  margin-bottom: 0;
+}
+
+h4 {
+  font-size: 15px;
+  line-height: 1.2;
+  margin-bottom: 0;
+}
+
+h5 {
+  font-size: 14px;
+  line-height: 1.2;
+  margin-bottom: 0;
+}
+
+h6 {
+  font-size: 13px;
+  line-height: 1.2;
+  margin-bottom: 0;
+}
+
+p {
+  font-size: 13px;
+  line-height: 1.5;
+  margin-bottom: 0;
+}
+
+a {
+  text-decoration: none;
+}
+
+ul {
+  padding: 0;
+  margin-bottom: 0;
+}
+
+li {
+  list-style: none;
+  display: inline-block;
+  font-size: 14px;
+}

@@ -1,0 +1,76 @@
+/*=====================
+    News CSS start
+==========================*/
+.news-details {
+    .news-img {
+        width: 100%;
+        height: auto;
+        border-radius: 8px;
+    }
+
+    .news-content {
+        margin-top: 12px;
+
+        h2 {
+            font-size: calc(18px + (20 - 18) * ((100vw - 320px) / (1920 - 320)));
+            font-weight: 600;
+            color: rgba(var(--dark-text), 1);
+        }
+
+        h5 {
+            margin-top: 8px;
+            padding-bottom: 15px;
+            font-weight: 400;
+            color: rgba(var(--light-text), 1);
+        }
+
+        .news-description {
+            padding-top: 15px;
+            border-top: 1px solid rgba(var(--box-bg), 0.3);
+
+            p {
+                margin-bottom: 12px;
+                font-size: 14px;
+                font-weight: 400;
+                line-height: 1.5;
+                color: rgba(var(--dark-text), 1);
+
+                &:last-child {
+                    margin-bottom: 0;
+                }
+            }
+
+            .investment-banner {
+                position: relative;
+                background-image: url(../images/background/news-detalis.jpg);
+                background-size: cover;
+                background-repeat: no-repeat;
+                width: 100%;
+                padding: 15px;
+                border-radius: 10px;
+                margin-top: 20px;
+                [class="dark"] & {
+                    background-color: #141414;
+                    background-blend-mode: overlay;
+                }
+                .investment-content {
+                    text-align: center;
+
+                    h5 {
+                        font-weight: 600;
+                        margin-top: 0;
+                        padding-bottom: 0;
+                        color: rgba(98, 44, 253, 1);
+                    }
+
+                    h6 {
+                        font-weight: 400;
+                        margin-top: 5px;
+                        color: rgba(var(--light-text), 1);
+                        line-height: 1.2;
+                    }
+                }
+            }
+        }
+    }
+}

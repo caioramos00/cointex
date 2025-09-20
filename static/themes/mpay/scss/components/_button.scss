@@ -1,0 +1,101 @@
+/*=====================
+    Button CSS start
+==========================*/
+.btn {
+    margin-top: 30px;
+    padding: calc(10px + (14 - 10) * ((100vw - 320px) / (1920 - 320)));
+
+    &-inline {
+        padding-inline: calc(5px + (15 - 5) * ((100vw - 320px) / (1920 - 320)));
+    }
+
+    &-lg {
+        padding: 12px 44px;
+    }
+
+    &:active {
+        background-color: rgba(var(--theme-color), 1);
+        color: rgba(var(--white), 1);
+        border: 1px solid rgba(var(--theme-color), 1);
+    }
+}
+
+.theme-btn {
+    background: linear-gradient(142.56deg, #913aff -1.68%, #622cfd 62.12%);
+    color: rgba(255, 255, 255, 1);
+    font-weight: 600;
+    font-size: calc(16px + (18 - 16) * ((100vw - 320px) / (1920 - 320)));
+    border-radius: 6px;
+
+    &:hover {
+        color: rgba(255, 255, 255, 1);
+    }
+
+    &:active {
+        background-color: rgba(var(--theme-color), 1);
+        color: rgba(255, 255, 255, 1) !important;
+        border: 1px solid rgba(var(--theme-color), 1);
+    }
+}
+
+.gray-btn {
+    background-color: rgba(var(--light-bg), 1);
+    color: rgba(var(--light-text), 1);
+    border-radius: 6px;
+    font-weight: 400;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+
+    &:active {
+        border: none;
+    }
+
+    &:hover {
+        background-color: rgba(var(--light-bg), 1);
+        color: rgba(var(--light-text), 1);
+    }
+
+    [class="dark"] & {
+        background-color: rgba(var(--box-bg), 1);
+    }
+}
+
+.btn-link {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 16px;
+    line-height: 18px;
+    color: rgba(var(--light-text), 1);
+
+    &:hover {
+        color: rgba(var(--light-text), 1);
+    }
+}
+
+.filter-btn {
+    background-color: rgba(var(--light-bg), 1);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 8px;
+    border: none;
+
+    &:hover {
+        background-color: rgba(var(--light-bg), 1);
+    }
+
+    &:active {
+        border: none;
+        background-color: rgba(var(--light-bg), 1);
+    }
+
+    .filter-icon {
+        font-size: 18px;
+    }
+}

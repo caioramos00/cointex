@@ -1,0 +1,121 @@
+/*=====================
+    Dark CSS start
+==========================*/
+body {
+    &.dark {
+        .auth-form{ 
+            .form-group{ 
+                .form-select{ 
+                    option{
+                        background-color: #222125;
+                        &:hover{
+                            background-color: #222125;
+                        }
+                    }
+                }
+            }
+        }
+
+        .offcanvas {
+            &.addtohome-popup {
+                .btn-close {
+                    filter: invert(1);
+                }
+            }
+        }
+        .add-money-modal{ 
+            .modal-content{ 
+                .modal-body{ 
+                    .form-group{ 
+                        .form-select{ 
+                            option{
+                                background-color: #222125;
+                                &:hover{
+                                    background-color: #222125;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .header {
+            .head-content {
+                .sidebar-btn {
+                    background-color: rgba(var(--light-bg), 1);
+                }
+            }
+
+            .notification {
+                background-color: rgba(var(--light-bg), 1);
+            }
+        }
+        .auth-form {
+            
+            .option {
+               background-color: #222125;
+
+                .form-check {
+                    .form-check-input:checked {
+                        filter: invert(0);
+                    }
+                }
+            }
+            .form-group {
+                .form-select {
+                    filter: contrast(0);
+                }
+            }
+        }
+
+        #revenue {
+            .apexcharts-datalabel-label {
+                fill: rgba(var(--dark-text), 1) !important;
+            }
+
+            .apexcharts-legend-text {
+                color: rgba(var(--dark-text), 1) !important;
+            }
+
+            .apexcharts-datalabel-value {
+                fill: rgba(var(--dark-text), 1) !important;
+            }
+        }
+
+        #category-chart {
+         
+            .apexcharts-datalabel-label {
+                fill: rgba(var(--dark-text), 1) !important;
+            }
+
+            .apexcharts-datalabel-value {
+                fill: rgba(var(--dark-text), 1) !important;
+            }
+        }
+        #analytics-chart {
+            .apexcharts-xaxis-label {
+                fill: rgba(var(--dark-text), 1) !important;
+            }
+
+            .apexcharts-yaxis-label {
+                fill: rgba(var(--dark-text), 1) !important;
+            }
+        }
+
+        #wallet {
+            .apexcharts-xaxis-label {
+                fill: rgba(var(--dark-text), 1) !important;
+            }
+
+            .apexcharts-yaxis-label {
+                fill: rgba(var(--dark-text), 1) !important;
+            }
+        }
+
+        #coin {
+            .apexcharts-xaxis-label {
+                fill: rgba(var(--dark-text), 1) !important;
+            }
+        }
+    }
+}

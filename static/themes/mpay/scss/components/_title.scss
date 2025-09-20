@@ -1,0 +1,23 @@
+/*===================== 
+    Title CSS start 
+==========================*/
+.title {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 15px;
+
+    &.w-border {
+        border-bottom: 1px dashed rgba(var(--box-bg), 0.15);
+        padding-bottom: 12px;
+    }
+
+    h2 {
+        color: rgba(var(--dark-text), 1);
+    }
+
+    a {
+        color: rgba(98, 44, 253, 1);
+        font-size: 14px;
+        font-weight: 400;
+    }
+}
