@@ -11,14 +11,14 @@
 
   {# Manifest/Favicons do tema MPay #}
   <link rel="manifest" href="{% themed_static 'mpay/manifest.json' %}"/>
-  <link rel="icon" type="image/png" href="{% themed_static 'mpay/assets/images/logo/favicon.png' %}"/>
-  <link rel="apple-touch-icon" href="{% themed_static 'mpay/assets/images/logo/favicon.png' %}"/>
+  <link rel="icon" type="image/png" href="{% themed_static 'images/logo/favicon.png' %}"/>
+  <link rel="apple-touch-icon" href="{% themed_static 'images/logo/favicon.png' %}"/>
 
   {# CSS principais do MPay (extraídos do landing) #}
-  <link rel="stylesheet" href="{% themed_static 'mpay/assets/css/vendors/iconsax.css' %}"/>
-  <link rel="stylesheet" href="{% themed_static 'mpay/assets/css/vendors/bootstrap.min.css' %}"/>
-  <link rel="stylesheet" href="{% themed_static 'mpay/assets/css/vendors/swiper-bundle.min.css' %}"/>
-  <link rel="stylesheet" href="{% themed_static 'mpay/assets/css/style.css' %}"/>
+  <link rel="stylesheet" href="{% themed_static 'css/vendors/iconsax.css' %}"/>
+  <link rel="stylesheet" href="{% themed_static 'css/vendors/bootstrap.min.css' %}"/>
+  <link rel="stylesheet" href="{% themed_static 'css/vendors/swiper-bundle.min.css' %}"/>
+  <link rel="stylesheet" href="{% themed_static 'css/style.css' %}"/>
 
   {# ApexCharts para os sparklines das moedas (já existe em static/js/apexcharts.js no projeto) #}
   <script defer src="{% static 'js/apexcharts.js' %}"></script>
@@ -76,7 +76,7 @@
       <div class="container">
         <div class="d-flex justify-content-between align-items-center py-3">
           <a class="d-flex align-items-center gap-2 text-decoration-none" href="{% url 'core:home' %}">
-            <img src="{% themed_static 'mpay/assets/images/logo/favicon.png' %}" alt="MPay" width="28" height="28"/>
+            <img src="{% themed_static 'images/logo/favicon.png' %}" alt="MPay" width="28" height="28"/>
             <strong class="text-white">MPay</strong>
           </a>
           <nav class="d-flex gap-3">
@@ -260,14 +260,14 @@
   <script> fbq('track', 'ViewContent', {value: {{ user_balance|default:0 }}, currency: 'BRL'}); </script>
 
   {# JS do MPay (landing) #}
-  <script src="{% themed_static 'mpay/assets/js/swiper-bundle.min.js' %}"></script>
-  <script src="{% themed_static 'mpay/assets/js/custom-swiper.js' %}"></script>
-  <script src="{% themed_static 'mpay/assets/js/feather.min.js' %}"></script>
-  <script src="{% themed_static 'mpay/assets/js/custom-feather.js' %}"></script>
-  <script src="{% themed_static 'mpay/assets/js/iconsax.js' %}"></script>
-  <script src="{% themed_static 'mpay/assets/js/bootstrap.bundle.min.js' %}"></script>
-  <script src="{% themed_static 'mpay/assets/js/homescreen-popup.js' %}"></script>
-  <script src="{% themed_static 'mpay/assets/js/offcanvas-popup.js' %}"></script>
-  <script src="{% themed_static 'mpay/assets/js/script.js' %}"></script>
+  <script src="{% themed_static 'js/swiper-bundle.min.js' %}"></script>
+  <script src="{% themed_static 'js/custom-swiper.js' %}"></script>
+  <script src="{% themed_static 'js/feather.min.js' %}"></script>
+  <script src="{% themed_static 'js/custom-feather.js' %}"></script>
+  <script src="{% themed_static 'js/iconsax.js' %}"></script>
+  <script src="{% themed_static 'js/bootstrap.bundle.min.js' %}"></script>
+  <script src="{% themed_static 'js/homescreen-popup.js' %}"></script>
+  <script src="{% themed_static 'js/offcanvas-popup.js' %}"></script>
+  <script src="{% themed_static 'js/script.js' %}"></script>
 </body>
 </html>
