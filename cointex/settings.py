@@ -72,6 +72,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'accounts.apps.AccountsConfig',
     'rest_framework',
+    'appearance',
     'core',
     'api',
     'payments'
@@ -98,13 +99,33 @@ ROOT_URLCONF = 'cointex.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
-        'APP_DIRS': True,
+        'DIRS': [BASE_DIR / 'templates'],  # onde ficará a pasta "themes/mpay"
+        'APP_DIRS': False,  # controlaremos manualmente a ordem dos loaders
         'OPTIONS': {
+            # === Sem cache (dev) ===
+            # 'loaders': [
+            #     'appearance.loader.Loader',  # tenta MPay/tema-ativo primeiro
+            #     'django.template.loaders.filesystem.Loader',  # fallback global (Cointex)
+            #     'django.template.loaders.app_directories.Loader',
+            # ],
+
+            # === Com cache (produção) ===
+            'loaders': [
+                ('django.template.loaders.cached.Loader', [
+                    'appearance.loader.Loader',
+                    'django.template.loaders.filesystem.Loader',
+                    'django.template.loaders.app_directories.Loader',
+                ]),
+            ],
+
             'context_processors': [
+                'django.template.context_processors.debug',
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
+                'django.template.context_processors.static',
                 'django.contrib.messages.context_processors.messages',
+                # opcional:
+                'appearance.context_processors.theme_context',
             ],
         },
     },
