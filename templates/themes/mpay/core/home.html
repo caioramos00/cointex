@@ -1,4 +1,4 @@
-{% load static %}
+{% load theming %}{% load static %}
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -8,9 +8,9 @@
   <meta name="keywords" content="mPay" />
   <meta name="author" content="mPay" />
   <link rel="manifest" href="{% static 'manifest.json' %}" />
-  <link rel="icon" href="{% static 'assets/images/logo/favicon.png' %}" type="image/x-icon" />
+  <link rel="icon" href="{% themed_static 'images/logo/favicon.png' %}" type="image/x-icon" />
   <title>mPay App</title>
-  <link rel="apple-touch-icon" href="{% static 'assets/images/logo/favicon.png' %}" />
+  <link rel="apple-touch-icon" href="{% themed_static 'images/logo/favicon.png' %}" />
   <meta name="theme-color" content="#122636" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black" />
@@ -20,10 +20,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Lato:wght@100;300;400;700;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" type="text/css" href="{% static 'assets/css/vendors/iconsax.css' %}" />
-  <link rel="stylesheet" type="text/css" href="{% static 'assets/css/vendors/bootstrap.min.css' %}" />
-  <link rel="stylesheet" type="text/css" href="{% static 'assets/css/vendors/swiper-bundle.min.css' %}" />
-  <link rel="stylesheet" id="change-link" type="text/css" href="{% static 'assets/css/style.css' %}" />
+  <link rel="stylesheet" type="text/css" href="{% themed_static 'css/vendors/iconsax.css' %}" />
+  <link rel="stylesheet" type="text/css" href="{% themed_static 'css/vendors/bootstrap.min.css' %}" />
+  <link rel="stylesheet" type="text/css" href="{% themed_static 'css/vendors/swiper-bundle.min.css' %}" />
+  <link rel="stylesheet" id="change-link" type="text/css" href="{% themed_static 'css/style.css' %}" />
 
   <!-- PIXELS — replicado da home Cointex -->
   <meta name="facebook-domain-verification" content="73hwg7lythnnqtl0mtlqdgyewx6h3z" />
@@ -52,10 +52,10 @@
   <div class="offcanvas sidebar-offcanvas offcanvas-start" tabindex="-1" id="offcanvasLeft">
     <div class="offcanvas-header sidebar-header">
       <div class="sidebar-logo">
-        <img class="img-fluid logo" src="{% static 'assets/images/logo/logo.png' %}" alt="logo" />
+        <img class="img-fluid logo" src="{% themed_static 'images/logo/logo.png' %}" alt="logo" />
       </div>
       <div class="balance">
-        <img class="img-fluid balance-bg" src="{% static 'assets/images/background/auth-bg.jpg' %}" alt="auth-bg" />
+        <img class="img-fluid balance-bg" src="{% themed_static 'images/background/auth-bg.jpg' %}" alt="auth-bg" />
         <h5>Saldo</h5>
         <h2>R$ {{ user_balance|default:"0,00" }}</h2>
       </div>
@@ -148,15 +148,15 @@
   <div class="navbar-menu">
     <div class="scanner-bg">
       <a href="#/scan" class="scanner-btn">
-        <img class="img-fluid" src="{% static 'assets/images/svg/scan.svg' %}" alt="scan" />
+        <img class="img-fluid" src="{% themed_static 'images/svg/scan.svg' %}" alt="scan" />
       </a>
     </div>
     <ul id="bottom-nav">
       <li data-route="landing" class="active">
         <a href="#/landing">
           <div class="icon">
-            <img class="unactive" src="{% static 'assets/images/svg/mpay.svg' %}" alt="mPay" />
-            <img class="active" src="{% static 'assets/images/svg/mpay-fill.svg' %}" alt="mPay" />
+            <img class="unactive" src="{% themed_static 'images/svg/mpay.svg' %}" alt="mPay" />
+            <img class="active" src="{% themed_static 'images/svg/mpay-fill.svg' %}" alt="mPay" />
           </div>
           <h5>mPay</h5>
         </a>
@@ -164,8 +164,8 @@
       <li data-route="crypto">
         <a href="#/crypto">
           <div class="icon">
-            <img class="unactive" src="{% static 'assets/images/svg/bitcoin.svg' %}" alt="cripto" />
-            <img class="active" src="{% static 'assets/images/svg/bitcoin-fill.svg' %}" alt="cripto" />
+            <img class="unactive" src="{% themed_static 'images/svg/bitcoin.svg' %}" alt="cripto" />
+            <img class="active" src="{% themed_static 'images/svg/bitcoin-fill.svg' %}" alt="cripto" />
           </div>
           <h5>Cripto</h5>
         </a>
@@ -174,8 +174,8 @@
       <li data-route="insight">
         <a href="#/insight">
           <div class="icon">
-            <img class="unactive" src="{% static 'assets/images/svg/bar-chart.svg' %}" alt="insights" />
-            <img class="active" src="{% static 'assets/images/svg/bar-chart-fill.svg' %}" alt="insights" />
+            <img class="unactive" src="{% themed_static 'images/svg/bar-chart.svg' %}" alt="insights" />
+            <img class="active" src="{% themed_static 'images/svg/bar-chart-fill.svg' %}" alt="insights" />
           </div>
           <h5>Insights</h5>
         </a>
@@ -183,8 +183,8 @@
       <li data-route="profile">
         <a href="#/profile">
           <div class="icon">
-            <img class="unactive" src="{% static 'assets/images/svg/user.svg' %}" alt="perfil" />
-            <img class="active" src="{% static 'assets/images/svg/user-fill.svg' %}" alt="perfil" />
+            <img class="unactive" src="{% themed_static 'images/svg/user.svg' %}" alt="perfil" />
+            <img class="active" src="{% themed_static 'images/svg/user-fill.svg' %}" alt="perfil" />
           </div>
           <h5>Perfil</h5>
         </a>
@@ -196,14 +196,14 @@
   <section class="panel-space"></section>
 
   <!-- JS vendors -->
-  <script src="{% static 'assets/js/jquery-3.6.0.min.js' %}"></script>
-  <script src="{% static 'assets/js/bootstrap.bundle.min.js' %}"></script>
-  <script src="{% static 'assets/js/feather.min.js' %}"></script>
-  <script src="{% static 'assets/js/swiper-bundle.min.js' %}"></script>
+  <script src="{% themed_static 'js/jquery-3.6.0.min.js' %}"></script>
+  <script src="{% themed_static 'js/bootstrap.bundle.min.js' %}"></script>
+  <script src="{% themed_static 'js/feather.min.js' %}"></script>
+  <script src="{% themed_static 'js/swiper-bundle.min.js' %}"></script>
   <script src="{% static 'js/chart.bundle.min.js' %}"></script>
   <script src="{% static 'js/line-chart.js' %}"></script>
-  <script src="{% static 'assets/js/apexcharts.min.js' %}"></script>
-  <script src="{% static 'assets/js/main.js' %}"></script>
+  <script src="{% themed_static 'js/apexcharts.min.js' %}"></script>
+  <script src="{% themed_static 'js/main.js' %}"></script>
 
   <!-- Disparos equivalentes ao Cointex -->
   {% if track_complete_registration %}

@@ -1,10 +1,10 @@
-{% load static %}
+{% load theming %}{% load static %}
 <section class="section-b-space">
   <div class="custom-container">
     <div class="profile-section">
       <div class="profile-banner">
         <div class="profile-image">
-          <img class="img-fluid profile-pic" src="{% static 'assets/images/person/p3.png' %}" alt="perfil" />
+          <img class="img-fluid profile-pic" src="{% themed_static 'images/person/p3.png' %}" alt="perfil" />
         </div>
       </div>
       <h2>{{ request.user.get_full_name|default:"Usuário" }}</h2>
@@ -17,7 +17,7 @@
           <div class="profile-img"><i class="icon" data-feather="user"></i></div>
           <div class="profile-details">
             <h4>Minha conta</h4>
-            <img class="img-fluid arrow" src="{% static 'assets/images/svg/arrow.svg' %}" alt="arrow" />
+            <img class="img-fluid arrow" src="{% themed_static 'images/svg/arrow.svg' %}" alt="arrow" />
           </div>
         </a>
       </li>
@@ -26,7 +26,7 @@
           <div class="profile-img"><i class="icon" data-feather="credit-card"></i></div>
           <div class="profile-details">
             <h4>Meus cartões</h4>
-            <img class="img-fluid arrow" src="{% static 'assets/images/svg/arrow.svg' %}" alt="arrow" />
+            <img class="img-fluid arrow" src="{% themed_static 'images/svg/arrow.svg' %}" alt="arrow" />
           </div>
         </a>
       </li>
@@ -35,7 +35,7 @@
           <div class="profile-img"><i class="icon" data-feather="settings"></i></div>
           <div class="profile-details">
             <h4>Alterar senha</h4>
-            <img class="img-fluid arrow" src="{% static 'assets/images/svg/arrow.svg' %}" alt="arrow" />
+            <img class="img-fluid arrow" src="{% themed_static 'images/svg/arrow.svg' %}" alt="arrow" />
           </div>
         </a>
       </li>
@@ -44,7 +44,7 @@
           <div class="profile-img"><i class="icon" data-feather="lock"></i></div>
           <div class="profile-details">
             <h4>Configurações</h4>
-            <img class="img-fluid arrow" src="{% static 'assets/images/svg/arrow.svg' %}" alt="arrow" />
+            <img class="img-fluid arrow" src="{% themed_static 'images/svg/arrow.svg' %}" alt="arrow" />
           </div>
         </a>
       </li>
@@ -53,7 +53,7 @@
           <div class="profile-img"><i class="icon" data-feather="help-circle"></i></div>
           <div class="profile-details">
             <h4>Ajuda</h4>
-            <img class="img-fluid arrow" src="{% static 'assets/images/svg/arrow.svg' %}" alt="arrow" />
+            <img class="img-fluid arrow" src="{% themed_static 'images/svg/arrow.svg' %}" alt="arrow" />
           </div>
         </a>
       </li>
