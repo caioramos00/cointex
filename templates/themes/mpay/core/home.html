@@ -33,31 +33,38 @@
         transform: translateY(12px);
         pointer-events: none;
       }
+      /* ao abrir */
       #route-notifications.is-open {
         opacity: 1;
         transform: translateY(0);
         pointer-events: auto;
-        transition: opacity 0.22s ease, transform 0.22s ease;
+        transition: opacity 0.28s ease, transform 0.28s ease; /* 0.22s -> 0.28s */
       }
+      
+      /* ao fechar */
       #route-notifications.is-closing {
         opacity: 0;
         transform: translateY(12px);
         pointer-events: none;
-        transition: opacity 0.18s ease, transform 0.18s ease;
+        transition: opacity 0.24s ease, transform 0.24s ease; /* 0.18s -> 0.24s */
       }
-
+      
       /* BOTÃO DO SINO ATIVO (gradiente roxo + ícone branco) */
-      .header-panel .notification{
-        display:flex; align-items:center; justify-content:center;
-        width:40px; height:40px; border-radius:12px;
-        transition: background .2s ease, box-shadow .2s ease;
+      .header-panel .notification {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+        transition: background 0.2s ease, box-shadow 0.2s ease;
       }
-      .header-panel .notification.active{
+      .header-panel .notification.active {
         background: linear-gradient(142.56deg, #913aff -1.68%, #622cfd 62.12%);
-        box-shadow: 0 6px 14px rgba(98,44,253,.25);
+        box-shadow: 0 6px 14px rgba(98, 44, 253, 0.25);
       }
-      .header-panel .notification.active svg{
-        stroke:#fff; /* feather icon branco */
+      .header-panel .notification.active svg {
+        stroke: #fff; /* feather icon branco */
       }
     </style>
 
@@ -65,17 +72,25 @@
     <meta name="facebook-domain-verification" content="73hwg7lythnnqtl0mtlqdgyewx6h3z" />
     <script>
       !(function (f, b, e, v, n, t, s) {
-        if (f.fbq) return;
-        n = f.fbq = function () { n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments); };
-        if (!f._fbq) f._fbq = n;
-        n.push = n; n.loaded = !0; n.version = '2.0';
-        n.queue = []; t = b.createElement(e); t.async = !0; t.src = v;
-        s = b.getElementsByTagName(e)[0]; s.parentNode.insertBefore(t, s);
-      })(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
-      fbq('init', '1414661506543941');
-      fbq('init', '24796423593276136');
-      fbq('init', '780359434541574');
-      fbq('track', 'PageView');
+        if (f.fbq) return
+        n = f.fbq = function () {
+          n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments)
+        }
+        if (!f._fbq) f._fbq = n
+        n.push = n
+        n.loaded = !0
+        n.version = '2.0'
+        n.queue = []
+        t = b.createElement(e)
+        t.async = !0
+        t.src = v
+        s = b.getElementsByTagName(e)[0]
+        s.parentNode.insertBefore(t, s)
+      })(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js')
+      fbq('init', '1414661506543941')
+      fbq('init', '24796423593276136')
+      fbq('init', '780359434541574')
+      fbq('track', 'PageView')
     </script>
     <noscript>
       <img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=1414661506543941&ev=PageView&noscript=1" />
@@ -151,13 +166,9 @@
     <header class="section-t-space">
       <div class="custom-container">
         <div class="header-panel">
-          <a class="sidebar-btn" data-bs-toggle="offcanvas" data-bs-target="#offcanvasLeft">
-            <i class="menu-icon" data-feather="menu"></i>
-          </a>
+          <a class="sidebar-btn" data-bs-toggle="offcanvas" data-bs-target="#offcanvasLeft"><i class="menu-icon" data-feather="menu"></i></a>
           <img id="spa-title" class="img-fluid logo" src="{% themed_static 'images/logo/logo.png' %}" alt="mPay" />
-          <a href="#/notifications" class="notification" id="spa-right-action" aria-label="Notificações">
-            <i class="notification-icon" data-feather="bell"></i>
-          </a>
+          <a href="#/notifications" class="notification" id="spa-right-action" aria-label="Notificações"><i class="notification-icon" data-feather="bell"></i></a>
         </div>
       </div>
     </header>
@@ -348,7 +359,9 @@
 
     <!-- Disparos equivalentes ao Cointex -->
     {% if track_complete_registration %}
-      <script> fbq('track', 'CompleteRegistration'); </script>
+      <script>
+        fbq('track', 'CompleteRegistration')
+      </script>
     {% endif %}
     <script> fbq('track', 'ViewContent', {value: {{ user_balance|default:0 }}, currency: 'BRL'}); </script>
 
@@ -385,7 +398,7 @@
           if (typeof cb === 'function') cb();
         };
         notifSec.addEventListener('transitionend', done);
-        setTimeout(done, 240); // fallback
+        setTimeout(done, 300); // fallback
       }
 
       function setActive(route) {
