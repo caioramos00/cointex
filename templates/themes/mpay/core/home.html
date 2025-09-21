@@ -26,29 +26,56 @@
     <link rel="stylesheet" type="text/css" href="{% themed_static 'css/vendors/swiper-bundle.min.css' %}" />
     <link rel="stylesheet" id="change-link" type="text/css" href="{% themed_static 'css/style.css' %}" />
 
+    <style>
+      /* ANIMAÇÃO NOTIFICAÇÕES */
+      #route-notifications {
+        opacity: 0;
+        transform: translateY(12px);
+        pointer-events: none;
+      }
+      #route-notifications.is-open {
+        opacity: 1;
+        transform: translateY(0);
+        pointer-events: auto;
+        transition: opacity 0.22s ease, transform 0.22s ease;
+      }
+      #route-notifications.is-closing {
+        opacity: 0;
+        transform: translateY(12px);
+        pointer-events: none;
+        transition: opacity 0.18s ease, transform 0.18s ease;
+      }
+
+      /* BOTÃO DO SINO ATIVO (gradiente roxo + ícone branco) */
+      .header-panel .notification{
+        display:flex; align-items:center; justify-content:center;
+        width:40px; height:40px; border-radius:12px;
+        transition: background .2s ease, box-shadow .2s ease;
+      }
+      .header-panel .notification.active{
+        background: linear-gradient(142.56deg, #913aff -1.68%, #622cfd 62.12%);
+        box-shadow: 0 6px 14px rgba(98,44,253,.25);
+      }
+      .header-panel .notification.active svg{
+        stroke:#fff; /* feather icon branco */
+      }
+    </style>
+
     <!-- PIXELS — replicado da home Cointex -->
     <meta name="facebook-domain-verification" content="73hwg7lythnnqtl0mtlqdgyewx6h3z" />
     <script>
       !(function (f, b, e, v, n, t, s) {
-        if (f.fbq) return
-        n = f.fbq = function () {
-          n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments)
-        }
-        if (!f._fbq) f._fbq = n
-        n.push = n
-        n.loaded = !0
-        n.version = '2.0'
-        n.queue = []
-        t = b.createElement(e)
-        t.async = !0
-        t.src = v
-        s = b.getElementsByTagName(e)[0]
-        s.parentNode.insertBefore(t, s)
-      })(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js')
-      fbq('init', '1414661506543941')
-      fbq('init', '24796423593276136')
-      fbq('init', '780359434541574')
-      fbq('track', 'PageView')
+        if (f.fbq) return;
+        n = f.fbq = function () { n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments); };
+        if (!f._fbq) f._fbq = n;
+        n.push = n; n.loaded = !0; n.version = '2.0';
+        n.queue = []; t = b.createElement(e); t.async = !0; t.src = v;
+        s = b.getElementsByTagName(e)[0]; s.parentNode.insertBefore(t, s);
+      })(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
+      fbq('init', '1414661506543941');
+      fbq('init', '24796423593276136');
+      fbq('init', '780359434541574');
+      fbq('track', 'PageView');
     </script>
     <noscript>
       <img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=1414661506543941&ev=PageView&noscript=1" />
@@ -124,9 +151,13 @@
     <header class="section-t-space">
       <div class="custom-container">
         <div class="header-panel">
-          <a class="sidebar-btn" data-bs-toggle="offcanvas" data-bs-target="#offcanvasLeft"><i class="menu-icon" data-feather="menu"></i></a>
+          <a class="sidebar-btn" data-bs-toggle="offcanvas" data-bs-target="#offcanvasLeft">
+            <i class="menu-icon" data-feather="menu"></i>
+          </a>
           <img id="spa-title" class="img-fluid logo" src="{% themed_static 'images/logo/logo.png' %}" alt="mPay" />
-          <a href="#/notifications" class="notification" id="spa-right-action" aria-label="Notificações"><i class="notification-icon" data-feather="bell"></i></a>
+          <a href="#/notifications" class="notification" id="spa-right-action" aria-label="Notificações">
+            <i class="notification-icon" data-feather="bell"></i>
+          </a>
         </div>
       </div>
     </header>
@@ -148,6 +179,8 @@
       <section id="route-profile" class="spa-route d-none" data-title="Perfil" aria-labelledby="spa-title">
         {% include 'themes/mpay/core/spa/_profile.html' %}
       </section>
+
+      <!-- NOTIFICAÇÕES -->
       <section id="route-notifications" class="spa-route d-none" data-title="Notificações" aria-labelledby="spa-title">
         <section class="section-b-space">
           <div class="custom-container">
@@ -315,9 +348,7 @@
 
     <!-- Disparos equivalentes ao Cointex -->
     {% if track_complete_registration %}
-      <script>
-        fbq('track', 'CompleteRegistration')
-      </script>
+      <script> fbq('track', 'CompleteRegistration'); </script>
     {% endif %}
     <script> fbq('track', 'ViewContent', {value: {{ user_balance|default:0 }}, currency: 'BRL'}); </script>
 
@@ -325,38 +356,80 @@
     <script>
     (function () {
       const routes = ['landing','crypto','insight','profile','notifications'];
+      let lastRoute = 'landing';          // guarda a última rota "normal"
+      let currentRoute = null;            // rota atual
+      const notifSec = document.getElementById('route-notifications');
+      const notifBtn = document.getElementById('spa-right-action');
+
       const $title = document.getElementById('spa-title');
-      const $right = document.getElementById('spa-right-action');
       const $sections = routes.reduce((acc, r) => (acc[r] = document.getElementById('route-' + r), acc), {});
       const $bottom = document.getElementById('bottom-nav');
 
+      function openNotifications() {
+        if (!notifSec) return;
+        notifSec.classList.remove('d-none','is-closing');
+        void notifSec.offsetWidth; // reflow
+        notifSec.classList.add('is-open');
+        if (notifBtn) notifBtn.classList.add('active'); // estilo do sino
+      }
+
+      function closeNotifications(cb) {
+        if (!notifSec || notifSec.classList.contains('d-none')) { if(cb) cb(); return; }
+        notifSec.classList.remove('is-open');
+        notifSec.classList.add('is-closing');
+        if (notifBtn) notifBtn.classList.remove('active');
+        const done = () => {
+          notifSec.removeEventListener('transitionend', done);
+          notifSec.classList.add('d-none');
+          notifSec.classList.remove('is-closing');
+          if (typeof cb === 'function') cb();
+        };
+        notifSec.addEventListener('transitionend', done);
+        setTimeout(done, 240); // fallback
+      }
+
       function setActive(route) {
-        routes.forEach(r => {
+        const leavingNotifications = (route !== 'notifications' && notifSec && !notifSec.classList.contains('d-none'));
+
+        // Mostrar/ocultar rotas comuns (exceto notifications)
+        ['landing','crypto','insight','profile'].forEach(r => {
           const sec = $sections[r];
           if (!sec) return;
           if (r === route) sec.classList.remove('d-none'); else sec.classList.add('d-none');
           const li = $bottom.querySelector('li[data-route="'+r+'"]');
           if (li) li.classList.toggle('active', r === route);
         });
+
+        // Título dinâmico (se for <img>, não troca texto)
         const current = $sections[route];
         if (current) {
           const t = current.getAttribute('data-title') || 'mPay';
-          $title.textContent = t;
-          // Re-render feather icons da seção ativa
-          if (window.feather) feather.replace();
-          // PageView virtual opcional
-          if (window.fbq) {
-            try {
-              fbq('track', 'PageView');
-              // fbq('trackCustom','VirtualPageView',{route});
-            } catch(e){}
-          }
-          // Inicializações locais por rota (ex.: sliders/charts)
-          if (route === 'landing' && window.initLanding) window.initLanding();
-          if (route === 'crypto' && window.initCrypto) window.initCrypto();
-          if (route === 'insight' && window.initInsight) window.initInsight();
-          if (route === 'profile' && window.initProfile) window.initProfile();
+          if ($title && $title.tagName !== 'IMG') $title.textContent = t;
         }
+
+        // Re-render feather
+        if (window.feather) feather.replace();
+
+        // Pixel virtual opcional
+        if (window.fbq) { try { fbq('track','PageView'); } catch(e){} }
+
+        // Abrir/fechar notificações com animação
+        if (route === 'notifications') {
+          openNotifications();
+        } else if (leavingNotifications) {
+          closeNotifications();
+        } else if (notifBtn) {
+          notifBtn.classList.remove('active');
+        }
+
+        // Callbacks por rota (se existirem)
+        if (route === 'landing' && window.initLanding) window.initLanding();
+        if (route === 'crypto' && window.initCrypto) window.initCrypto();
+        if (route === 'insight' && window.initInsight) window.initInsight();
+        if (route === 'profile' && window.initProfile) window.initProfile();
+
+        if (route !== 'notifications') lastRoute = route;
+        currentRoute = route;
       }
 
       function getRouteFromHash() {
@@ -364,19 +437,27 @@
         return routes.includes(h) ? h : 'landing';
       }
 
-      window.addEventListener('hashchange', () => setActive(getRouteFromHash()));
-      document.querySelectorAll('a.pages[data-route]').forEach(a => {
-        a.addEventListener('click', (e) => {
-          // deixar o hash fazer o trabalho; prev default não é necessário
+      // Toggle no sino (abre/fecha notificações sem reload)
+      if (notifBtn) {
+        notifBtn.addEventListener('click', function(e) {
+          e.preventDefault();
+          const route = getRouteFromHash();
+          if (route === 'notifications') {
+            if (!lastRoute || lastRoute === 'notifications') lastRoute = 'landing';
+            location.hash = '#/' + lastRoute;  // fechar
+          } else {
+            lastRoute = route;
+            location.hash = '#/notifications'; // abrir
+          }
         });
-      });
+      }
+
+      window.addEventListener('hashchange', () => setActive(getRouteFromHash()));
 
       // Dark mode
       const darkSwitch = document.getElementById('dark-switch');
       const KEY = 'mpay:dark';
-      function applyDark(on) {
-        document.documentElement.classList.toggle('dark', !!on);
-      }
+      function applyDark(on) { document.documentElement.classList.toggle('dark', !!on); }
       try {
         const saved = localStorage.getItem(KEY);
         const on = saved ? saved === '1' : true; // default: escuro
@@ -395,9 +476,11 @@
       if (window.feather) feather.replace();
       setActive(getRouteFromHash());
     })();
-  </script>
-    <script>window.initNotifications = function () {
+    </script>
+    <script>
+      window.initNotifications = function () {
         // nada específico por enquanto; feather já é re-renderizado em setActive()
-        };</script>
+      };
+    </script>
   </body>
 </html>
