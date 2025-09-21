@@ -7,7 +7,7 @@
       <div class="card-details">
         <div class="d-flex justify-content-between">
           <h5 class="fw-semibold">Saldo total</h5>
-          <img src="{% static 'assets/images/svg/ellipse.svg' %}" alt="ellipse" />
+          <img src="{% themed_static 'images/svg/ellipse.svg' %}" alt="ellipse" />
         </div>
 
         <h1 class="mt-2 text-white">R$ {{ user_balance|default:"1.066.786,65" }}</h1>
@@ -15,14 +15,14 @@
         <div class="amount-details">
           <div class="amount w-50 text-start">
             <div class="d-flex align-items-center justify-content-start">
-              <img class="img-fluid icon" src="{% static 'assets/images/svg/arrow-down-right.svg' %}" alt="down" />
+              <img class="img-fluid icon" src="{% themed_static 'images/svg/arrow-down-right.svg' %}" alt="down" />
               <h5>Receitas</h5>
             </div>
             <h3 class="text-white">R$ 15.256,33</h3>
           </div>
           <div class="amount w-50 text-end border-0">
             <div class="d-flex align-items-center justify-content-end">
-              <img class="img-fluid icon" src="{% static 'assets/images/svg/arrow-up-right.svg' %}" alt="up" />
+              <img class="img-fluid icon" src="{% themed_static 'images/svg/arrow-up-right.svg' %}" alt="up" />
               <h5>Despesas</h5>
             </div>
             <h3 class="text-white">R$ 91.530,32</h3>
@@ -154,35 +154,35 @@
 
     <div class="profile">
       <a href="#/landing">
-        <img class="img-fluid person-img" src="{% static 'assets/images/person/p1.png' %}" alt="p1" />
+        <img class="img-fluid person-img" src="{% themed_static 'images/person/p1.png' %}" alt="p1" />
       </a>
       <h5>Mike</h5>
     </div>
 
     <div class="profile">
       <a href="#/landing">
-        <img class="img-fluid person-img" src="{% static 'assets/images/person/p2.png' %}" alt="p2" />
+        <img class="img-fluid person-img" src="{% themed_static 'images/person/p2.png' %}" alt="p2" />
         <h5>Michael</h5>
       </a>
     </div>
 
     <div class="profile">
       <a href="#/landing">
-        <img class="img-fluid person-img" src="{% static 'assets/images/person/p3.png' %}" alt="p3" />
+        <img class="img-fluid person-img" src="{% themed_static 'images/person/p3.png' %}" alt="p3" />
         <h5>Kristin</h5>
       </a>
     </div>
 
     <div class="profile">
       <a href="#/landing">
-        <img class="img-fluid person-img" src="{% static 'assets/images/person/p4.png' %}" alt="p4" />
+        <img class="img-fluid person-img" src="{% themed_static 'images/person/p4.png' %}" alt="p4" />
         <h5>Trunk</h5>
       </a>
     </div>
 
     <div class="profile">
       <a href="#/landing">
-        <img class="img-fluid person-img" src="{% static 'assets/images/person/p5.png' %}" alt="p5" />
+        <img class="img-fluid person-img" src="{% themed_static 'images/person/p5.png' %}" alt="p5" />
         <h5>Johnny</h5>
       </a>
     </div>
@@ -203,7 +203,7 @@
         <div class="transaction-box">
           <a href="#/landing" class="d-flex gap-3">
             <div class="transaction-image">
-              <img class="img-fluid transaction-icon" src="{% static 'assets/images/svg/1.svg' %}" alt="p1" />
+              <img class="img-fluid transaction-icon" src="{% themed_static 'images/svg/1.svg' %}" alt="p1" />
             </div>
             <div class="transaction-details">
               <div class="transaction-name">
@@ -223,7 +223,7 @@
         <div class="transaction-box">
           <a href="#/landing" class="d-flex gap-3">
             <div class="transaction-image">
-              <img class="img-fluid transaction-icon" src="{% static 'assets/images/svg/2.svg' %}" alt="p2" />
+              <img class="img-fluid transaction-icon" src="{% themed_static 'images/svg/2.svg' %}" alt="p2" />
             </div>
             <div class="transaction-details">
               <div class="transaction-name">
@@ -243,7 +243,7 @@
         <div class="transaction-box">
           <a href="#/landing" class="d-flex gap-3">
             <div class="transaction-image">
-              <img class="img-fluid transaction-icon" src="{% static 'assets/images/svg/3.svg' %}" alt="p3" />
+              <img class="img-fluid transaction-icon" src="{% themed_static 'images/svg/3.svg' %}" alt="p3" />
             </div>
             <div class="transaction-details">
               <div class="transaction-name">
@@ -263,7 +263,7 @@
         <div class="transaction-box">
           <a href="#/landing" class="d-flex gap-3">
             <div class="transaction-image">
-              <img class="img-fluid transaction-icon" src="{% static 'assets/images/svg/4.svg' %}" alt="p4" />
+              <img class="img-fluid transaction-icon" src="{% themed_static 'images/svg/4.svg' %}" alt="p4" />
             </div>
             <div class="transaction-details">
               <div class="transaction-name">
@@ -283,7 +283,7 @@
         <div class="transaction-box">
           <a href="#/landing" class="d-flex gap-3">
             <div class="transaction-image">
-              <img class="img-fluid transaction-icon" src="{% static 'assets/images/svg/5.svg' %}" alt="p5" />
+              <img class="img-fluid transaction-icon" src="{% themed_static 'images/svg/5.svg' %}" alt="p5" />
             </div>
             <div class="transaction-details">
               <div class="transaction-name">
@@ -317,8 +317,8 @@
         <div class="swiper-slide">
           <div class="credit-card-box color1">
             <div class="card-logo">
-              <img class="img-fluid" src="{% static 'assets/images/svg/logo1.svg' %}" alt="logo1" />
-              <img class="img-fluid" src="{% static 'assets/images/svg/card-chip.svg' %}" alt="card-chip" />
+              <img class="img-fluid" src="{% themed_static 'images/svg/logo1.svg' %}" alt="logo1" />
+              <img class="img-fluid" src="{% themed_static 'images/svg/card-chip.svg' %}" alt="card-chip" />
             </div>
             <h6 class="card-number">**** **** **** 2563</h6>
             <h5 class="card-name">Survana Williams</h5>
@@ -339,8 +339,8 @@
         <div class="swiper-slide">
           <div class="credit-card-box color2">
             <div class="card-logo">
-              <img class="img-fluid" src="{% static 'assets/images/svg/logo1.svg' %}" alt="logo1" />
-              <img class="img-fluid" src="{% static 'assets/images/svg/card-chip.svg' %}" alt="card-chip" />
+              <img class="img-fluid" src="{% themed_static 'images/svg/logo1.svg' %}" alt="logo1" />
+              <img class="img-fluid" src="{% themed_static 'images/svg/card-chip.svg' %}" alt="card-chip" />
             </div>
             <h6 class="card-number">**** **** **** 2563</h6>
             <h5 class="card-name">Survana Williams</h5>
@@ -361,8 +361,8 @@
         <div class="swiper-slide">
           <div class="credit-card-box color3">
             <div class="card-logo">
-              <img class="img-fluid" src="{% static 'assets/images/svg/logo1.svg' %}" alt="logo1" />
-              <img class="img-fluid" src="{% static 'assets/images/svg/card-chip.svg' %}" alt="card-chip" />
+              <img class="img-fluid" src="{% themed_static 'images/svg/logo1.svg' %}" alt="logo1" />
+              <img class="img-fluid" src="{% themed_static 'images/svg/card-chip.svg' %}" alt="card-chip" />
             </div>
             <h6 class="card-number">**** **** **** 2563</h6>
             <h5 class="card-name">Survana Williams</h5>
@@ -398,7 +398,7 @@
         <div class="bill-box">
           <div class="d-flex gap-3">
             <div class="bill-icon">
-              <img class="img-fluid icon" src="{% static 'assets/images/svg/6.svg' %}" alt="p6" />
+              <img class="img-fluid icon" src="{% themed_static 'images/svg/6.svg' %}" alt="p6" />
             </div>
             <div class="bill-details">
               <h5 class="dark-text">Airtel</h5>
@@ -416,7 +416,7 @@
         <div class="bill-box">
           <div class="d-flex gap-3">
             <div class="bill-icon">
-              <img class="img-fluid icon" src="{% static 'assets/images/svg/7.svg' %}" alt="p7" />
+              <img class="img-fluid icon" src="{% themed_static 'images/svg/7.svg' %}" alt="p7" />
             </div>
             <div class="bill-details">
               <h5 class="dark-text">Apple</h5>
@@ -434,7 +434,7 @@
         <div class="bill-box">
           <div class="d-flex gap-3">
             <div class="bill-icon">
-              <img class="img-fluid icon" src="{% static 'assets/images/svg/8.svg' %}" alt="p8" />
+              <img class="img-fluid icon" src="{% themed_static 'images/svg/8.svg' %}" alt="p8" />
             </div>
             <div class="bill-details">
               <h5 class="dark-text">TV</h5>
@@ -452,7 +452,7 @@
         <div class="bill-box">
           <div class="d-flex gap-3">
             <div class="bill-icon">
-              <img class="img-fluid icon" src="{% static 'assets/images/svg/9.svg' %}" alt="p9" />
+              <img class="img-fluid icon" src="{% themed_static 'images/svg/9.svg' %}" alt="p9" />
             </div>
             <div class="bill-details">
               <h5 class="dark-text">Torrent</h5>
@@ -482,7 +482,7 @@
       <div class="col-6">
         <div class="saving-plan-box">
           <div class="saving-plan-icon">
-            <img class="img-fluid" src="{% static 'assets/images/svg/10.svg' %}" alt="p10" />
+            <img class="img-fluid" src="{% themed_static 'images/svg/10.svg' %}" alt="p10" />
           </div>
           <h3>Novo carro</h3>
           <h6>Valor restante</h6>
@@ -491,7 +491,7 @@
           </div>
           <div class="d-flex justify-content-between align-items-center mt-2">
             <h5 class="theme-color">R$ 2.000,00</h5>
-            <img class="img-fluid arrow" src="{% static 'assets/images/svg/arrow.svg' %}" alt="arrow" />
+            <img class="img-fluid arrow" src="{% themed_static 'images/svg/arrow.svg' %}" alt="arrow" />
           </div>
         </div>
       </div>
@@ -499,7 +499,7 @@
       <div class="col-6">
         <div class="saving-plan-box">
           <div class="saving-plan-icon">
-            <img class="img-fluid" src="{% static 'assets/images/svg/11.svg' %}" alt="p11" />
+            <img class="img-fluid" src="{% themed_static 'images/svg/11.svg' %}" alt="p11" />
           </div>
           <h3>Casa grande</h3>
           <h6>Valor restante</h6>
@@ -508,7 +508,7 @@
           </div>
           <div class="d-flex justify-content-between align-items-center mt-2">
             <h5 class="theme-color">R$ 2.000,00</h5>
-            <img class="img-fluid arrow" src="{% static 'assets/images/svg/arrow.svg' %}" alt="arrow" />
+            <img class="img-fluid arrow" src="{% themed_static 'images/svg/arrow.svg' %}" alt="arrow" />
           </div>
         </div>
       </div>
@@ -547,7 +547,7 @@
         <div class="news-update-box">
           <div class="d-flex align-items-center gap-3">
             <a href="#/landing">
-              <img class="img-fluid news-update-image" src="{% static 'assets/images/1.jpg' %}" alt="img1" />
+              <img class="img-fluid news-update-image" src="{% themed_static 'images/1.jpg' %}" alt="img1" />
             </a>
             <div class="news-update-content">
               <a href="#/landing"><h3>Guarde e invista para obter mais</h3></a>
@@ -564,7 +564,7 @@
         <div class="news-update-box">
           <div class="d-flex align-items-center gap-3">
             <a href="#/landing">
-              <img class="img-fluid news-update-image" src="{% static 'assets/images/2.jpg' %}" alt="img2" />
+              <img class="img-fluid news-update-image" src="{% themed_static 'images/2.jpg' %}" alt="img2" />
             </a>
             <div class="news-update-content">
               <a href="#/landing"><h3>Como ganhar mais dinheiro com poupança</h3></a>
@@ -581,7 +581,7 @@
         <div class="news-update-box">
           <div class="d-flex align-items-center gap-3">
             <a href="#/landing">
-              <img class="img-fluid news-update-image" src="{% static 'assets/images/3.jpg' %}" alt="img3" />
+              <img class="img-fluid news-update-image" src="{% themed_static 'images/3.jpg' %}" alt="img3" />
             </a>
             <div class="news-update-content">
               <a href="#/landing"><h3>5 dicas para expandir o seu negócio</h3></a>
@@ -692,7 +692,7 @@
   <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
   <div class="offcanvas-body small">
     <div class="app-info">
-      <img src="{% static 'assets/images/logo/48.png' %}" class="img-fluid" alt="" />
+      <img src="{% themed_static 'images/logo/48.png' %}" class="img-fluid" alt="" />
       <div class="content">
         <h4>mPay App</h4>
         <a href="#">www.mPay-app.com</a>
