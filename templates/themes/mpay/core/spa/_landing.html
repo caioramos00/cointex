@@ -1,93 +1,704 @@
-{% load theming %}{% load static %}
+{% load static %}
+
+<!-- card start -->
 <section class="section-b-space">
   <div class="custom-container">
     <div class="card-box">
       <div class="card-details">
         <div class="d-flex justify-content-between">
           <h5 class="fw-semibold">Saldo total</h5>
-          <img src="{% themed_static 'images/svg/ellipse.svg' %}" alt="ellipse" />
+          <img src="{% static 'assets/images/svg/ellipse.svg' %}" alt="ellipse" />
         </div>
-        <h1 class="mt-2 text-white">R$ {{ user_balance|default:"0,00" }}</h1>
+
+        <h1 class="mt-2 text-white">R$ {{ user_balance|default:"1.066.786,65" }}</h1>
+
         <div class="amount-details">
           <div class="amount w-50 text-start">
             <div class="d-flex align-items-center justify-content-start">
-              <img class="img-fluid icon" src="{% themed_static 'images/svg/arrow-down-right.svg' %}" alt="down" />
+              <img class="img-fluid icon" src="{% static 'assets/images/svg/arrow-down-right.svg' %}" alt="down" />
               <h5>Receitas</h5>
             </div>
             <h3 class="text-white">R$ 15.256,33</h3>
           </div>
           <div class="amount w-50 text-end border-0">
             <div class="d-flex align-items-center justify-content-end">
-              <img class="img-fluid icon" src="{% themed_static 'images/svg/arrow-up-right.svg' %}" alt="up" />
+              <img class="img-fluid icon" src="{% static 'assets/images/svg/arrow-up-right.svg' %}" alt="up" />
               <h5>Despesas</h5>
             </div>
             <h3 class="text-white">R$ 91.530,32</h3>
           </div>
         </div>
       </div>
-      <a href="#/landing" class="add-money theme-color">+ Adicionar dinheiro</a>
+      <a href="#add-money" class="add-money theme-color" data-bs-toggle="modal">+ Adicionar dinheiro</a>
     </div>
   </div>
 </section>
+<!-- card end -->
 
+<!-- categories section starts -->
 <section class="categories-section section-b-space">
   <div class="custom-container">
     <ul class="categories-list">
       <li>
         <a href="#/landing">
-          <div class="categories-box"><i class="categories-icon" data-feather="repeat"></i></div>
+          <div class="categories-box">
+            <i class="categories-icon" data-feather="repeat"></i>
+          </div>
           <h5 class="mt-2 text-center">Transferir</h5>
         </a>
       </li>
       <li>
         <a href="#/landing">
-          <div class="categories-box"><i class="categories-icon" data-feather="file-text"></i></div>
+          <div class="categories-box">
+            <i class="categories-icon" data-feather="file-text"></i>
+          </div>
           <h5 class="mt-2 text-center">Boleto</h5>
         </a>
       </li>
       <li>
         <a href="#/landing">
-          <div class="categories-box"><i class="categories-icon icon1" data-feather="log-in"></i></div>
+          <div class="categories-box">
+            <i class="categories-icon icon1" data-feather="log-in"></i>
+          </div>
           <h5 class="mt-2 text-center">Solicitar</h5>
         </a>
       </li>
       <li>
         <a href="#/landing">
-          <div class="categories-box"><i class="iconsax categories-icon" data-icon="bank"></i></div>
+          <div class="categories-box">
+            <i class="iconsax categories-icon" data-icon="bank"></i>
+          </div>
           <h5 class="mt-2 text-center">Saque</h5>
         </a>
       </li>
     </ul>
   </div>
 </section>
+<!-- categories section end -->
 
+<!-- service section starts -->
 <section>
   <div class="custom-container">
     <div class="title">
-      <h2>Serviços</h2>
+      <h2>Selecionar serviço</h2>
       <a href="#/landing">Ver todos</a>
     </div>
-    <!-- (mantidos cards/serviços — traduzidos) -->
-    <!-- ... -->
+    <div class="row gy-3">
+      <div class="col-3">
+        <a href="#/landing">
+          <div class="service-box"><i class="service-icon" data-feather="activity"></i></div>
+          <h5 class="mt-2 text-center dark-text">Energia</h5>
+        </a>
+      </div>
+      <div class="col-3">
+        <a href="#/landing">
+          <div class="service-box"><i class="service-icon" data-feather="droplet"></i></div>
+          <h5 class="mt-2 text-center dark-text">Água</h5>
+        </a>
+      </div>
+      <div class="col-3">
+        <a href="#/landing">
+          <div class="service-box"><i class="service-icon" data-feather="wifi"></i></div>
+          <h5 class="mt-2 text-center dark-text">Internet</h5>
+        </a>
+      </div>
+      <div class="col-3">
+        <a href="#/landing">
+          <div class="service-box"><i class="service-icon" data-feather="monitor"></i></div>
+          <h5 class="mt-2 text-center dark-text">TV</h5>
+        </a>
+      </div>
+      <div class="col-3">
+        <a href="#/landing">
+          <div class="service-box"><i class="service-icon" data-feather="bar-chart-2"></i></div>
+          <h5 class="mt-2 text-center dark-text">Investimento</h5>
+        </a>
+      </div>
+      <div class="col-3">
+        <a href="#/landing">
+          <div class="service-box"><i class="service-icon" data-feather="tablet"></i></div>
+          <h5 class="mt-2 text-center dark-text">Celular</h5>
+        </a>
+      </div>
+      <div class="col-3">
+        <a href="#/landing">
+          <div class="service-box"><i class="service-icon" data-feather="plus-square"></i></div>
+          <h5 class="mt-2 text-center dark-text">Saúde</h5>
+        </a>
+      </div>
+      <div class="col-3">
+        <a href="#/landing">
+          <div class="service-box"><i class="service-icon" data-feather="more-horizontal"></i></div>
+          <h5 class="mt-2 text-center dark-text">Outros</h5>
+        </a>
+      </div>
+    </div>
   </div>
 </section>
+<!-- service section end -->
 
+<!-- quick send section starts -->
+<section>
+  <div class="custom-container">
+    <div class="title">
+      <h2>Enviar rapidamente para</h2>
+      <a href="#/landing">Ver todos</a>
+    </div>
+  </div>
+  <div class="quick-send">
+    <div class="profile">
+      <a href="#/landing" class="profile new-profile">
+        <div class="new-image"><i class="icon" data-feather="plus"></i></div>
+      </a>
+    </div>
+
+    <div class="profile">
+      <a href="#/landing">
+        <img class="img-fluid person-img" src="{% static 'assets/images/person/p1.png' %}" alt="p1" />
+      </a>
+      <h5>Mike</h5>
+    </div>
+
+    <div class="profile">
+      <a href="#/landing">
+        <img class="img-fluid person-img" src="{% static 'assets/images/person/p2.png' %}" alt="p2" />
+        <h5>Michael</h5>
+      </a>
+    </div>
+
+    <div class="profile">
+      <a href="#/landing">
+        <img class="img-fluid person-img" src="{% static 'assets/images/person/p3.png' %}" alt="p3" />
+        <h5>Kristin</h5>
+      </a>
+    </div>
+
+    <div class="profile">
+      <a href="#/landing">
+        <img class="img-fluid person-img" src="{% static 'assets/images/person/p4.png' %}" alt="p4" />
+        <h5>Trunk</h5>
+      </a>
+    </div>
+
+    <div class="profile">
+      <a href="#/landing">
+        <img class="img-fluid person-img" src="{% static 'assets/images/person/p5.png' %}" alt="p5" />
+        <h5>Johnny</h5>
+      </a>
+    </div>
+  </div>
+</section>
+<!-- quick send section end -->
+
+<!-- Transaction section starts -->
 <section>
   <div class="custom-container">
     <div class="title">
       <h2>Transações</h2>
       <a href="#/landing">Ver todas</a>
     </div>
+
     <div class="row gy-3">
-      <!-- (mantidos exemplos de transações — traduzidos) -->
-      <!-- ... -->
+      <div class="col-12">
+        <div class="transaction-box">
+          <a href="#/landing" class="d-flex gap-3">
+            <div class="transaction-image">
+              <img class="img-fluid transaction-icon" src="{% static 'assets/images/svg/1.svg' %}" alt="p1" />
+            </div>
+            <div class="transaction-details">
+              <div class="transaction-name">
+                <h5>Amazon Prime</h5>
+                <h3 class="error-color">R$ 199,<span>99</span></h3>
+              </div>
+              <div class="d-flex justify-content-between">
+                <h5 class="light-text">Assinatura</h5>
+                <h5 class="light-text">08:45</h5>
+              </div>
+            </div>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-12">
+        <div class="transaction-box">
+          <a href="#/landing" class="d-flex gap-3">
+            <div class="transaction-image">
+              <img class="img-fluid transaction-icon" src="{% static 'assets/images/svg/2.svg' %}" alt="p2" />
+            </div>
+            <div class="transaction-details">
+              <div class="transaction-name">
+                <h5>Apple Store</h5>
+                <h3 class="success-color">R$ 60,<span>30</span></h3>
+              </div>
+              <div class="d-flex justify-content-between">
+                <h5 class="light-text">Parcelado</h5>
+                <h5 class="light-text">21:00</h5>
+              </div>
+            </div>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-12">
+        <div class="transaction-box">
+          <a href="#/landing" class="d-flex gap-3">
+            <div class="transaction-image">
+              <img class="img-fluid transaction-icon" src="{% static 'assets/images/svg/3.svg' %}" alt="p3" />
+            </div>
+            <div class="transaction-details">
+              <div class="transaction-name">
+                <h5>Mercado</h5>
+                <h3 class="error-color">R$ 55,<span>20</span></h3>
+              </div>
+              <div class="d-flex justify-content-between">
+                <h5 class="light-text">Compra</h5>
+                <h5 class="light-text">20 mai</h5>
+              </div>
+            </div>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-12">
+        <div class="transaction-box">
+          <a href="#/landing" class="d-flex gap-3">
+            <div class="transaction-image">
+              <img class="img-fluid transaction-icon" src="{% static 'assets/images/svg/4.svg' %}" alt="p4" />
+            </div>
+            <div class="transaction-details">
+              <div class="transaction-name">
+                <h5>Snapchat</h5>
+                <h3 class="success-color">R$ 18,<span>10</span></h3>
+              </div>
+              <div class="d-flex justify-content-between">
+                <h5 class="light-text">Boleto</h5>
+                <h5 class="light-text">19 mai</h5>
+              </div>
+            </div>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-12">
+        <div class="transaction-box">
+          <a href="#/landing" class="d-flex gap-3">
+            <div class="transaction-image">
+              <img class="img-fluid transaction-icon" src="{% static 'assets/images/svg/5.svg' %}" alt="p5" />
+            </div>
+            <div class="transaction-details">
+              <div class="transaction-name">
+                <h5>Spotify</h5>
+                <h3 class="success-color">R$ 20,<span>50</span></h3>
+              </div>
+              <div class="d-flex justify-content-between">
+                <h5 class="light-text">Transferência</h5>
+                <h5 class="light-text">18 mai</h5>
+              </div>
+            </div>
+          </a>
+        </div>
+      </div>
+
     </div>
   </div>
 </section>
+<!-- Transaction section end -->
 
-<script>
-  // Inicializações específicas da rota "landing"
-  window.initLanding = function() {
-    // Ex.: sliders Swiper, se existirem nessa seção
-  };
-</script>
+<!-- all cards section starts -->
+<section>
+  <div class="custom-container">
+    <div class="title">
+      <h2>Todos os cartões</h2>
+      <a href="#/landing">Ver todos</a>
+    </div>
+
+    <div class="swiper card-slider">
+      <div class="swiper-wrapper">
+        <div class="swiper-slide">
+          <div class="credit-card-box color1">
+            <div class="card-logo">
+              <img class="img-fluid" src="{% static 'assets/images/svg/logo1.svg' %}" alt="logo1" />
+              <img class="img-fluid" src="{% static 'assets/images/svg/card-chip.svg' %}" alt="card-chip" />
+            </div>
+            <h6 class="card-number">**** **** **** 2563</h6>
+            <h5 class="card-name">Survana Williams</h5>
+            <h2 class="card-amount">R$ 25.000,89</h2>
+            <div class="d-block">
+              <div class="card-date w-100">
+                <h6>Validade</h6>
+                <h6>CVV</h6>
+              </div>
+              <div class="card-numbers w-100">
+                <h6 class="text-white fw-semibold mt-1">12 /24</h6>
+                <h6 class="text-white fw-semibold mt-1">***</h6>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="swiper-slide">
+          <div class="credit-card-box color2">
+            <div class="card-logo">
+              <img class="img-fluid" src="{% static 'assets/images/svg/logo1.svg' %}" alt="logo1" />
+              <img class="img-fluid" src="{% static 'assets/images/svg/card-chip.svg' %}" alt="card-chip" />
+            </div>
+            <h6 class="card-number">**** **** **** 2563</h6>
+            <h5 class="card-name">Survana Williams</h5>
+            <h2 class="card-amount">R$ 25.000,89</h2>
+            <div class="d-block">
+              <div class="card-date w-100">
+                <h6>Validade</h6>
+                <h6>CVV</h6>
+              </div>
+              <div class="card-numbers w-100">
+                <h6 class="text-white fw-semibold mt-1">12 /24</h6>
+                <h6 class="text-white fw-semibold mt-1">***</h6>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="swiper-slide">
+          <div class="credit-card-box color3">
+            <div class="card-logo">
+              <img class="img-fluid" src="{% static 'assets/images/svg/logo1.svg' %}" alt="logo1" />
+              <img class="img-fluid" src="{% static 'assets/images/svg/card-chip.svg' %}" alt="card-chip" />
+            </div>
+            <h6 class="card-number">**** **** **** 2563</h6>
+            <h5 class="card-name">Survana Williams</h5>
+            <h2 class="card-amount">R$ 25.000,89</h2>
+            <div class="d-block">
+              <div class="card-date w-100">
+                <h6>Validade</h6>
+                <h6>CVV</h6>
+              </div>
+              <div class="card-numbers w-100">
+                <h6 class="text-white fw-semibold mt-1">12 /24</h6>
+                <h6 class="text-white fw-semibold mt-1">***</h6>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div> <!-- swiper-wrapper -->
+    </div> <!-- swiper -->
+  </div>
+</section>
+<!-- all cards section end -->
+
+<!-- bill details section starts -->
+<section>
+  <div class="custom-container">
+    <div class="title">
+      <h2>Detalhes de contas</h2>
+      <a href="#/landing">Ver todos</a>
+    </div>
+    <div class="row g-3">
+      <div class="col-md-3 col-6">
+        <div class="bill-box">
+          <div class="d-flex gap-3">
+            <div class="bill-icon">
+              <img class="img-fluid icon" src="{% static 'assets/images/svg/6.svg' %}" alt="p6" />
+            </div>
+            <div class="bill-details">
+              <h5 class="dark-text">Airtel</h5>
+              <h6 class="light-text mt-2">Pré-pago</h6>
+            </div>
+          </div>
+          <div class="bill-price">
+            <h5>R$ 69,49</h5>
+            <a href="#pay" data-bs-toggle="modal" class="btn bill-pay bill-paid">Pagar</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-3 col-6">
+        <div class="bill-box">
+          <div class="d-flex gap-3">
+            <div class="bill-icon">
+              <img class="img-fluid icon" src="{% static 'assets/images/svg/7.svg' %}" alt="p7" />
+            </div>
+            <div class="bill-details">
+              <h5 class="dark-text">Apple</h5>
+              <h6 class="light-text mt-2">Assinatura</h6>
+            </div>
+          </div>
+          <div class="bill-price">
+            <h5>R$ 49,85</h5>
+            <a href="#pay" data-bs-toggle="modal" class="btn bill-pay bill-paid">Pagar</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-3 col-6">
+        <div class="bill-box">
+          <div class="d-flex gap-3">
+            <div class="bill-icon">
+              <img class="img-fluid icon" src="{% static 'assets/images/svg/8.svg' %}" alt="p8" />
+            </div>
+            <div class="bill-details">
+              <h5 class="dark-text">TV</h5>
+              <h6 class="light-text mt-2">Conexão</h6>
+            </div>
+          </div>
+          <div class="bill-price">
+            <h5>R$ 99,99</h5>
+            <a href="#pay" data-bs-toggle="modal" class="btn bill-pay bill-paid">Pagar</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-3 col-6">
+        <div class="bill-box">
+          <div class="d-flex gap-3">
+            <div class="bill-icon">
+              <img class="img-fluid icon" src="{% static 'assets/images/svg/9.svg' %}" alt="p9" />
+            </div>
+            <div class="bill-details">
+              <h5 class="dark-text">Torrent</h5>
+              <h6 class="light-text mt-2">Energia</h6>
+            </div>
+          </div>
+          <div class="bill-price">
+            <h5>R$ 60,49</h5>
+            <a href="#pay" data-bs-toggle="modal" class="btn bill-pay bill-paid">Pagar</a>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+<!-- bill details section end -->
+
+<!-- saving plans section starts -->
+<section>
+  <div class="custom-container">
+    <div class="title">
+      <h2>Meus planos de poupança</h2>
+      <a href="#/landing">Ver todos</a>
+    </div>
+    <div class="row">
+      <div class="col-6">
+        <div class="saving-plan-box">
+          <div class="saving-plan-icon">
+            <img class="img-fluid" src="{% static 'assets/images/svg/10.svg' %}" alt="p10" />
+          </div>
+          <h3>Novo carro</h3>
+          <h6>Valor restante</h6>
+          <div class="progress" role="progressbar" aria-label="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+            <div class="progress-bar bar1"></div>
+          </div>
+          <div class="d-flex justify-content-between align-items-center mt-2">
+            <h5 class="theme-color">R$ 2.000,00</h5>
+            <img class="img-fluid arrow" src="{% static 'assets/images/svg/arrow.svg' %}" alt="arrow" />
+          </div>
+        </div>
+      </div>
+
+      <div class="col-6">
+        <div class="saving-plan-box">
+          <div class="saving-plan-icon">
+            <img class="img-fluid" src="{% static 'assets/images/svg/11.svg' %}" alt="p11" />
+          </div>
+          <h3>Casa grande</h3>
+          <h6>Valor restante</h6>
+          <div class="progress" role="progressbar" aria-label="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+            <div class="progress-bar bar2"></div>
+          </div>
+          <div class="d-flex justify-content-between align-items-center mt-2">
+            <h5 class="theme-color">R$ 2.000,00</h5>
+            <img class="img-fluid arrow" src="{% static 'assets/images/svg/arrow.svg' %}" alt="arrow" />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<!-- saving plans section end -->
+
+<!-- monthly statistics section starts -->
+<section>
+  <div class="custom-container">
+    <div class="statistics-banner">
+      <div class="d-flex justify-content-center gap-3">
+        <div class="statistics-image">
+          <i class="icon" data-feather="bar-chart-2"></i>
+        </div>
+        <div class="statistics-content d-block">
+          <h5>Estatísticas mensais</h5>
+          <h6>30% melhor desempenho que o período anterior</h6>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<!-- monthly statistics section end -->
+
+<!-- news-update section starts -->
+<section class="section-b-space">
+  <div class="custom-container">
+    <div class="title">
+      <h2>Notícias</h2>
+      <a href="#/landing">Ver todas</a>
+    </div>
+    <div class="row gy-3">
+      <div class="col-12">
+        <div class="news-update-box">
+          <div class="d-flex align-items-center gap-3">
+            <a href="#/landing">
+              <img class="img-fluid news-update-image" src="{% static 'assets/images/1.jpg' %}" alt="img1" />
+            </a>
+            <div class="news-update-content">
+              <a href="#/landing"><h3>Guarde e invista para obter mais</h3></a>
+              <div class="news-writer">
+                <h6>13 mai, 23</h6>
+                <h6>-Smith</h6>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-12">
+        <div class="news-update-box">
+          <div class="d-flex align-items-center gap-3">
+            <a href="#/landing">
+              <img class="img-fluid news-update-image" src="{% static 'assets/images/2.jpg' %}" alt="img2" />
+            </a>
+            <div class="news-update-content">
+              <a href="#/landing"><h3>Como ganhar mais dinheiro com poupança</h3></a>
+              <div class="news-writer">
+                <h6>10 mai, 23</h6>
+                <h6>-Laila</h6>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-12">
+        <div class="news-update-box">
+          <div class="d-flex align-items-center gap-3">
+            <a href="#/landing">
+              <img class="img-fluid news-update-image" src="{% static 'assets/images/3.jpg' %}" alt="img3" />
+            </a>
+            <div class="news-update-content">
+              <a href="#/landing"><h3>5 dicas para expandir o seu negócio</h3></a>
+              <div class="news-writer">
+                <h6>06 mai, 23</h6>
+                <h6>-Brunt</h6>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+<!-- news-update section end -->
+
+<!-- ==================== MODAIS E OFFCANVAS (iguais ao original) ==================== -->
+
+<!-- add money modal start -->
+<div class="modal add-money-modal fade" id="add-money" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title">Adicionar dinheiro</h2>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="inputcard" class="form-label mb-2">De</label>
+          <div class="d-flex gap-2">
+            <select id="inputcard" class="form-select">
+              <option selected>**** **** **** 1566 - Conta poupança</option>
+              <option>**** **** **** 1566 - Conta poupança</option>
+              <option>**** **** **** 1566 - Conta poupança</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="inputamount" class="form-label mb-2">Valor</label>
+          <div class="form-input">
+            <input type="number" class="form-control" id="inputamount" />
+          </div>
+        </div>
+        <a href="#/landing" class="btn theme-btn successfully w-100">Depositar</a>
+      </div>
+      <button type="button" class="btn close-btn" data-bs-dismiss="modal">
+        <i class="icon" data-feather="x"></i>
+      </button>
+    </div>
+  </div>
+</div>
+<!-- add money modal end -->
+
+<!-- pay modal starts -->
+<div class="modal pay-modal fade" id="pay" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title">Detalhe da conta Apple</h2>
+      </div>
+      <div class="modal-body">
+        <ul class="details-list">
+          <li><h3 class="fw-normal dark-text">Valor</h3><h3 class="fw-semibold theme-color">R$ 49,85</h3></li>
+          <li><h3 class="fw-normal dark-text">Data da fatura</h3><h3 class="fw-normal light-text">10 mai, 2023</h3></li>
+          <li><h3 class="fw-normal dark-text">Vencimento</h3><h3 class="fw-normal error-color">31 mai, 2023</h3></li>
+          <li><h3 class="fw-normal dark-text">Nº da fatura</h3><h3 class="fw-normal light-text">BM452695523</h3></li>
+          <li><h3 class="fw-normal dark-text">Telefone</h3><h3 class="fw-normal light-text">+55 ***** **256</h3></li>
+          <li><h3 class="fw-normal dark-text">Status</h3><h3 class="fw-semibold error-color">Em aberto</h3></li>
+        </ul>
+        <a href="#/landing" class="btn theme-btn successfully w-100">Pagar</a>
+      </div>
+      <button type="button" class="btn close-btn" data-bs-dismiss="modal">
+        <i class="icon" data-feather="x"></i>
+      </button>
+    </div>
+  </div>
+</div>
+<!-- pay modal end -->
+
+<!-- paid modal starts -->
+<div class="modal pay-modal fade" id="paid" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title">Detalhe da conta Mobile</h2>
+      </div>
+      <div class="modal-body">
+        <ul class="details-list">
+          <li><h3 class="fw-normal dark-text">Valor</h3><h3 class="fw-semibold theme-color">R$ 69,49</h3></li>
+          <li><h3 class="fw-normal dark-text">Data da fatura</h3><h3 class="fw-normal light-text">10 mai, 2023</h3></li>
+          <li><h3 class="fw-normal dark-text">Vencimento</h3><h3 class="fw-normal light-text">22 mai, 2023</h3></li>
+          <li><h3 class="fw-normal dark-text">Nº da fatura</h3><h3 class="fw-normal light-text">BM452695523</h3></li>
+          <li><h3 class="fw-normal dark-text">Telefone</h3><h3 class="fw-normal light-text">+55 ***** **256</h3></li>
+          <li><h3 class="fw-normal dark-text">Status</h3><h3 class="fw-semibold theme-color">Pago</h3></li>
+        </ul>
+        <a href="#/landing" class="btn theme-btn successfully w-100">Pago — obrigado!</a>
+      </div>
+      <button type="button" class="btn close-btn" data-bs-dismiss="modal">
+        <i class="icon" data-feather="x"></i>
+      </button>
+    </div>
+  </div>
+</div>
+<!-- paid modal end -->
+
+<!-- pwa install app popup (offcanvas) -->
+<div class="offcanvas offcanvas-bottom addtohome-popup theme-offcanvas" tabindex="-1" id="offcanvas">
+  <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+  <div class="offcanvas-body small">
+    <div class="app-info">
+      <img src="{% static 'assets/images/logo/48.png' %}" class="img-fluid" alt="" />
+      <div class="content">
+        <h4>mPay App</h4>
+        <a href="#">www.mPay-app.com</a>
+      </div>
+    </div>
+    <a href="#!" class="btn theme-btn install-app btn-inline home-screen-btn m-0" id="installapp">Adicionar à tela inicial</a>
+  </div>
+</div>
+<!-- pwa offcanvas end -->
