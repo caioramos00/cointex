@@ -1,220 +1,330 @@
-{% load theming %}{% load static %}
+{% load theming %}
+{% load static %}
 <!DOCTYPE html>
 <html lang="pt-BR">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, viewport-fit=cover" />
-  <meta name="description" content="mPay" />
-  <meta name="keywords" content="mPay" />
-  <meta name="author" content="mPay" />
-  <link rel="manifest" href="{% static 'manifest.json' %}" />
-  <link rel="icon" href="{% themed_static 'images/logo/favicon.png' %}" type="image/x-icon" />
-  <title>mPay App</title>
-  <link rel="apple-touch-icon" href="{% themed_static 'images/logo/favicon.png' %}" />
-  <meta name="theme-color" content="#122636" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
-  <meta name="apple-mobile-web-app-title" content="mPay" />
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, viewport-fit=cover" />
+    <meta name="description" content="mPay" />
+    <meta name="keywords" content="mPay" />
+    <meta name="author" content="mPay" />
+    <link rel="manifest" href="{% static 'manifest.json' %}" />
+    <link rel="icon" href="{% themed_static 'images/logo/favicon.png' %}" type="image/x-icon" />
+    <title>mPay App</title>
+    <link rel="apple-touch-icon" href="{% themed_static 'images/logo/favicon.png' %}" />
+    <meta name="theme-color" content="#122636" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="apple-mobile-web-app-title" content="mPay" />
 
-  <!-- Fontes / Ícones / CSS -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@100;300;400;700;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" type="text/css" href="{% themed_static 'css/vendors/iconsax.css' %}" />
-  <link rel="stylesheet" type="text/css" href="{% themed_static 'css/vendors/bootstrap.min.css' %}" />
-  <link rel="stylesheet" type="text/css" href="{% themed_static 'css/vendors/swiper-bundle.min.css' %}" />
-  <link rel="stylesheet" id="change-link" type="text/css" href="{% themed_static 'css/style.css' %}" />
+    <!-- Fontes / Ícones / CSS -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@100;300;400;700;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" type="text/css" href="{% themed_static 'css/vendors/iconsax.css' %}" />
+    <link rel="stylesheet" type="text/css" href="{% themed_static 'css/vendors/bootstrap.min.css' %}" />
+    <link rel="stylesheet" type="text/css" href="{% themed_static 'css/vendors/swiper-bundle.min.css' %}" />
+    <link rel="stylesheet" id="change-link" type="text/css" href="{% themed_static 'css/style.css' %}" />
 
-  <!-- PIXELS — replicado da home Cointex -->
-  <meta name="facebook-domain-verification" content="73hwg7lythnnqtl0mtlqdgyewx6h3z" />
-  <script>
-    !function(f,b,e,v,n,t,s) {
-      if(f.fbq) return;
-      n=f.fbq=function(){n.callMethod? n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-      if(!f._fbq) f._fbq=n; n.push=n; n.loaded=!0; n.version='2.0';
-      n.queue=[]; t=b.createElement(e); t.async=!0; t.src=v;
-      s=b.getElementsByTagName(e)[0]; s.parentNode.insertBefore(t,s)
-    }(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
-    fbq('init', '1414661506543941');
-    fbq('init', '24796423593276136');
-    fbq('init', '780359434541574');
-    fbq('track', 'PageView');
-  </script>
-  <noscript>
-    <img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=1414661506543941&ev=PageView&noscript=1"/>
-    <img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=24796423593276136&ev=PageView&noscript=1"/>
-    <img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=780359434541574&ev=PageView&noscript=1"/>
-  </noscript>
-</head>
+    <!-- PIXELS — replicado da home Cointex -->
+    <meta name="facebook-domain-verification" content="73hwg7lythnnqtl0mtlqdgyewx6h3z" />
+    <script>
+      !(function (f, b, e, v, n, t, s) {
+        if (f.fbq) return
+        n = f.fbq = function () {
+          n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments)
+        }
+        if (!f._fbq) f._fbq = n
+        n.push = n
+        n.loaded = !0
+        n.version = '2.0'
+        n.queue = []
+        t = b.createElement(e)
+        t.async = !0
+        t.src = v
+        s = b.getElementsByTagName(e)[0]
+        s.parentNode.insertBefore(t, s)
+      })(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js')
+      fbq('init', '1414661506543941')
+      fbq('init', '24796423593276136')
+      fbq('init', '780359434541574')
+      fbq('track', 'PageView')
+    </script>
+    <noscript>
+      <img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=1414661506543941&ev=PageView&noscript=1" />
+      <img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=24796423593276136&ev=PageView&noscript=1" />
+      <img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=780359434541574&ev=PageView&noscript=1" />
+    </noscript>
+  </head>
 
-<body class="theme-body">
-  <!-- Sidebar -->
-  <div class="offcanvas sidebar-offcanvas offcanvas-start" tabindex="-1" id="offcanvasLeft">
-    <div class="offcanvas-header sidebar-header">
-      <div class="sidebar-logo">
-        <img class="img-fluid logo" src="{% themed_static 'images/logo/logo.png' %}" alt="logo" />
+  <body class="theme-body">
+    <!-- Sidebar -->
+    <div class="offcanvas sidebar-offcanvas offcanvas-start" tabindex="-1" id="offcanvasLeft">
+      <div class="offcanvas-header sidebar-header">
+        <div class="sidebar-logo">
+          <img class="img-fluid logo" src="{% themed_static 'images/logo/logo.png' %}" alt="logo" />
+        </div>
+        <div class="balance">
+          <img class="img-fluid balance-bg" src="{% themed_static 'images/background/auth-bg.jpg' %}" alt="auth-bg" />
+          <h5>Saldo</h5>
+          <h2>R$ {{ user_balance|default:'0,00' }}</h2>
+        </div>
       </div>
-      <div class="balance">
-        <img class="img-fluid balance-bg" src="{% themed_static 'images/background/auth-bg.jpg' %}" alt="auth-bg" />
-        <h5>Saldo</h5>
-        <h2>R$ {{ user_balance|default:"0,00" }}</h2>
-      </div>
-    </div>
-    <div class="offcanvas-body">
-      <div class="sidebar-content">
-        <ul class="link-section">
-          <li>
-            <a href="#/landing" class="pages" data-route="landing">
-              <i class="sidebar-icon" data-feather="credit-card"></i>
-              <h3>mPay</h3>
-            </a>
-          </li>
-          <li>
-            <a href="#/crypto" class="pages" data-route="crypto">
-              <i class="sidebar-icon" data-feather="dollar-sign"></i>
-              <h3>Cripto</h3>
-            </a>
-          </li>
-          <li>
-            <a href="#/insight" class="pages" data-route="insight">
-              <i class="sidebar-icon" data-feather="bar-chart-2"></i>
-              <h3>Insights</h3>
-            </a>
-          </li>
-          <li>
-            <a href="#/profile" class="pages" data-route="profile">
-              <i class="sidebar-icon" data-feather="user"></i>
-              <h3>Perfil</h3>
-            </a>
-          </li>
-          <li>
-            <a href="{% url 'accounts:logout_view' %}" class="pages">
-              <i class="sidebar-icon" data-feather="log-out"></i>
-              <h3>Sair</h3>
-            </a>
-          </li>
-        </ul>
-
-        <div class="mode-switch">
-          <ul class="switch-section">
-            <!-- REMOVIDO: RTL -->
+      <div class="offcanvas-body">
+        <div class="sidebar-content">
+          <ul class="link-section">
             <li>
-              <h3>Tema escuro</h3>
-              <div class="switch-btn">
-                <input id="dark-switch" type="checkbox" />
-              </div>
+              <a href="#/landing" class="pages" data-route="landing">
+                <i class="sidebar-icon" data-feather="credit-card"></i>
+                <h3>mPay</h3>
+              </a>
+            </li>
+            <li>
+              <a href="#/crypto" class="pages" data-route="crypto">
+                <i class="sidebar-icon" data-feather="dollar-sign"></i>
+                <h3>Cripto</h3>
+              </a>
+            </li>
+            <li>
+              <a href="#/insight" class="pages" data-route="insight">
+                <i class="sidebar-icon" data-feather="bar-chart-2"></i>
+                <h3>Insights</h3>
+              </a>
+            </li>
+            <li>
+              <a href="#/profile" class="pages" data-route="profile">
+                <i class="sidebar-icon" data-feather="user"></i>
+                <h3>Perfil</h3>
+              </a>
+            </li>
+            <li>
+              <a href="{% url 'accounts:logout_view' %}" class="pages">
+                <i class="sidebar-icon" data-feather="log-out"></i>
+                <h3>Sair</h3>
+              </a>
             </li>
           </ul>
+
+          <div class="mode-switch">
+            <ul class="switch-section">
+              <!-- REMOVIDO: RTL -->
+              <li>
+                <h3>Tema escuro</h3>
+                <div class="switch-btn">
+                  <input id="dark-switch" type="checkbox" />
+                </div>
+              </li>
+            </ul>
+          </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- Cabeçalho dinâmico -->
-  <header class="section-t-space">
-    <div class="custom-container">
-      <div class="header-panel">
-        <a class="sidebar-btn" data-bs-toggle="offcanvas" data-bs-target="#offcanvasLeft">
-          <i class="menu-icon" data-feather="menu"></i>
-        </a>
-        <img id="spa-title" class="img-fluid logo" src="{% themed_static 'images/logo/logo.png' %}" alt="mPay" />
-        <a href="#/scan" class="notification" id="spa-right-action" aria-label="Ação">
-          <i class="notification-icon" data-feather="bell"></i>
-        </a>
+    <!-- Cabeçalho dinâmico -->
+    <header class="section-t-space">
+      <div class="custom-container">
+        <div class="header-panel">
+          <a class="sidebar-btn" data-bs-toggle="offcanvas" data-bs-target="#offcanvasLeft"><i class="menu-icon" data-feather="menu"></i></a>
+          <img id="spa-title" class="img-fluid logo" src="{% themed_static 'images/logo/logo.png' %}" alt="mPay" />
+          <a href="#/notifications" class="notification" id="spa-right-action" aria-label="Notificações"><i class="notification-icon" data-feather="bell"></i></a>
+        </div>
       </div>
+    </header>
+
+    <!-- Seções SPA -->
+    <main id="spa-root">
+      <section id="route-landing" class="spa-route" data-title="mPay" aria-labelledby="spa-title">
+        {% include 'themes/mpay/core/spa/_landing.html' %}
+      </section>
+
+      <section id="route-crypto" class="spa-route d-none" data-title="Cripto" aria-labelledby="spa-title">
+        {% include 'themes/mpay/core/spa/_crypto.html' %}
+      </section>
+
+      <section id="route-insight" class="spa-route d-none" data-title="Insights" aria-labelledby="spa-title">
+        {% include 'themes/mpay/core/spa/_insight.html' %}
+      </section>
+
+      <section id="route-profile" class="spa-route d-none" data-title="Perfil" aria-labelledby="spa-title">
+        {% include 'themes/mpay/core/spa/_profile.html' %}
+      </section>
+      <section id="route-notifications" class="spa-route d-none" data-title="Notificações" aria-labelledby="spa-title">
+        <section class="section-b-space">
+          <div class="custom-container">
+            <div class="title">
+              <h2>Hoje</h2>
+            </div>
+
+            <ul class="notification-list">
+              <li class="notification-box">
+                <div class="notification-img">
+                  <img class="img-fluid icon" src="{% themed_static 'images/person/p1.png' %}" alt="p1" />
+                </div>
+                <div class="notification-details">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                      <h5 class="fw-semibold dark-text">Pagamento recebido</h5>
+                      <h6 class="fw-normal light-text mt-1">Dianne Christian</h6>
+                    </div>
+                    <h6 class="time fw-normal light-text">21:02</h6>
+                  </div>
+                  <div class="d-flex justify-content-between align-items-center mt-3">
+                    <h5 class="dark-text fw-normal">Você recebeu <span class="fw-semibold theme-color">R$ 25,85</span></h5>
+                  </div>
+                </div>
+              </li>
+
+              <li class="notification-box">
+                <div class="notification-img">
+                  <img class="img-fluid icon" src="{% themed_static 'images/person/p2.png' %}" alt="p2" />
+                </div>
+                <div class="notification-details">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                      <h5 class="fw-semibold dark-text">Solicitação de pagamento</h5>
+                      <h6 class="fw-normal light-text mt-1">Connie Williams</h6>
+                    </div>
+                    <h6 class="time fw-normal light-text">20:45</h6>
+                  </div>
+                  <div class="d-flex justify-content-between align-items-center mt-3">
+                    <h5 class="dark-text fw-normal">Enviar solicitação de <span class="fw-semibold theme-color">R$ 56,48</span></h5>
+                    <a href="#/landing" class="btn theme-btn pay-btn mt-0">Pagar</a>
+                  </div>
+                </div>
+              </li>
+
+              <li class="notification-box">
+                <div class="notification-img img1">
+                  <img class="img-fluid notification-icon" src="{% themed_static 'images/svg/alert.svg' %}" alt="alerta" />
+                </div>
+                <div class="notification-details">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                      <h5 class="fw-normal dark-text">Alerta de poupança</h5>
+                      <h6 class="fw-normal light-text mt-1">Banco</h6>
+                    </div>
+                    <h6 class="time fw-normal light-text">05:12</h6>
+                  </div>
+                  <div class="d-flex justify-content-between align-items-center mt-3">
+                    <h5 class="light-text fw-normal">Suas despesas mensais estão perto do limite do orçamento.</h5>
+                  </div>
+                </div>
+              </li>
+            </ul>
+
+            <div class="title mt-3">
+              <h2>Ontem</h2>
+            </div>
+
+            <ul class="notification-list">
+              <li class="notification-box">
+                <div class="notification-img">
+                  <img class="img-fluid icon" src="{% themed_static 'images/person/p3.png' %}" alt="p3" />
+                </div>
+                <div class="notification-details">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                      <h5 class="fw-semibold dark-text">Pagamento enviado</h5>
+                      <h6 class="fw-normal light-text mt-1">Kristina Johny</h6>
+                    </div>
+                    <h6 class="time fw-normal light-text">05:12</h6>
+                  </div>
+                  <div class="d-flex justify-content-between align-items-center mt-3">
+                    <h5 class="light-text fw-normal"><span class="fw-semibold theme-color">R$ 25,85</span> enviados para <span class="dark-text">Kristin Johny</span></h5>
+                  </div>
+                </div>
+              </li>
+
+              <li class="notification-box">
+                <div class="notification-img img2">
+                  <img class="img-fluid notification-icon" src="{% themed_static 'images/svg/lock.svg' %}" alt="alerta" />
+                </div>
+                <div class="notification-details">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                      <h5 class="fw-normal dark-text">Alerta de segurança</h5>
+                      <h6 class="fw-normal light-text mt-1">Banco</h6>
+                    </div>
+                    <h6 class="time fw-normal light-text">05:12</h6>
+                  </div>
+                  <div class="d-flex justify-content-between align-items-center mt-3">
+                    <h5 class="light-text fw-normal">Você alterou sua senha em um dispositivo Samsung.</h5>
+                  </div>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <!-- Navbar inferior -->
+    <div class="navbar-menu">
+      <ul id="bottom-nav" style="display:flex; justify-content: space-around;">
+        <li data-route="landing" class="active">
+          <a href="#/landing">
+            <div class="icon">
+              <img class="unactive" src="{% themed_static 'images/svg/mpay.svg' %}" alt="mPay" />
+              <img class="active" src="{% themed_static 'images/svg/mpay-fill.svg' %}" alt="mPay" />
+            </div>
+            <h5>mPay</h5>
+          </a>
+        </li>
+        <li data-route="crypto">
+          <a href="#/crypto">
+            <div class="icon">
+              <img class="unactive" src="{% themed_static 'images/svg/bitcoin.svg' %}" alt="cripto" />
+              <img class="active" src="{% themed_static 'images/svg/bitcoin-fill.svg' %}" alt="cripto" />
+            </div>
+            <h5>Cripto</h5>
+          </a>
+        </li>
+        <li data-route="insight">
+          <a href="#/insight">
+            <div class="icon">
+              <img class="unactive" src="{% themed_static 'images/svg/bar-chart.svg' %}" alt="insights" />
+              <img class="active" src="{% themed_static 'images/svg/bar-chart-fill.svg' %}" alt="insights" />
+            </div>
+            <h5>Insights</h5>
+          </a>
+        </li>
+        <li data-route="profile">
+          <a href="#/profile">
+            <div class="icon">
+              <img class="unactive" src="{% themed_static 'images/svg/user.svg' %}" alt="perfil" />
+              <img class="active" src="{% themed_static 'images/svg/user-fill.svg' %}" alt="perfil" />
+            </div>
+            <h5>Perfil</h5>
+          </a>
+        </li>
+      </ul>
     </div>
-  </header>
 
-  <!-- Seções SPA -->
-  <main id="spa-root">
-    <section id="route-landing" class="spa-route" data-title="mPay" aria-labelledby="spa-title">
-      {% include "themes/mpay/core/spa/_landing.html" %}
-    </section>
+    <!-- Espaço painel -->
+    <section class="panel-space"></section>
 
-    <section id="route-crypto" class="spa-route d-none" data-title="Cripto" aria-labelledby="spa-title">
-      {% include "themes/mpay/core/spa/_crypto.html" %}
-    </section>
+    <!-- JS vendors -->
+    <script src="{% themed_static 'js/jquery-3.6.0.min.js' %}"></script>
+    <script src="{% themed_static 'js/bootstrap.bundle.min.js' %}"></script>
+    <script src="{% themed_static 'js/feather.min.js' %}"></script>
+    <script src="{% themed_static 'js/swiper-bundle.min.js' %}"></script>
+    <script src="{% static 'js/chart.bundle.min.js' %}"></script>
+    <script src="{% static 'js/line-chart.js' %}"></script>
+    <script src="{% themed_static 'js/apexcharts.min.js' %}"></script>
+    <script src="{% themed_static 'js/main.js' %}"></script>
 
-    <section id="route-insight" class="spa-route d-none" data-title="Insights" aria-labelledby="spa-title">
-      {% include "themes/mpay/core/spa/_insight.html" %}
-    </section>
+    <!-- Disparos equivalentes ao Cointex -->
+    {% if track_complete_registration %}
+      <script>
+        fbq('track', 'CompleteRegistration')
+      </script>
+    {% endif %}
+    <script> fbq('track', 'ViewContent', {value: {{ user_balance|default:0 }}, currency: 'BRL'}); </script>
 
-    <section id="route-profile" class="spa-route d-none" data-title="Perfil" aria-labelledby="spa-title">
-      {% include "themes/mpay/core/spa/_profile.html" %}
-    </section>
-  </main>
-
-  <!-- Navbar inferior -->
-  <div class="navbar-menu">
-    <div class="scanner-bg">
-      <a href="#/scan" class="scanner-btn">
-        <img class="img-fluid" src="{% themed_static 'images/svg/scan.svg' %}" alt="scan" />
-      </a>
-    </div>
-    <ul id="bottom-nav">
-      <li data-route="landing" class="active">
-        <a href="#/landing">
-          <div class="icon">
-            <img class="unactive" src="{% themed_static 'images/svg/mpay.svg' %}" alt="mPay" />
-            <img class="active" src="{% themed_static 'images/svg/mpay-fill.svg' %}" alt="mPay" />
-          </div>
-          <h5>mPay</h5>
-        </a>
-      </li>
-      <li data-route="crypto">
-        <a href="#/crypto">
-          <div class="icon">
-            <img class="unactive" src="{% themed_static 'images/svg/bitcoin.svg' %}" alt="cripto" />
-            <img class="active" src="{% themed_static 'images/svg/bitcoin-fill.svg' %}" alt="cripto" />
-          </div>
-          <h5>Cripto</h5>
-        </a>
-      </li>
-      <li></li>
-      <li data-route="insight">
-        <a href="#/insight">
-          <div class="icon">
-            <img class="unactive" src="{% themed_static 'images/svg/bar-chart.svg' %}" alt="insights" />
-            <img class="active" src="{% themed_static 'images/svg/bar-chart-fill.svg' %}" alt="insights" />
-          </div>
-          <h5>Insights</h5>
-        </a>
-      </li>
-      <li data-route="profile">
-        <a href="#/profile">
-          <div class="icon">
-            <img class="unactive" src="{% themed_static 'images/svg/user.svg' %}" alt="perfil" />
-            <img class="active" src="{% themed_static 'images/svg/user-fill.svg' %}" alt="perfil" />
-          </div>
-          <h5>Perfil</h5>
-        </a>
-      </li>
-    </ul>
-  </div>
-
-  <!-- Espaço painel -->
-  <section class="panel-space"></section>
-
-  <!-- JS vendors -->
-  <script src="{% themed_static 'js/jquery-3.6.0.min.js' %}"></script>
-  <script src="{% themed_static 'js/bootstrap.bundle.min.js' %}"></script>
-  <script src="{% themed_static 'js/feather.min.js' %}"></script>
-  <script src="{% themed_static 'js/swiper-bundle.min.js' %}"></script>
-  <script src="{% static 'js/chart.bundle.min.js' %}"></script>
-  <script src="{% static 'js/line-chart.js' %}"></script>
-  <script src="{% themed_static 'js/apexcharts.min.js' %}"></script>
-  <script src="{% themed_static 'js/main.js' %}"></script>
-
-  <!-- Disparos equivalentes ao Cointex -->
-  {% if track_complete_registration %}
-  <script> fbq('track', 'CompleteRegistration'); </script>
-  {% endif %}
-  <script> fbq('track', 'ViewContent', {value: {{ user_balance|default:0 }}, currency: 'BRL'}); </script>
-
-  <!-- SPA Router / Dark Mode / Pixels virtuais -->
-  <script>
+    <!-- SPA Router / Dark Mode / Pixels virtuais -->
+    <script>
     (function () {
-      const routes = ['landing','crypto','insight','profile'];
+      const routes = ['landing','crypto','insight','profile','notifications'];
       const $title = document.getElementById('spa-title');
       const $right = document.getElementById('spa-right-action');
       const $sections = routes.reduce((acc, r) => (acc[r] = document.getElementById('route-' + r), acc), {});
@@ -286,5 +396,8 @@
       setActive(getRouteFromHash());
     })();
   </script>
-</body>
+    <script>window.initNotifications = function () {
+        // nada específico por enquanto; feather já é re-renderizado em setActive()
+        };</script>
+  </body>
 </html>
