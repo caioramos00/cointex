@@ -127,6 +127,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 # opcional:
                 'appearance.context_processors.theme_context',
+                'tracking.context_processors.tracking_context',
             ],
         },
     },
