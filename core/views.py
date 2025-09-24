@@ -30,6 +30,7 @@ from utils.http import http_get, http_post
 from utils.pix_cache import get_cached_pix, set_cached_pix, with_user_pix_lock
 
 from accounts.models import CustomUser, UserProfile, Wallet, Transaction, Notification, PixTransaction
+from tracking.services import dispatch_capi
 from .capi import lookup_click
 from .forms import SendForm, WithdrawForm
 
@@ -1718,7 +1719,7 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
         if status in ('AUTHORIZED', 'CONFIRMED', 'RECEIVED'):
             if not skip_capi:
                 try:
-                    send_capi(
+                    dispatch_capi(
                         event_name="Purchase",
                         event_id=event_id_for("purchase", txid),
                         event_time=event_time_s,
@@ -1748,9 +1749,9 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
         elif status == 'EXPIRED':
             if not skip_capi:
                 try:
-                    send_capi(
+                    dispatch_capi(
                         event_name="PaymentExpired",
-                        event_id=event_id_for("payment_expired", txid),
+                        event_id=event_id_for("PaymentExpired", txid),
                         event_time=event_time_s,
                         user_data=user_data,
                         custom_data=custom_data,
