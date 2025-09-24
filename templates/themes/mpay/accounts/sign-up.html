@@ -1,5 +1,6 @@
 {% load theming %}
 {% load static %}
+{% load tracking_tags %}
 <!DOCTYPE html>
 <html lang="pt-BR">
   <head>
@@ -19,6 +20,7 @@
     <link rel="stylesheet" href="{% themed_static 'css/vendors/swiper-bundle.min.css' %}" />
     <link rel="stylesheet" href="{% themed_static 'css/style.css' %}" />
     <link rel="stylesheet" href="{% themed_static 'css/overrides.css' %}" />
+    {% tracking_head %}
   </head>
 
   <body class="mpay-theme auth-body">

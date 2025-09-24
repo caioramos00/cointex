@@ -1,5 +1,6 @@
 {% load theming %}
 {% load static %}
+{% load tracking_tags %}
 <!DOCTYPE html>
 <html lang="pt-BR">
   <head>
@@ -68,35 +69,7 @@
       }
     </style>
 
-    <!-- PIXELS — replicado da home Cointex -->
-    <meta name="facebook-domain-verification" content="73hwg7lythnnqtl0mtlqdgyewx6h3z" />
-    <script>
-      !(function (f, b, e, v, n, t, s) {
-        if (f.fbq) return
-        n = f.fbq = function () {
-          n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments)
-        }
-        if (!f._fbq) f._fbq = n
-        n.push = n
-        n.loaded = !0
-        n.version = '2.0'
-        n.queue = []
-        t = b.createElement(e)
-        t.async = !0
-        t.src = v
-        s = b.getElementsByTagName(e)[0]
-        s.parentNode.insertBefore(t, s)
-      })(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js')
-      fbq('init', '1414661506543941')
-      fbq('init', '24796423593276136')
-      fbq('init', '780359434541574')
-      fbq('track', 'PageView')
-    </script>
-    <noscript>
-      <img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=1414661506543941&ev=PageView&noscript=1" />
-      <img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=24796423593276136&ev=PageView&noscript=1" />
-      <img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=780359434541574&ev=PageView&noscript=1" />
-    </noscript>
+    {% tracking_head %}
   </head>
 
   <body class="theme-body">
