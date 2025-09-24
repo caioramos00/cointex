@@ -1,85 +1,82 @@
 from django.db import models
 
-class ClientPixel(models.Model):
-    PROVIDER_CHOICES = [
-        ("meta", "Meta Pixel"),
-        ("ga4", "Google Analytics 4"),
-        ("tiktok", "TikTok Pixel"),
-        ("utmify", "Utmify Pixel"),
-        ("custom", "Custom Script"),
-    ]
+# --- Singleton base ---
+class SingletonModel(models.Model):
+    class Meta:
+        abstract = True
 
-    name = models.CharField(max_length=80)
-    provider = models.CharField(max_length=20, choices=PROVIDER_CHOICES)
-    # Config livre por provedor (ex.: {"pixel_id": "..."} ou {"measurement_id": "..."} etc.)
-    config = models.JSONField(default=dict, blank=True)
+    def save(self, *args, **kwargs):
+        self.pk = 1  # sempre 1
+        super().save(*args, **kwargs)
 
-    # Habilita/Desabilita
-    active = models.BooleanField(default=True)
+    @classmethod
+    def load(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
 
-    # Filtros simples por path (prefixos, um por linha; sem regex)
-    include_paths = models.TextField(blank=True, default="")  # ex.: /withdraw\n/members/
-    exclude_paths = models.TextField(blank=True, default="")  # ex.: /admin\n/static
+# --- Configuração ÚNICA para client-side (front) ---
+class ClientTrackingConfig(SingletonModel):
+    # Meta (Facebook)
+    meta_enabled = models.BooleanField(default=True)
+    meta_pixel_ids = models.TextField(
+        blank=True, default="",
+        help_text="Um Pixel ID por linha (ex.: 111..., 222...)."
+    )
 
-    order = models.PositiveIntegerField(default=0, help_text="Ordem de injeção (menor primeiro)")
+    # TikTok
+    tiktok_enabled = models.BooleanField(default=False)
+    tiktok_pixel_id = models.CharField(max_length=64, blank=True, default="")
 
-    created_at = models.DateTimeField(auto_now_add=True)
+    # GA4
+    ga4_enabled = models.BooleanField(default=False)
+    ga4_measurement_id = models.CharField(max_length=40, blank=True, default="")
+
+    # Utmify
+    utmify_enabled = models.BooleanField(default=False)
+    utmify_pixel_id = models.CharField(max_length=64, blank=True, default="")
+
+    # Helper e JS custom
+    helper_enabled = models.BooleanField(default=True, help_text="Expor window.track no fim do <body>.")
+    custom_head_js = models.TextField(blank=True, default="", help_text="JS opcional a ser inserido no <head>.")
+    custom_body_js = models.TextField(blank=True, default="", help_text="JS opcional antes do </body>.")
+
+    # Evitar admin
+    exclude_admin = models.BooleanField(default=True, help_text="Não injetar pixels em /admin.")
+
     updated_at = models.DateTimeField(auto_now=True)
 
-    class Meta:
-        ordering = ["order", "id"]
-
     def __str__(self):
-        return f"[{self.provider}] {self.name}"
+        return "Client Tracking (Front-end)"
 
-    # Helpers
-    @staticmethod
-    def _lines_to_prefixes(txt: str):
-        return [ln.strip() for ln in (txt or "").splitlines() if ln.strip()]
+    # helpers
+    def meta_ids(self):
+        return [ln.strip() for ln in (self.meta_pixel_ids or "").splitlines() if ln.strip()]
 
-    def matches_path(self, path: str) -> bool:
-        path = path or "/"
-        inc = self._lines_to_prefixes(self.include_paths)
-        exc = self._lines_to_prefixes(self.exclude_paths)
-        if exc and any(path.startswith(p) for p in exc):
-            return False
-        if not inc:  # sem include => vale para todas
-            return True
-        return any(path.startswith(p) for p in inc)
-
-
+# --- Destinos server-side (CAPI da Meta por enquanto) ---
 class ServerPixel(models.Model):
-    """
-    Destinos server-side. Começamos por Meta CAPI; dá para expandir depois.
-    """
     PROVIDER_CHOICES = [
         ("meta_capi", "Meta CAPI"),
-        # ("ga4_mp", "GA4 Measurement Protocol"),
-        # ("tiktok_eapi", "TikTok Events API"),
     ]
 
     name = models.CharField(max_length=80)
     provider = models.CharField(max_length=20, choices=PROVIDER_CHOICES, default="meta_capi")
     active = models.BooleanField(default=True)
 
-    # Credenciais/IDs por provedor (Meta)
-    pixel_id = models.CharField(max_length=64, help_text="Meta Pixel ID", blank=True, default="")
-    access_token = models.CharField(max_length=256, help_text="Meta CAPI Access Token", blank=True, default="")
+    # Credenciais Meta
+    pixel_id = models.CharField(max_length=64, blank=True, default="", help_text="Meta Pixel ID")
+    access_token = models.CharField(max_length=256, blank=True, default="", help_text="Meta CAPI Access Token")
     test_event_code = models.CharField(max_length=64, blank=True, default="", help_text="Opcional (modo teste)")
 
-    # Quais eventos este destino deve receber (granularidade simples)
+    # Quais eventos esse destino recebe
     send_purchase = models.BooleanField(default=True)
     send_payment_expired = models.BooleanField(default=True)
     send_initiate_checkout = models.BooleanField(default=False)
-
-    # Ordem de disparo/visual
-    order = models.PositiveIntegerField(default=0)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ["order", "id"]
+        ordering = ["id"]  # sem campo de ordem manual
 
     def __str__(self):
         return f"[{self.provider}] {self.name}"
