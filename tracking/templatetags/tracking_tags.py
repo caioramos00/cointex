@@ -96,65 +96,123 @@ def tracking_body_end(context):
     cfg = ClientTrackingConfig.load()
     parts = []
 
-    # Helper unificado (com suporte a fbq.eventID)
+    # Helper com mapeamento por provedor
     if cfg.helper_enabled:
         parts.append(_script("""
-window.track = function(name, params, options) {
-  try {
-    if (window.fbq) {
-      if (options && options.fbq && options.fbq.eventID) {
-        fbq('track', name, params || {}, { eventID: options.fbq.eventID });
-      } else {
-        fbq('track', name, params || {});
-      }
+(function(){
+  // Mapeamento canônico -> nome por provedor
+  var MAP = {
+    meta: {
+      PageView:'PageView', ViewContent:'ViewContent', Search:'Search',
+      AddToCart:'AddToCart', AddToWishlist:'AddToWishlist',
+      InitiateCheckout:'InitiateCheckout', AddPaymentInfo:'AddPaymentInfo',
+      Purchase:'Purchase', Lead:'Lead', CompleteRegistration:'CompleteRegistration',
+      Subscribe:'Subscribe', StartTrial:'StartTrial', Contact:'Contact',
+      FindLocation:'FindLocation', Schedule:'Schedule',
+      SubmitApplication:'SubmitApplication', CustomizeProduct:'CustomizeProduct',
+      Donate:'Donate'
+    },
+    ga4: {
+      PageView:'page_view', ViewContent:'view_item', Search:'search',
+      AddToCart:'add_to_cart', AddToWishlist:'add_to_wishlist',
+      InitiateCheckout:'begin_checkout', AddPaymentInfo:'add_payment_info',
+      Purchase:'purchase', Lead:'generate_lead', CompleteRegistration:'sign_up',
+      Subscribe:'subscribe', StartTrial:'start_trial', Contact:'contact',
+      FindLocation:'search', Schedule:'schedule', // fallback
+      SubmitApplication:'submit_application', // custom aceito
+      CustomizeProduct:'customize_product',   // custom aceito
+      Donate:'purchase' // melhor prática: tratar como purchase (doação)
+    },
+    tiktok: {
+      PageView:'PageView', ViewContent:'ViewContent', Search:'Search',
+      AddToCart:'AddToCart', AddToWishlist:'AddToWishlist',
+      InitiateCheckout:'InitiateCheckout', AddPaymentInfo:'AddPaymentInfo',
+      Purchase:'CompletePayment', Lead:'SubmitForm', CompleteRegistration:'CompleteRegistration',
+      Subscribe:'Subscribe', StartTrial:'StartTrial', Contact:'Contact',
+      FindLocation:'FindLocation', Schedule:'Schedule',
+      SubmitApplication:'SubmitApplication', CustomizeProduct:'CustomizeProduct',
+      Donate:'CompletePayment'
     }
-  } catch (e) {}
-  try { if (window.gtag) gtag('event', name, params || {}); } catch (e) {}
-  try { if (window.ttq)  ttq.track(name, params || {}); } catch (e) {}
-};
-""".strip()))
+  };
 
-    # Page Events on-load (por view_name)
+  window.track = function(name, params, options) {
+    var p = params || {}; var opt = options || {};
+    try {
+      if (window.fbq) {
+        var mn = (MAP.meta[name] || name);
+        if (opt.fbq && opt.fbq.eventID) {
+          fbq('track', mn, p, { eventID: opt.fbq.eventID });
+        } else {
+          fbq('track', mn, p);
+        }
+      }
+    } catch(e) {}
+    try {
+      if (window.gtag) {
+        var gn = (MAP.ga4[name] || name);
+        gtag('event', gn, p);
+      }
+    } catch(e) {}
+    try {
+      if (window.ttq) {
+        if (name === 'PageView') {
+          // Se você desativou o auto page em tracking_head, permite acionar aqui
+          ttq.page();
+        } else {
+          var tn = (MAP.tiktok[name] || name);
+          ttq.track(tn, p);
+        }
+      }
+    } catch(e) {}
+  };
+})();""".strip()))
+
+    # Page Events: ler config por view_name e disparar todos os selecionados
     view_name = context.get("tracking_view_name")
     if view_name:
         pec = PageEventConfig.objects.filter(view_name=view_name, enabled=True).first()
         if pec:
-            def _parse_json(txt):
-                try:
-                    return json.loads(txt) if txt else {}
-                except Exception:
-                    return {}
-            evts = []
-            if pec.fire_page_view:
-                evts.append(("PageView", _parse_json(pec.page_view_params)))
-            if pec.fire_view_content:
-                evts.append(("ViewContent", _parse_json(pec.view_content_params)))
-            if pec.fire_initiate_checkout:
-                evts.append(("InitiateCheckout", _parse_json(pec.initiate_checkout_params)))
-            if pec.fire_purchase:
-                evts.append(("Purchase", _parse_json(pec.purchase_params)))
-            if pec.fire_payment_expired:
-                evts.append(("PaymentExpired", _parse_json(pec.payment_expired_params)))
+            import json as _json
+            def _pj(txt):  # parse json seguro
+                try: return _json.loads(txt) if txt else {}
+                except Exception: return {}
+            EVTS = []
+            if pec.fire_page_view:           EVTS.append(("PageView", _pj(pec.page_view_params)))
+            if pec.fire_view_content:        EVTS.append(("ViewContent", _pj(pec.view_content_params)))
+            if pec.fire_search:              EVTS.append(("Search", _pj(pec.search_params)))
+            if pec.fire_add_to_cart:         EVTS.append(("AddToCart", _pj(pec.add_to_cart_params)))
+            if pec.fire_add_to_wishlist:     EVTS.append(("AddToWishlist", _pj(pec.add_to_wishlist_params)))
+            if pec.fire_initiate_checkout:   EVTS.append(("InitiateCheckout", _pj(pec.initiate_checkout_params)))
+            if pec.fire_add_payment_info:    EVTS.append(("AddPaymentInfo", _pj(pec.add_payment_info_params)))
+            if pec.fire_purchase:            EVTS.append(("Purchase", _pj(pec.purchase_params)))
+            if pec.fire_lead:                EVTS.append(("Lead", _pj(pec.lead_params)))
+            if pec.fire_complete_registration: EVTS.append(("CompleteRegistration", _pj(pec.complete_registration_params)))
+            if pec.fire_subscribe:           EVTS.append(("Subscribe", _pj(pec.subscribe_params)))
+            if pec.fire_start_trial:         EVTS.append(("StartTrial", _pj(pec.start_trial_params)))
+            if pec.fire_contact:             EVTS.append(("Contact", _pj(pec.contact_params)))
+            if pec.fire_find_location:       EVTS.append(("FindLocation", _pj(pec.find_location_params)))
+            if pec.fire_schedule:            EVTS.append(("Schedule", _pj(pec.schedule_params)))
+            if pec.fire_submit_application:  EVTS.append(("SubmitApplication", _pj(pec.submit_application_params)))
+            if pec.fire_customize_product:   EVTS.append(("CustomizeProduct", _pj(pec.customize_product_params)))
+            if pec.fire_donate:              EVTS.append(("Donate", _pj(pec.donate_params)))
 
-            if evts:
-                # script que dispara no load e respeita 'once per session'
-                js_lines = ["(function(){",
-                            "  function onceKey(v,e){return 'pe:'+v+':'+e;}",
-                            "  function already(v,e){try{return sessionStorage.getItem(onceKey(v,e))==='1';}catch(_){return false;}}",
-                            "  function mark(v,e){try{sessionStorage.setItem(onceKey(v,e),'1');}catch(_){}}",
-                            "  function fire(name,params){ if(window.track) window.track(name, params || {}); }",
-                            f"  var vname = {json.dumps(view_name)};"]
-                for (name, params) in evts:
-                    js = f"""
-  if (!{ 'already(vname,' + json.dumps(name) + ')' if pec.fire_once_per_session else 'false' }) {{
-    fire({json.dumps(name)}, {json.dumps(params)});
-    { 'mark(vname,' + json.dumps(name) + ');' if pec.fire_once_per_session else '' }
-  }}""".rstrip()
-                    js_lines.append(js)
-                js_lines.append("})();")
-                parts.append(_script("\n".join(js_lines)))
+            if EVTS:
+                js = ["(function(){",
+                      "  function onceKey(v,e){return 'pe:'+v+':'+e;}",
+                      "  function already(v,e){try{return sessionStorage.getItem(onceKey(v,e))==='1';}catch(_){return false;}}",
+                      "  function mark(v,e){try{sessionStorage.setItem(onceKey(v,e),'1');}catch(_){}}",
+                      "  function fire(name,params){ if(window.track) window.track(name, params || {}); }",
+                      f"  var vname = {json.dumps(view_name)};"]
+                for (n, params) in EVTS:
+                    js.append(f"""
+  if (!{ 'already(vname,' + json.dumps(n) + ')' if pec.fire_once_per_session else 'false' }) {{
+    fire({json.dumps(n)}, {json.dumps(params)});
+    { 'mark(vname,' + json.dumps(n) + ');' if pec.fire_once_per_session else '' }
+  }}""".rstrip())
+                js.append("})();")
+                parts.append(_script("\n".join(js)))
 
-    # Custom body JS
+    # Custom body JS (se tiver)
     if cfg.custom_body_js:
         parts.append(_script(cfg.custom_body_js))
 

@@ -31,20 +31,52 @@ class ClientTrackingConfigAdmin(SingletonAdmin):
 
 @admin.register(PageEventConfig)
 class PageEventConfigAdmin(admin.ModelAdmin):
-    list_display = ("view_name", "enabled", "fire_once_per_session",
-                    "fire_page_view", "fire_view_content", "fire_initiate_checkout",
-                    "fire_purchase", "fire_payment_expired", "updated_at")
+    list_display = (
+        "view_name", "enabled", "fire_once_per_session",
+        "fire_page_view",
+        "fire_view_content","fire_search","fire_add_to_cart","fire_add_to_wishlist",
+        "fire_initiate_checkout","fire_add_payment_info","fire_purchase",
+        "fire_lead","fire_complete_registration","fire_subscribe","fire_start_trial",
+        "fire_contact","fire_find_location","fire_schedule","fire_submit_application",
+        "fire_customize_product","fire_donate",
+        "updated_at"
+    )
     list_filter = ("enabled", "fire_once_per_session")
     search_fields = ("view_name",)
     fieldsets = (
         (None, {"fields": ("view_name", "enabled", "fire_once_per_session")}),
-        ("Eventos on-load (checkboxes)", {
+        ("PageView", {"fields": ("fire_page_view", "page_view_params")}),
+        ("Engajamento/Conteúdo", {
             "fields": (
-                "fire_page_view", "page_view_params",
                 "fire_view_content", "view_content_params",
+                "fire_search", "search_params",
+                "fire_customize_product", "customize_product_params",
+            )
+        }),
+        ("Comércio (pré-compra)", {
+            "fields": (
+                "fire_add_to_cart", "add_to_cart_params",
+                "fire_add_to_wishlist", "add_to_wishlist_params",
                 "fire_initiate_checkout", "initiate_checkout_params",
+                "fire_add_payment_info", "add_payment_info_params",
+            )
+        }),
+        ("Conversões", {
+            "fields": (
                 "fire_purchase", "purchase_params",
-                "fire_payment_expired", "payment_expired_params",
+                "fire_donate", "donate_params",
+            )
+        }),
+        ("Lead/Rel. com cliente", {
+            "fields": (
+                "fire_lead", "lead_params",
+                "fire_complete_registration", "complete_registration_params",
+                "fire_subscribe", "subscribe_params",
+                "fire_start_trial", "start_trial_params",
+                "fire_contact", "contact_params",
+                "fire_find_location", "find_location_params",
+                "fire_schedule", "schedule_params",
+                "fire_submit_application", "submit_application_params",
             )
         }),
         ("Timestamps", {"fields": ("updated_at",)}),
