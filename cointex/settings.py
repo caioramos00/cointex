@@ -75,7 +75,8 @@ INSTALLED_APPS = [
     'appearance',
     'core',
     'api',
-    'payments'
+    'payments',
+    'tracking'
 ]
 
 MIDDLEWARE = [
