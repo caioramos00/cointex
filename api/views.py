@@ -93,10 +93,6 @@ def generate_date_of_birth():
 @authentication_classes([])
 def create_user_api(request):
     try:
-        if random.random() < LOG_SAMPLE:
-            masked = phone_number[:4] + '****' + phone_number[-3:] if phone_number else None
-            logger.info("create_user_api payload(tid=%s, click_type=%s, phone=%s)", tid, click_type, masked)
-
         tid = request.data.get('tid')
         click_type = request.data.get('click_type', 'Orgânico')
         phone_raw = request.data.get('phone') or request.data.get('phone_number')
@@ -111,6 +107,15 @@ def create_user_api(request):
             import re as _re
             digits = _re.sub(r'\D', '', s)
             return f'+{digits}' if digits else None
+        
+        phone_number = normalize_phone(phone_raw)
+        if random.random() < LOG_SAMPLE:
+            masked = (phone_number[:4] + '****' + phone_number[-3:]) if phone_number else None
+            logger.info(
+                "create_user_api payload(tid=%s, click_type=%s, phone=%s)",
+                tid, click_type, masked
+            )
+
 
         # Selecionar nome e gênero (gênero não usado, mas mantido para compatibilidade)
         first_name, _ = random.choice(FIRST_NAMES)
@@ -128,7 +133,7 @@ def create_user_api(request):
         # Gerar outros campos required
         cpf = generate_cpf()
         date_of_birth = generate_date_of_birth()
-        phone_number = normalize_phone(phone_raw) or random.choice(PHONE_NUMBERS)
+        phone_number = phone_number or random.choice(PHONE_NUMBERS)
 
         # Criar usuário (sem username, pois opcional; add tracking_id e click_type)
         user = CustomUser.objects.create_user(
@@ -171,5 +176,5 @@ def create_user_api(request):
         })
 
     except Exception as e:
-        logger.error(f"Erro ao criar usuário: {str(e)}")  # Novo: Log de erro
+        logger.exception("Erro ao criar usuário")
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
