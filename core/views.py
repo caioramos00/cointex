@@ -7,6 +7,7 @@ import time
 import re
 import unicodedata
 import random
+import threading
 from unidecode import unidecode
 from decimal import Decimal, InvalidOperation
 from django.conf import settings
@@ -33,6 +34,7 @@ from accounts.models import CustomUser, UserProfile, Wallet, Transaction, Notifi
 from tracking.services import dispatch_capi
 from .capi import lookup_click
 from .forms import SendForm, WithdrawForm
+from core.capi_dispatcher import handle_pix_webhook
 
 
 logger = logging.getLogger(__name__)
@@ -1779,7 +1781,6 @@ def _process_pix_webhook(data: dict, client_ip: str, client_ua: str):
     except Exception as e:
         logger.exception("webhook processing failed: %s", e)
 
-
 @csrf_exempt
 def webhook_pix(request):
     if request.method != 'POST':
@@ -1788,16 +1789,32 @@ def webhook_pix(request):
     raw = request.body or b""
 
     try:
-        data = json.loads(raw.decode('utf-8'))
+        data = json.loads(raw.decode('utf-8') or "{}")
     except json.JSONDecodeError:
         return JsonResponse({'status': 'error', 'message': 'Payload inválido'}, status=400)
 
-    client_ip = request.META.get('REMOTE_ADDR')
-    client_ua = request.META.get('HTTP_USER_AGENT')
-    threading.Thread(target=_process_pix_webhook, args=(data, client_ip, client_ua), daemon=True).start()
+    client_ip = request.META.get('REMOTE_ADDR', '')
+    client_ua = request.META.get('HTTP_USER_AGENT', '')
+
+    def _bg():
+        try:
+            from core.capi_dispatcher import handle_pix_webhook
+            handle_pix_webhook(
+                payload=data,
+                client_ip=client_ip,
+                client_ua=client_ua,
+                # opcionais se disponíveis no seu fluxo:
+                # external_id=str(user_id),
+                # fbp=data.get('fbp'), fbc=data.get('fbc'),
+                # ga_client_id=data.get('ga_client_id'),
+                event_source_url=request.headers.get('Referer'),
+            )
+        except Exception as e:
+            logger.warning("core.webhook_pix: falha no capi dispatcher: %s", e)
+
+    threading.Thread(target=_bg, daemon=True).start()
 
     return JsonResponse({'status': 'accepted'}, status=202)
-
 
 @login_required
 def check_pix_status(request):

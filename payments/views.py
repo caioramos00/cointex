@@ -1,6 +1,7 @@
 from __future__ import annotations
 import json
 import logging
+import threading
 from typing import Dict, Any, Optional
 
 from django.conf import settings
@@ -12,6 +13,7 @@ from django.core.cache import cache
 
 from .service import get_active_adapter, get_adapter_by_name
 from accounts.models import PixTransaction
+from core.capi_dispatcher import handle_pix_webhook
 
 logger = logging.getLogger(__name__)
 
@@ -81,11 +83,23 @@ def webhook_pix(request: HttpRequest):
     # 2) Tentar localizar a transação no banco
     try:
         if external_id:
-            pix = PixTransaction.objects.filter(external_id=external_id).only("id", "provider", "user_id").first()
+            pix = (
+                PixTransaction.objects.filter(external_id=external_id)
+                .only("id", "provider", "user_id")
+                .first()
+            )
         if not pix and transaction_id:
-            pix = PixTransaction.objects.filter(transaction_id=transaction_id).only("id", "provider", "user_id").first()
+            pix = (
+                PixTransaction.objects.filter(transaction_id=transaction_id)
+                .only("id", "provider", "user_id")
+                .first()
+            )
         if not pix and hash_id:
-            pix = PixTransaction.objects.filter(hash_id=hash_id).only("id", "provider", "user_id").first()
+            pix = (
+                PixTransaction.objects.filter(hash_id=hash_id)
+                .only("id", "provider", "user_id")
+                .first()
+            )
     except Exception as e:
         logger.error("webhook_pix: erro consultando PixTransaction: %s", e)
 
@@ -102,6 +116,8 @@ def webhook_pix(request: HttpRequest):
     # 4) Deixar o adapter validar assinatura (quando houver) e normalizar payload
     try:
         parsed = adapter.parse_webhook(raw, headers)
+        # esperado: dict com chaves normalizadas como:
+        #   status, external_id, transaction_id, hash_id, value, currency, fbp, fbc, ga_client_id, event_source_url, ...
     except ValueError:
         return JsonResponse({"status": "unauthorized"}, status=401)
     except Exception as e:
@@ -125,16 +141,46 @@ def webhook_pix(request: HttpRequest):
 
     if not pix:
         # Não encontramos a transação — aceite mas logue para análise
-        logger.warning("webhook_pix: transação não encontrada (ext=%s, tid=%s, hid=%s)", external_id, transaction_id, hash_id)
+        logger.warning(
+            "webhook_pix: transação não encontrada (ext=%s, tid=%s, hid=%s)",
+            external_id, transaction_id, hash_id
+        )
         return JsonResponse({"status": "accepted"}, status=202)
 
-    # 6) Atualizar status + caches
+    # 6) Atualizar status + caches (não bloquear o retorno em caso de erro)
     new_status = parsed.get("status") or "PENDING"
     try:
         _update_pix_and_caches(pix, new_status)
     except Exception as e:
         logger.error("webhook_pix: erro atualizando transação/cache: %s", e)
-        # Mesmo com erro interno, respondemos 202 para não gerar re-tentativas infinitas do provedor
-        return JsonResponse({"status": "accepted"}, status=202)
+        # seguimos mesmo assim; o disparo CAPI abaixo é independente
+
+    # 7) Disparo CAPI em background (não bloquear o webhook do provedor)
+    client_ip = request.META.get("REMOTE_ADDR", "")
+    client_ua = request.META.get("HTTP_USER_AGENT", "")
+
+    # external_id para CAPI: tenta o do payload normalizado, senão user_id da transação
+    external_id_for_capi: Optional[str] = (
+        parsed.get("external_id")
+        or (str(pix.user_id) if getattr(pix, "user_id", None) else None)
+    )
+
+    def _bg():
+        try:
+            from core.capi_dispatcher import handle_pix_webhook
+            handle_pix_webhook(
+                payload=parsed,
+                client_ip=client_ip,
+                client_ua=client_ua,
+                external_id=external_id_for_capi,
+                fbp=parsed.get("fbp"),
+                fbc=parsed.get("fbc"),
+                ga_client_id=parsed.get("ga_client_id"),
+                event_source_url=parsed.get("event_source_url") or request.headers.get("Referer"),
+            )
+        except Exception as e:
+            logger.warning("webhook_pix: falha no capi dispatcher: %s", e)
+
+    threading.Thread(target=_bg, daemon=True).start()
 
     return JsonResponse({"status": "accepted"}, status=202)
