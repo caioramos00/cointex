@@ -155,6 +155,19 @@ def webhook_pix(request: HttpRequest):
         logger.error("webhook_pix: erro atualizando transação/cache: %s", e)
         # seguimos mesmo assim; o disparo CAPI abaixo é independente
 
+    # ----------------------------------------------------------------------
+    # >>> FIX META CAPI: garantir value/currency para Purchase
+    parsed.setdefault("currency", getattr(pix, "currency", "BRL"))
+    if parsed.get("value") is None:
+        try:
+            # usa o valor real da transação (Decimal/str/float) -> float
+            parsed["value"] = float(getattr(pix, "amount", 0))
+        except Exception:
+            # se não conseguir extrair, não define (dispatcher decidirá)
+            pass
+    # <<< fim do fix
+    # ----------------------------------------------------------------------
+
     # 7) Disparo CAPI em background (não bloquear o webhook do provedor)
     client_ip = request.META.get("REMOTE_ADDR", "")
     client_ua = request.META.get("HTTP_USER_AGENT", "")
