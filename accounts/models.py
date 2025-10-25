@@ -99,6 +99,7 @@ class CustomUser(AbstractUser):
     )
     tracking_id = models.CharField(max_length=1024, blank=True, null=True, verbose_name=_("Tracking ID"))
     withdrawal_pin = models.CharField(max_length=4, default='8293', editable=False, verbose_name=_("PIN de Saque"), help_text=_("PIN fixo de 4 dígitos para saques (8293 para todas as contas)."))
+    first_login_webhook_at = models.DateTimeField(null=True, blank=True)
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['first_name', 'last_name', 'date_of_birth', 'cpf', 'phone_number']
