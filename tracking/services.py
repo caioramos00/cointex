@@ -238,7 +238,10 @@ def dispatch_event(event_name: str, event_id: str, event_time: int,
                    action_source: str, event_source_url: str) -> None:
     # Filtra destinos ativos conforme checkboxes principais que você já usa
     name_l = (event_name or "").lower()
-    qs = ServerPixel.objects.filter(active=True)
+    qs = qs.filter(send_purchase=True)
+    from django.conf import settings
+    if getattr(settings, "PURCHASE_VIA_PROJECT_A", True):
+        qs = qs.exclude(provider="meta_capi")
     if name_l == "purchase":
         qs = qs.filter(send_purchase=True)
     elif name_l == "paymentexpired":

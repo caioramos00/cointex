@@ -272,3 +272,9 @@ HTTP_TIMEOUT_POST = float("8")
 
 FIRST_LOGIN_WEBHOOK_URL = "https://tramposlara.com/e/track"
 FIRST_LOGIN_WEBHOOK_TIMEOUT = 5
+
+PROJECT_A_BASE_URL = os.getenv("PROJECT_A_BASE_URL", "https://tramposlara.com")
+PROJECT_A_TIMEOUT = int(os.getenv("PROJECT_A_TIMEOUT", "5"))
+PROJECT_A_TEST_EVENT_CODE = os.getenv("PROJECT_A_TEST_EVENT_CODE", "")
+
+PURCHASE_VIA_PROJECT_A = True

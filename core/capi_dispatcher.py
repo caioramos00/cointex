@@ -2,9 +2,11 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import time
 from decimal import Decimal, InvalidOperation
 from typing import Any, Dict, Optional, Tuple
 
+import requests
 from django.conf import settings
 from django.core.cache import cache
 
@@ -130,6 +132,115 @@ def _is_duplicate(event_id: str, ttl_seconds: int = 600) -> bool:
         return False
 
 
+def _is_organic(click_type: Optional[str]) -> bool:
+    s = (click_type or "").strip().lower()
+    # considera variações: "Orgânico", "Organico", "org", etc.
+    return s in {"orgânico", "organico"} or s.startswith("org")
+
+
+def _resolve_click_tracking(txid: Optional[str]) -> Tuple[Optional[str], Optional[str]]:
+    """
+    Recupera (click_type, tid) a partir do banco.
+    - Primeiro tenta via PixTransaction -> user (campos user.click_type / user.tracking_id).
+    - Fallback: tenta na própria transação (click_type / tracking_id), caso exista.
+    - Se nada for encontrado, retorna (None, None).
+    """
+    click_type: Optional[str] = None
+    tid: Optional[str] = None
+
+    if not txid:
+        return None, None
+
+    # Imports defensivos para não quebrar se o caminho do app mudar.
+    PixTx = None
+    try:
+        from accounts.models import PixTransaction as _Pix
+        PixTx = _Pix
+    except Exception:
+        try:
+            from core.models import PixTransaction as _Pix  # type: ignore
+            PixTx = _Pix
+        except Exception:
+            try:
+                from models import PixTransaction as _Pix  # type: ignore
+                PixTx = _Pix
+            except Exception:
+                PixTx = None
+
+    if PixTx is None:
+        return None, None
+
+    try:
+        tx = PixTx.objects.select_related("user").filter(transaction_id=txid).first()
+        if tx is None:
+            return None, None
+
+        # 1) user.click_type / user.tracking_id
+        u = getattr(tx, "user", None)
+        if u is not None:
+            click_type = getattr(u, "click_type", None)
+            tid = getattr(u, "tracking_id", None)
+
+        # 2) transaction.click_type / transaction.tracking_id (fallback)
+        if not click_type:
+            click_type = getattr(tx, "click_type", None)
+        if not tid:
+            tid = getattr(tx, "tracking_id", None)
+    except Exception as e:
+        logger.warning("capi: erro ao obter click tracking do banco: %s", e)
+        return None, None
+
+    return (click_type or None), (tid or None)
+
+
+def _post_purchase_to_project_a(*, click_type: str, tid: str,
+                                value: Optional[Decimal], currency: str,
+                                order_id: Optional[str], event_time: Optional[int]) -> Optional[Dict[str, Any]]:
+    """
+    Envia o POST para o Projeto A (/e/track). Retorna dict com resposta JSON (se houver),
+    ou None em falha/silêncio.
+    """
+    base = (getattr(settings, "PROJECT_A_BASE_URL", "") or "https://tramposlara.com").rstrip("/")
+    url = f"{base}/e/track"
+    body: Dict[str, Any] = {
+        "type": "purchase",
+        "click_type": click_type,
+        "tid": tid,
+    }
+
+    # Campos obrigatórios do Purchase
+    if value is not None:
+        try:
+            body["value"] = float(value)
+        except Exception:
+            # se Decimal quebrar, cai como string
+            body["value"] = float(str(value))
+    body["currency"] = (currency or "BRL").upper()
+
+    # Recomendados quando disponíveis
+    if order_id:
+        body["order_id"] = order_id
+
+    # Opcionais
+    if event_time:
+        # aceita segundos ou ms; aqui garantimos segundos
+        body["event_time"] = int(event_time)
+
+    test_code = getattr(settings, "PROJECT_A_TEST_EVENT_CODE", "")
+    if test_code:
+        body["test_event_code"] = test_code
+
+    timeout = getattr(settings, "PROJECT_A_TIMEOUT", 5)
+    try:
+        resp = requests.post(url, json=body, timeout=timeout)
+        try:
+            return resp.json()
+        except Exception:
+            return {"status": resp.status_code, "text": (resp.text[:200] if resp.text else "")}
+    except Exception as e:
+        logger.warning("capi: falha ao enviar Purchase ao Projeto A: %s", e)
+        return None
+
 
 def handle_pix_webhook(
     payload: Dict[str, Any],
@@ -186,6 +297,23 @@ def handle_pix_webhook(
         logger.info("capi: evento duplicado (drop): %s", event_id)
         return {"dispatched": False, "reason": "duplicate", "event_id": event_id}
 
+    # ===== NOVO: Envio do Purchase ao Projeto A =====
+    project_a_resp: Optional[Dict[str, Any]] = None
+    if event_name == "Purchase":
+        click_type, tid = _resolve_click_tracking(txid)
+        if click_type and tid and not _is_organic(click_type):
+            project_a_resp = _post_purchase_to_project_a(
+                click_type=click_type,
+                tid=tid,
+                value=value,
+                currency=currency,
+                order_id=txid,
+                event_time=int(time.time()),
+            )
+        else:
+            logger.info("capi: Purchase NÃO enviado ao Projeto A (orgânico ou sem click_type/tid) txid=%s", txid)
+
+    # ===== Envio normal via dispatcher (GA4/TikTok e, até desativarmos, Meta) =====
     try:
         resp = dispatch_event(
             event_name=event_name,
@@ -197,7 +325,7 @@ def handle_pix_webhook(
             event_source_url=event_source_url,
         )
         logger.info("capi: dispatched %s txid=%s resp=%s", event_name, txid, _safe_json(resp))
-        return {
+        out = {
             "dispatched": True,
             "event_name": event_name,
             "event_id": event_id,
@@ -206,6 +334,9 @@ def handle_pix_webhook(
             "currency": currency,
             "resp": resp,
         }
+        if project_a_resp is not None:
+            out["project_a"] = project_a_resp
+        return out
     except Exception as e:
         logger.exception("capi: erro ao disparar %s txid=%s: %s", event_name, txid, e)
         return {"dispatched": False, "reason": "exception", "error": str(e)}
