@@ -171,47 +171,73 @@ def _utmify_mark_sent(pix_transaction, status_str: str, http_status: int, ok: bo
         logger.warning("[UTMIFY-BOOK] mark_sent_failed txid=%s status=%s err=%s",
                        getattr(pix_transaction, 'transaction_id', None), status_str, e)
         
+def _mask_mid(s: str | None, left: int = 4, right: int = 3) -> str:
+    if not s:
+        return ""
+    s = str(s)
+    if len(s) <= left + right:
+        return s
+    return f"{s[:left]}…{s[-right:]}"
+
 @login_required
 @require_POST
 def track_add_payment_info(request):
     """
     Dispara AddPaymentInfo para o Projeto A usando exatamente click_type + tid do banco.
-    Não envia se for Orgânico. Dedup simples por user+dia para evitar múltiplos cliques.
+    Não envia se for Orgânico. Dedup simples para evitar múltiplos cliques.
     """
+    t0 = time.perf_counter()
     user = request.user
+    ip = request.META.get("REMOTE_ADDR", "")
+    xff = request.META.get("HTTP_X_FORWARDED_FOR", "")
+    ua = (request.META.get("HTTP_USER_AGENT", "") or "")[:160]
 
-    # Lê exatamente do seu banco
+    logger.info("apinfo.entry user_id=%s ip=%s xff=%s ua=%s", user.id, ip, xff, ua)
+
+    # Lê exatamente do seu banco (sem inferências)
     click_type = (getattr(user, "click_type", "") or "").strip()
     tid = (getattr(user, "tracking_id", "") or "").strip()
     low = click_type.lower()
     is_org = (low == "orgânico") or (low == "organico") or low.startswith("org")
 
+    logger.info(
+        "apinfo.inputs user_id=%s click_type=%s tid=%s is_org=%s",
+        user.id, click_type or "<empty>", _mask_mid(tid), is_org
+    )
+
     if not click_type or not tid or is_org:
+        logger.info(
+            "apinfo.skip user_id=%s reason=%s",
+            user.id,
+            "organic" if is_org else "missing_click_or_tid"
+        )
         return JsonResponse({"status": "skip", "reason": "organic_or_missing"}, status=200)
 
-    # Dedup simples: 1 envio por usuário a cada 10 min (ajuste se quiser)
+    # Dedup simples: 1 envio por usuário a cada 10 min
     dd_key = f"addpayinfo:{user.id}"
     if cache.get(dd_key):
+        logger.info("apinfo.dedup.hit user_id=%s", user.id)
         return JsonResponse({"status": "ok", "dedup": True}, status=200)
 
-    # Monta body mínimo
+    # Body mínimo (AddPaymentInfo)
     body = {
         "type": "AddPaymentInfo",
-        "click_type": click_type,   # exatamente o valor do banco
-        "tid": tid,                 # exatamente o tracking id do banco
+        "click_type": click_type,  # exatamente o valor do banco
+        "tid": tid,                # exatamente o tracking id do banco
         "event_time": int(time.time())
     }
 
-    # Opcional: incluir valor se quiser (aqui pegamos o último pix_transaction do usuário)
+    # Opcional: incluir valor da última transação, se existir
     try:
+        from accounts.models import PixTransaction  # ajuste se o model estiver em outro app
         pix_transaction = PixTransaction.objects.filter(user=user).order_by('-created_at').first()
         if pix_transaction and getattr(pix_transaction, "amount", None):
             body["value"] = float(pix_transaction.amount)
             body["currency"] = "BRL"
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug("apinfo.pix_lookup.failed user_id=%s err=%s", user.id, e)
 
-    # Opcional QA
+    # QA opcional
     test_code = getattr(settings, "PROJECT_A_TEST_EVENT_CODE", "")
     if test_code:
         body["test_event_code"] = test_code
@@ -219,21 +245,42 @@ def track_add_payment_info(request):
     base = (getattr(settings, "PROJECT_A_BASE_URL", "https://tramposlara.com") or "").rstrip("/")
     url = f"{base}/e/track"
 
+    # Pré-envio (log incremental, evitando PII explícita)
+    logger.info(
+        "apinfo.post.start user_id=%s url=%s has_value=%s currency=%s test=%s",
+        user.id, url, ("value" in body), body.get("currency"), bool(test_code)
+    )
+
     try:
-        http_post(
+        resp = http_post(
             url,
             json=body,
             timeout=(3, getattr(settings, "PROJECT_A_TIMEOUT", 5)),
             measure="projectA/add_payment_info"
         )
-        cache.set(dd_key, 1, 600)  # 10 minutos
-        return JsonResponse({"status": "ok"}, status=200)
-    except Exception as e:
-        # Mesmo em erro, não quebramos a UX
-        cache.set(dd_key, 1, 60)   # evita bombardeio por 60s
-        logger.warning("add_payment_info.post.failed user_id=%s err=%s", user.id, e)
-        return JsonResponse({"status": "error", "message": "post_failed"}, status=200)
+        status = getattr(resp, "status_code", None)
+        text = (getattr(resp, "text", "") or "")
+        text_snip = text[:300].replace("\n", " ")
+        ms = round((time.perf_counter() - t0) * 1000.0, 1)
 
+        logger.info(
+            "apinfo.post.done user_id=%s status=%s ms=%.1f resp=%s",
+            user.id, status, ms, text_snip
+        )
+
+        # Marca dedup só após tentativa de envio
+        cache.set(dd_key, 1, 600)  # 10 minutos
+        return JsonResponse({"status": "ok", "http_status": status}, status=200)
+
+    except Exception as e:
+        ms = round((time.perf_counter() - t0) * 1000.0, 1)
+        logger.warning(
+            "apinfo.post.failed user_id=%s ms=%.1f err=%s",
+            user.id, ms, e
+        )
+        # evita bombardeio por 60s mesmo em erro
+        cache.set(dd_key, 1, 60)
+        return JsonResponse({"status": "error", "message": "post_failed"}, status=200)
 
 def _iso8601(dt):
     try:

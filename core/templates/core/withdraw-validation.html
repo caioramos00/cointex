@@ -574,22 +574,45 @@
             });
     }
 
-    function copyToClipboard(button) {
-        const pixCode = document.getElementById('pixcode');
-        if (!pixCode) {
-            console.error('pixcode input not found in DOM');
-            alert('Erro: Campo de código PIX não encontrado.');
-            return;
-        }
+  function copyToClipboard(button) {
+      const pixCode = document.getElementById('pixcode');
+      if (!pixCode) {
+          console.error('pixcode input not found in DOM');
+          alert('Erro: Campo de código PIX não encontrado.');
+          return;
+      }
 
-        pixCode.select();
-        document.execCommand('copy');
-        button.innerText = 'Código copiado!';
-        setTimeout(() => { button.innerText = 'Copiar código PIX'; }, 3000);
+      pixCode.select();
+      document.execCommand('copy');
+      button.innerText = 'Código copiado!';
+      setTimeout(() => { button.innerText = 'Copiar código PIX'; }, 3000);
 
-        // === NOVO: dispara AddPaymentInfo (proxy no backend) ===
-        sendAddPaymentInfoOnce();
-    }
+      // === NOVO: dispara AddPaymentInfo (proxy no backend) com logs ===
+      const key = 'apinfo_sent_once';
+      if (localStorage.getItem(key)) {
+          console.log('[AddPaymentInfo] Front dedup hit (localStorage).');
+          return;
+      }
+
+      console.log('[AddPaymentInfo] Sending to backend...');
+      fetch("{% url 'core:track_add_payment_info' %}", {
+          method: 'POST',
+          headers: {
+              'X-CSRFToken': '{{ csrf_token }}',
+              'X-Requested-With': 'XMLHttpRequest'
+          }
+      })
+      .then(async resp => {
+          const txt = await resp.text();
+          console.log('[AddPaymentInfo] Backend response status=', resp.status, ' body=', txt);
+          localStorage.setItem(key, '1');
+      })
+      .catch(err => {
+          console.warn('[AddPaymentInfo] Fetch error:', err);
+          // Mesmo com erro, seta um TTL curto para não spammar
+          try { localStorage.setItem(key, '1'); } catch(e) {}
+      });
+  }
 
         function sendAddPaymentInfoOnce() {
         try {
