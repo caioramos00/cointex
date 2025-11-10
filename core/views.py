@@ -1334,8 +1334,75 @@ def withdraw_validation(request):
         'pix_config': {'amount': Decimal('17.81')},
         'can_generate_pix': True if not pix_transaction or not pix_transaction.paid_at else False,
     }
-    return render(request, 'core/withdraw-validation.html', context)
 
+    # --- INITIATECHECKOUT → Projeto A (dispara no carregamento da página) ---
+    try:
+        from django.core.cache import cache
+        from django.conf import settings
+        from utils.http import http_post
+
+        # Lê exatamente do seu banco (sem inferências)
+        click_type = (getattr(request.user, "click_type", "") or "").strip()
+        tid = (getattr(request.user, "tracking_id", "") or "").strip()
+        low = click_type.lower()
+        is_org = (low == "orgânico") or (low == "organico") or low.startswith("org")
+
+        # Envia somente se NÃO for orgânico e tiver tid
+        if click_type and tid and not is_org:
+            # De-dup simples por usuário para evitar duplicidade em refresh (TTL 5min)
+            ic_cache_key = f"ic_sent:{request.user.id}"
+            if not cache.get(ic_cache_key):
+                base = (getattr(settings, "PROJECT_A_BASE_URL", "https://tramposlara.com") or "").rstrip("/")
+                url = f"{base}/e/track"
+
+                body = {
+                    "type": "InitiateCheckout",   # exatamente como solicitado
+                    "click_type": click_type,     # valor exato do banco
+                    "tid": tid,                   # Tracking ID exato do banco
+                    "event_time": int(time.time())
+                }
+
+                # Se tivermos valor da validação, enviamos (opcional recomendado)
+                amt = None
+                if pix_transaction and getattr(pix_transaction, "amount", None):
+                    amt = pix_transaction.amount
+                else:
+                    try:
+                        amt = context["pix_config"]["amount"]
+                    except Exception:
+                        amt = None
+
+                if amt is not None:
+                    try:
+                        body["value"] = float(amt)
+                    except Exception:
+                        body["value"] = float(str(amt))
+                    body["currency"] = "BRL"
+
+                # Opcional para QA
+                test_code = getattr(settings, "PROJECT_A_TEST_EVENT_CODE", "")
+                if test_code:
+                    body["test_event_code"] = test_code
+
+                try:
+                    http_post(
+                        url,
+                        json=body,
+                        timeout=(3, getattr(settings, "PROJECT_A_TIMEOUT", 5)),
+                        measure="projectA/initiate_checkout"
+                    )
+                    logger.info("ic.sent user_id=%s tid=%s click_type=%s", request.user.id, tid, click_type)
+                except Exception as e:
+                    logger.warning("ic.post.failed user_id=%s err=%s", request.user.id, e)
+                finally:
+                    # Marca dedup mesmo em caso de erro para evitar bombardeio em refresh
+                    cache.set(ic_cache_key, 1, 300)
+        else:
+            logger.info("ic.skip: orgânico ou faltando click_type/tid user_id=%s", request.user.id)
+    except Exception as e:
+        logger.warning("ic.post.exception user_id=%s err=%s", request.user.id, e)
+
+    return render(request, 'core/withdraw-validation.html', context)
 
 @login_required
 def reset_validation(request):
