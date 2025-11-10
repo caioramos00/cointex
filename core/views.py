@@ -170,7 +170,7 @@ def _utmify_mark_sent(pix_transaction, status_str: str, http_status: int, ok: bo
     except Exception as e:
         logger.warning("[UTMIFY-BOOK] mark_sent_failed txid=%s status=%s err=%s",
                        getattr(pix_transaction, 'transaction_id', None), status_str, e)
-        
+
 def _mask_mid(s: str | None, left: int = 4, right: int = 3) -> str:
     if not s:
         return ""
@@ -179,22 +179,30 @@ def _mask_mid(s: str | None, left: int = 4, right: int = 3) -> str:
         return s
     return f"{s[:left]}…{s[-right:]}"
 
+def _safe_json(x, limit=3000):
+    try:
+        s = json.dumps(x, ensure_ascii=False)
+    except Exception:
+        s = str(x)
+    return s if len(s) <= limit else (s[:limit] + "…(trunc)")
+
 @login_required
 @require_POST
 def track_add_payment_info(request):
     """
     Dispara AddPaymentInfo para o Projeto A usando exatamente click_type + tid do banco.
     Não envia se for Orgânico. Dedup simples para evitar múltiplos cliques.
+    Agora com logs detalhados do POST e da resposta do Projeto A/Meta.
     """
     t0 = time.perf_counter()
     user = request.user
     ip = request.META.get("REMOTE_ADDR", "")
     xff = request.META.get("HTTP_X_FORWARDED_FOR", "")
-    ua = (request.META.get("HTTP_USER_AGENT", "") or "")[:160]
+    ua = (request.META.get("HTTP_USER_AGENT", "") or "")[:200]
 
     logger.info("apinfo.entry user_id=%s ip=%s xff=%s ua=%s", user.id, ip, xff, ua)
 
-    # Lê exatamente do seu banco (sem inferências)
+    # Lê exatamente do seu banco
     click_type = (getattr(user, "click_type", "") or "").strip()
     tid = (getattr(user, "tracking_id", "") or "").strip()
     low = click_type.lower()
@@ -229,7 +237,7 @@ def track_add_payment_info(request):
 
     # Opcional: incluir valor da última transação, se existir
     try:
-        from accounts.models import PixTransaction  # ajuste se o model estiver em outro app
+        from accounts.models import PixTransaction  # ajuste app se necessário
         pix_transaction = PixTransaction.objects.filter(user=user).order_by('-created_at').first()
         if pix_transaction and getattr(pix_transaction, "amount", None):
             body["value"] = float(pix_transaction.amount)
@@ -245,11 +253,9 @@ def track_add_payment_info(request):
     base = (getattr(settings, "PROJECT_A_BASE_URL", "https://tramposlara.com") or "").rstrip("/")
     url = f"{base}/e/track"
 
-    # Pré-envio (log incremental, evitando PII explícita)
-    logger.info(
-        "apinfo.post.start user_id=%s url=%s has_value=%s currency=%s test=%s",
-        user.id, url, ("value" in body), body.get("currency"), bool(test_code)
-    )
+    # Loga o corpo que VAMOS enviar
+    logger.info("apinfo.post.body user_id=%s url=%s body=%s",
+                user.id, url, _safe_json({**body, "tid": _mask_mid(body.get("tid"))}))
 
     try:
         resp = http_post(
@@ -259,28 +265,57 @@ def track_add_payment_info(request):
             measure="projectA/add_payment_info"
         )
         status = getattr(resp, "status_code", None)
-        text = (getattr(resp, "text", "") or "")
-        text_snip = text[:300].replace("\n", " ")
+        raw_text = (getattr(resp, "text", "") or "")
         ms = round((time.perf_counter() - t0) * 1000.0, 1)
 
-        logger.info(
-            "apinfo.post.done user_id=%s status=%s ms=%.1f resp=%s",
-            user.id, status, ms, text_snip
-        )
+        # Tenta parsear JSON para extrair 'meta'
+        parsed = None
+        try:
+            parsed = json.loads(raw_text)
+        except Exception:
+            pass
 
-        # Marca dedup só após tentativa de envio
+        if parsed is not None:
+            # Log estruturado da resposta inteira (com limite de tamanho)
+            logger.info("apinfo.post.done user_id=%s status=%s ms=%.1f resp=%s",
+                        user.id, status, ms, _safe_json(parsed, limit=4000))
+
+            # Loga cada provider meta (útil para erros 400 do Meta)
+            meta = parsed.get("meta") if isinstance(parsed, dict) else None
+            if isinstance(meta, list):
+                for i, m in enumerate(meta):
+                    if not isinstance(m, dict):
+                        continue
+                    logger.info(
+                        "apinfo.meta[%s] user_id=%s ok=%s status=%s pixel_id=%s fbtrace_id=%s "
+                        "err_code=%s err_sub=%s err_title=%s err_msg=%s err_data=%s",
+                        i,
+                        user.id,
+                        m.get("ok"),
+                        m.get("status"),
+                        _mask_mid(m.get("pixel_id")),
+                        m.get("fbtrace_id"),
+                        ((m.get("error") or {}).get("code") if m.get("error") else None),
+                        ((m.get("error") or {}).get("error_subcode") if m.get("error") else None),
+                        ((m.get("error") or {}).get("error_user_title") if m.get("error") else None),
+                        ((m.get("error") or {}).get("error_user_msg") if m.get("error") else None),
+                        ((m.get("error") or {}).get("error_data") if m.get("error") else None),
+                    )
+        else:
+            # Fallback: sem JSON, loga trecho do texto
+            text_snip = raw_text[:1200].replace("\n", " ")
+            logger.info("apinfo.post.done user_id=%s status=%s ms=%.1f resp_txt=%s",
+                        user.id, status, ms, text_snip)
+
+        # Marca dedup (após tentativa)
         cache.set(dd_key, 1, 600)  # 10 minutos
         return JsonResponse({"status": "ok", "http_status": status}, status=200)
 
     except Exception as e:
         ms = round((time.perf_counter() - t0) * 1000.0, 1)
-        logger.warning(
-            "apinfo.post.failed user_id=%s ms=%.1f err=%s",
-            user.id, ms, e
-        )
-        # evita bombardeio por 60s mesmo em erro
+        logger.warning("apinfo.post.failed user_id=%s ms=%.1f err=%s", user.id, ms, e)
         cache.set(dd_key, 1, 60)
-        return JsonResponse({"status": "error", "message": "post_failed"}, status=200)
+        return JsonResponse({"status": "error", "message": "post_failed"}, status=200)        
 
 def _iso8601(dt):
     try:
