@@ -2,7 +2,7 @@ import time
 import logging
 import requests
 import json
-from typing import Dict, Any
+from typing import Dict, Any, List
 from django.conf import settings
 from .models import ServerPixel
 
@@ -235,20 +235,35 @@ def _send_tiktok(sp: ServerPixel, event_name: str, event_id: str, event_time: in
 # ====== Dispatcher ÚNICO ======
 def dispatch_event(event_name: str, event_id: str, event_time: int,
                    user_data: Dict[str, Any], custom_data: Dict[str, Any],
-                   action_source: str, event_source_url: str) -> None:
-    # Filtra destinos ativos conforme checkboxes principais que você já usa
-    name_l = (event_name or "").lower()
-    qs = qs.filter(send_purchase=True)
-    from django.conf import settings
-    if getattr(settings, "PURCHASE_VIA_PROJECT_A", True):
-        qs = qs.exclude(provider="meta_capi")
+                   action_source: str, event_source_url: str) -> Dict[str, Any]:
+    """
+    Envia o evento para os ServerPixels ativos conforme flags por evento.
+    Retorna um sumário simples com provedores acionados.
+    """
+    name_l = (event_name or "").strip().lower().replace(" ", "").replace("-", "_")
+
+    # Sempre inicialize qs antes de qualquer branch
+    qs = ServerPixel.objects.filter(active=True)
+
+    # Filtros por tipo de evento
     if name_l == "purchase":
         qs = qs.filter(send_purchase=True)
-    elif name_l == "paymentexpired":
+        # Se migrando Purchase para o Projeto A, não enviar Meta pelo dispatcher local
+        if getattr(settings, "PURCHASE_VIA_PROJECT_A", True):
+            qs = qs.exclude(provider="meta_capi")
+    elif name_l in ("paymentexpired", "payment_expired"):
         qs = qs.filter(send_payment_expired=True)
-    elif name_l == "initiatecheckout":
+    elif name_l in ("initiatecheckout", "initiate_checkout"):
         qs = qs.filter(send_initiate_checkout=True)
+    else:
+        # Mantém todos ativos (sem filtros adicionais) ou ajuste conforme sua política
+        pass
 
+    if not qs.exists():
+        logger.info("dispatch_event: nenhum ServerPixel ativo habilitado para %s", event_name)
+        return {"sent": 0, "providers": []}
+
+    providers_sent: List[str] = []
     for sp in qs.order_by("id"):
         try:
             if sp.provider == "meta_capi":
@@ -257,11 +272,15 @@ def dispatch_event(event_name: str, event_id: str, event_time: int,
                 _send_ga4(sp, event_name, event_id, event_time, user_data, custom_data, action_source, event_source_url)
             elif sp.provider == "tiktok_eapi":
                 _send_tiktok(sp, event_name, event_id, event_time, user_data, custom_data, action_source, event_source_url)
+            providers_sent.append(sp.provider)
         except Exception as e:
-            logger.warning("[CAPI-ERR] provider=%s event=%s eid=%s err=%s", getattr(sp, "provider", "?"), event_name, event_id, e)
+            logger.warning("[CAPI-ERR] provider=%s event=%s eid=%s err=%s",
+                           getattr(sp, "provider", "?"), event_name, event_id, e)
+
+    return {"sent": len(providers_sent), "providers": providers_sent}
 
 # ==== Compat: se você ainda chama dispatch_capi(...) ====
 def dispatch_capi(event_name: str, event_id: str, event_time: int,
                   user_data: Dict[str, Any], custom_data: Dict[str, Any],
-                  action_source: str, event_source_url: str) -> None:
-    dispatch_event(event_name, event_id, event_time, user_data, custom_data, action_source, event_source_url)
+                  action_source: str, event_source_url: str) -> Dict[str, Any]:
+    return dispatch_event(event_name, event_id, event_time, user_data, custom_data, action_source, event_source_url)
