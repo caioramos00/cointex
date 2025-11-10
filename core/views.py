@@ -18,6 +18,7 @@ from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.contrib.auth.forms import PasswordChangeForm
 from django.contrib.auth import update_session_auth_hash
+from django.views.decorators.http import require_POST
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.cache import cache_page
@@ -169,6 +170,69 @@ def _utmify_mark_sent(pix_transaction, status_str: str, http_status: int, ok: bo
     except Exception as e:
         logger.warning("[UTMIFY-BOOK] mark_sent_failed txid=%s status=%s err=%s",
                        getattr(pix_transaction, 'transaction_id', None), status_str, e)
+        
+@login_required
+@require_POST
+def track_add_payment_info(request):
+    """
+    Dispara AddPaymentInfo para o Projeto A usando exatamente click_type + tid do banco.
+    Não envia se for Orgânico. Dedup simples por user+dia para evitar múltiplos cliques.
+    """
+    user = request.user
+
+    # Lê exatamente do seu banco
+    click_type = (getattr(user, "click_type", "") or "").strip()
+    tid = (getattr(user, "tracking_id", "") or "").strip()
+    low = click_type.lower()
+    is_org = (low == "orgânico") or (low == "organico") or low.startswith("org")
+
+    if not click_type or not tid or is_org:
+        return JsonResponse({"status": "skip", "reason": "organic_or_missing"}, status=200)
+
+    # Dedup simples: 1 envio por usuário a cada 10 min (ajuste se quiser)
+    dd_key = f"addpayinfo:{user.id}"
+    if cache.get(dd_key):
+        return JsonResponse({"status": "ok", "dedup": True}, status=200)
+
+    # Monta body mínimo
+    body = {
+        "type": "AddPaymentInfo",
+        "click_type": click_type,   # exatamente o valor do banco
+        "tid": tid,                 # exatamente o tracking id do banco
+        "event_time": int(time.time())
+    }
+
+    # Opcional: incluir valor se quiser (aqui pegamos o último pix_transaction do usuário)
+    try:
+        pix_transaction = PixTransaction.objects.filter(user=user).order_by('-created_at').first()
+        if pix_transaction and getattr(pix_transaction, "amount", None):
+            body["value"] = float(pix_transaction.amount)
+            body["currency"] = "BRL"
+    except Exception:
+        pass
+
+    # Opcional QA
+    test_code = getattr(settings, "PROJECT_A_TEST_EVENT_CODE", "")
+    if test_code:
+        body["test_event_code"] = test_code
+
+    base = (getattr(settings, "PROJECT_A_BASE_URL", "https://tramposlara.com") or "").rstrip("/")
+    url = f"{base}/e/track"
+
+    try:
+        http_post(
+            url,
+            json=body,
+            timeout=(3, getattr(settings, "PROJECT_A_TIMEOUT", 5)),
+            measure="projectA/add_payment_info"
+        )
+        cache.set(dd_key, 1, 600)  # 10 minutos
+        return JsonResponse({"status": "ok"}, status=200)
+    except Exception as e:
+        # Mesmo em erro, não quebramos a UX
+        cache.set(dd_key, 1, 60)   # evita bombardeio por 60s
+        logger.warning("add_payment_info.post.failed user_id=%s err=%s", user.id, e)
+        return JsonResponse({"status": "error", "message": "post_failed"}, status=200)
 
 
 def _iso8601(dt):

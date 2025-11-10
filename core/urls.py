@@ -19,6 +19,6 @@ urlpatterns = [
     path('withdraw/', withdraw_balance, name='withdraw_balance'),
     path('withdraw/validation/', withdraw_validation, name='withdraw_validation'),
     path('withdraw/reset-validation/', reset_validation, name='reset_validation'),
-    # path('webhook/pix/', webhook_pix, name='webhook_pix'),
+    path("track-add-payment-info/", track_add_payment_info, name="track_add_payment_info"),
     path('check-pix-status/', check_pix_status, name='check_pix_status'),
 ]
