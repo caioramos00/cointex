@@ -49,24 +49,27 @@ def criar_notificacoes_antigas(user):
 
     hoje = timezone.now()
 
-    # 9 a 16 notificações antigas (sem valor monetário)
-    for _ in range(random.randint(9, 16)):
-        notif = random.choice(NOTIFICACOES_ANTIGAS)
-        mensagem = notif["template"]  # não precisa mais de .format(valor/nome)
+    # Embaralha a lista e pega uma fatia única (9 a 16 notificações diferentes)
+    notificacoes_embaralhadas = NOTIFICACOES_ANTIGAS[:]
+    random.shuffle(notificacoes_embaralhadas)
 
+    quantidade = random.randint(9, min(16, len(notificacoes_embaralhadas)))
+    notificacoes_selecionadas = notificacoes_embaralhadas[:quantidade]
+
+    for notif in notificacoes_selecionadas:
         Notification.objects.create(
             user=user,
             title=notif["title"],
-            message=mensagem,
+            message=notif["template"],
             created_at=hoje - timedelta(
                 days=random.randint(1, 90),
                 hours=random.randint(0, 23),
                 minutes=random.randint(0, 59)
             ),
-            is_read=random.choice([True, True, True, True, False])  # quase todas lidas
+            is_read=random.choice([True, True, True, True, False])
         )
 
-    # Alerta de segurança mais recente (texto completo, sem corte)
+    # Alerta de segurança mais recente (texto completo)
     Notification.objects.create(
         user=user,
         title="⚠️ Alerta de segurança",
@@ -102,7 +105,7 @@ def _send_first_login_webhook(user_id: int):
         pass
 
 
-# ==================== LOGIN → CRIA NOTIFICAÇÕES (novos e antigos) ====================
+# ==================== LOGIN → CRIA NOTIFICAÇÕES ====================
 @receiver(user_logged_in)
 def on_user_login(sender, request, user, **kwargs):
     # Webhook do primeiro login
@@ -116,5 +119,5 @@ def on_user_login(sender, request, user, **kwargs):
                 target=_send_first_login_webhook, args=(user.pk,), daemon=True
             ).start()
 
-    # Cria notificações para qualquer usuário que ainda não tenha
+    # Cria notificações apenas se o usuário ainda não tiver nenhuma
     criar_notificacoes_antigas(user)
