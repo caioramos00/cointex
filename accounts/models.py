@@ -329,8 +329,8 @@ class Notification(models.Model):
     
 class PixTransaction(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='pix_transactions', verbose_name=_("Usuário"))
-    external_id = models.CharField(max_length=12, verbose_name=_("External ID"), unique=True)
-    transaction_id = models.CharField(max_length=100, verbose_name=_("Transaction ID"), unique=True, blank=True, null=True)
+    external_id = models.CharField(max_length=128, verbose_name=_("External ID"), default='')
+    transaction_id = models.CharField(max_length=100, verbose_name=_("Transaction ID"), blank=True, null=True)
     amount = models.DecimalField(max_digits=10, decimal_places=2, verbose_name=_("Valor"))
     status = models.CharField(max_length=20, default='PENDING', verbose_name=_("Status"))
     qr_code = models.TextField(verbose_name=_("QR Code Payload"), blank=True, null=True)
@@ -355,7 +355,7 @@ class PixTransaction(models.Model):
         db_index=True,
         null=True, blank=True
     )
-    hash_id = models.CharField(max_length=100, null=True, blank=True, unique=True)
+    hash_id = models.CharField(max_length=100, null=True, blank=True)
 
     class Meta:
         verbose_name = _("Transação PIX")
