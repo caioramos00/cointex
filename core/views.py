@@ -804,16 +804,46 @@ def home(request):
         formatted_balance = "R$ 0,00"
 
     track_complete_registration = request.session.pop('track_complete_registration', False)
+    
+    try:
+        balance = request.user.wallet.balance
+    except Exception:
+        balance = Decimal('0.00')
+
+    # Formatação BRL correta (usa sua função já existente no arquivo)
+    formatted_balance = f"R$ {format_number_br(balance)}"
+
+    # Entradas / Saídas dinâmicas (sempre entradas > saídas ≈ 3:1)
+    if balance > Decimal('0'):
+        ratio = random.uniform(2.9, 3.7)
+        divisor = Decimal(str(ratio + 1))                # converte float → Decimal (evita TypeError)
+        saidas = (balance / divisor).quantize(Decimal('0.01'))
+        entradas = (balance + saidas).quantize(Decimal('0.01'))
+    else:
+        entradas = Decimal('0.00')
+        saidas = Decimal('0.00')
+
+    entradas_formatted = f"R$ {format_number_br(entradas)}"
+    saidas_formatted = f"R$ {format_number_br(saidas)}"
+
+    track_complete_registration = request.session.pop('track_complete_registration', False)
 
     context = {
+        # ... suas chaves existentes de moedas ...
         'hot_coins': hot_coins,
         'favorites_coins': favorites_coins,
         'top_gainers': top_gainers,
         'popular_coins': popular_coins,
         'price_coins': price_coins,
+
+        # Saldo e entradas/saídas
         'formatted_balance': formatted_balance,
+        'user_balance_formatted': formatted_balance,   # para sidebar e landing
+        'entradas_formatted': entradas_formatted,
+        'saidas_formatted': saidas_formatted,
+
         'track_complete_registration': track_complete_registration,
-        'user_balance': float(user_balance),
+        'user_balance': float(balance),
     }
     return render(request, 'core/home.html', context)
 

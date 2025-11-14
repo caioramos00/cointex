@@ -9,22 +9,22 @@
           <img src="{% themed_static 'images/svg/ellipse.svg' %}" alt="ellipse" />
         </div>
 
-        <h1 class="mt-2 text-white">R$ {{ user_balance|default:"1.066.786,65" }}</h1>
+        <h1 class="mt-2 text-white">{{ user_balance_formatted|default:'R$ 0,00' }}</h1>
 
         <div class="amount-details">
           <div class="amount w-50 text-start">
             <div class="d-flex align-items-center justify-content-start">
               <img class="img-fluid icon" src="{% themed_static 'images/svg/arrow-down-right.svg' %}" alt="down" />
-              <h5>Receitas</h5>
+              <h5>Entradas do mês</h5>
             </div>
-            <h3 class="text-white">R$ 15.256,33</h3>
+            <h3 class="text-white">{{ entradas_formatted|default:'R$ 0,00' }}</h3>
           </div>
           <div class="amount w-50 text-end border-0">
             <div class="d-flex align-items-center justify-content-end">
               <img class="img-fluid icon" src="{% themed_static 'images/svg/arrow-up-right.svg' %}" alt="up" />
-              <h5>Despesas</h5>
+              <h5>Saídas do mês</h5>
             </div>
-            <h3 class="text-white">R$ 91.530,32</h3>
+            <h3 class="text-white">{{ saidas_formatted|default:'R$ 0,00' }}</h3>
           </div>
         </div>
       </div>

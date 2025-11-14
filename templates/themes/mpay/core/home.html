@@ -83,7 +83,7 @@
         <div class="balance">
           <img class="img-fluid balance-bg" src="{% themed_static 'images/background/auth-bg.jpg' %}" alt="auth-bg" />
           <h5>Saldo disponível</h5>
-          <h2>R$ {{ user_balance|default:'0,00' }}</h2>
+          <h2>{{ user_balance_formatted|default:'R$ 0,00' }}</h2>
         </div>
       </div>
       <div class="offcanvas-body">
@@ -169,7 +169,6 @@
       <section id="route-notifications" class="spa-route d-none" data-title="Notificações" aria-labelledby="spa-title">
         <section class="section-b-space">
           <div class="custom-container">
-
             {% if notifications_count > 0 %}
               <div class="title d-flex justify-content-between align-items-center mb-3">
                 <h2>Notificações</h2>
@@ -182,19 +181,19 @@
             {% endif %}
 
             {% if user_notifications %}
-              {% regroup user_notifications by created_at|localtime|date:"Y-m-d" as notifications_by_day %}
+              {% regroup user_notifications by created_at|localtime|date:'Y-m-d' as notifications_by_day %}
 
               {% for group in notifications_by_day %}
                 <div class="title mt-4">
                   <h2>
-                    {% if group.grouper == today|date:"Y-m-d" %}
+                    {% if group.grouper == today|date:'Y-m-d' %}
                       Hoje
-                    {% elif group.grouper == yesterday|date:"Y-m-d" %}
+                    {% elif group.grouper == yesterday|date:'Y-m-d' %}
                       Ontem
                     {% else %}
-                      {{ group.list.0.created_at|localtime|date:"j \\d\\e F" }}
-                      {% if group.list.0.created_at|localtime|date:"Y" != today|date:"Y" %}
-                        \\d\\e {{ group.list.0.created_at|localtime|date:"Y" }}
+                      {{ group.list.0.created_at|localtime|date:'j \\d\\e F' }}
+                      {% if group.list.0.created_at|localtime|date:'Y' != today|date:'Y' %}
+                        \\d\\e {{ group.list.0.created_at|localtime|date:'Y' }}
                       {% endif %}
                     {% endif %}
                   </h2>
@@ -202,21 +201,19 @@
 
                 <ul class="notification-list">
                   {% for n in group.list %}
-                    <li class="notification-box {% if not n.is_read %}unread{% endif %}" 
-                        onclick="marcarComoLida({{ n.id }})" style="cursor:pointer;">
-
+                    <li class="notification-box {% if not n.is_read %}unread{% endif %}" onclick="marcarComoLida({{ n.id }})" style="cursor:pointer;">
                       {# ÍCONES EXATAMENTE COMO VOCÊ PEDIU #}
-                      {% if "Alerta de segurança" in n.title %}
+                      {% if 'Alerta de segurança' in n.title %}
                         <div class="notification-img danger">
-                          <img class="img-fluid notification-icon" src="{% themed_static 'images/svg/alert.svg' %}" alt="alerta">
+                          <img class="img-fluid notification-icon" src="{% themed_static 'images/svg/alert.svg' %}" alt="alerta" />
                         </div>
-                      {% elif "Parceria" in n.title or "Oferta" in n.title or "cashback" in n.message|lower or "ganhe" in n.message|lower %}
+                      {% elif 'Parceria' in n.title or 'Oferta' in n.title or 'cashback' in n.message|lower %}
                         <div class="notification-img success">
                           <i data-feather="shopping-bag" class="notification-icon"></i>
                         </div>
-                      {% elif "segurança" in n.title|lower or "fraude" in n.title|lower or "senha" in n.title|lower or "2FA" in n.title or "lock" in n.title|lower %}
+                      {% elif 'segurança' in n.title|lower or 'fraude' in n.title|lower or 'senha' in n.title|lower or '2FA' in n.title or 'Dica' in n.title %}
                         <div class="notification-img warning">
-                          <img class="img-fluid notification-icon" src="{% themed_static 'images/svg/lock.svg' %}" alt="segurança">
+                          <img class="img-fluid notification-icon" src="{% themed_static 'images/svg/lock.svg' %}" alt="segurança" />
                         </div>
                       {% else %}
                         <div class="notification-img">
@@ -229,20 +226,19 @@
                           <div>
                             <h5 class="fw-semibold dark-text {% if not n.is_read %}theme-color{% endif %}">
                               {{ n.title }}
-                              {% if not n.is_read %}<span class="badge bg-primary ms-2" style="font-size:10px;">Nova</span>{% endif %}
+                              {% if not n.is_read %}
+                                <span class="badge bg-primary ms-2" style="font-size:10px;">Nova</span>
+                              {% endif %}
                             </h5>
                             <h6 class="fw-normal light-text mt-1">{{ n.message }}</h6>
                           </div>
-                          <h6 class="time fw-normal light-text">
-                            {{ n.created_at|localtime|time:"H:i" }}
-                          </h6>
+                          <h6 class="time fw-normal light-text">{{ n.created_at|localtime|time:'H:i' }}</h6>
                         </div>
                       </div>
                     </li>
                   {% endfor %}
                 </ul>
               {% endfor %}
-
             {% else %}
               <div class="text-center py-5">
                 <i data-feather="bell-off" style="width:80px;height:80px;" class="text-muted mb-3"></i>
@@ -250,7 +246,6 @@
                 <p class="text-muted">Fique tranquilo, avisaremos assim que algo acontecer algo!</p>
               </div>
             {% endif %}
-
           </div>
         </section>
       </section>
