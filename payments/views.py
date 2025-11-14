@@ -220,58 +220,80 @@ def create_deposit_pix(request):
         data = json.loads(request.body)
         amount = Decimal(data["amount"])
 
-        # NOVOS LIMITES
+        # Limites atualizados
         if amount < Decimal("1.00"):
             return JsonResponse({"detail": "O valor mínimo para depósito é R$ 1,00"}, status=400)
         if amount > Decimal("2000.00"):
             return JsonResponse({"detail": "O valor máximo para depósito é R$ 2.000,00"}, status=400)
 
         adapter = get_active_adapter()
+        active_provider = get_active_provider().name
 
-        external_id = f"dep_{request.user.id}_{uuid.uuid4().hex[:16]}"
+        # external_id exatamente como na validation: 12 caracteres alfanuméricos maiúsculos
+        external_id = ''.join(random.choices(string.ascii_uppercase + string.digits, k=12))
+
         webhook_url = request.build_absolute_uri(reverse("payments:webhook_pix"))
 
+        # Dados do cliente (exatamente como na validation)
+        name = f"{request.user.first_name} {request.user.last_name}".strip() or "Cliente mPay"
+        email = request.user.email or f"user{request.user.id}@mpay.local"
+        document = getattr(request.user, "cpf", "") or ""
+        phone = getattr(request.user, "phone_number", "") or ""
+
         customer = {
-            "name": request.user.get_full_name() or request.user.username or "Usuário mPay",
-            "email": getattr(request.user, "email", "") or "sem-email@mpay.app",
-            "document": "",
-            "phone": "",
+            "name": name,
+            "email": email,
+            "document": document,
+            "phone": phone,
         }
 
+        # Meta com IP (igual validation)
+        meta = {
+            "ip": request.META.get("REMOTE_ADDR", ""),
+            "xff": request.META.get("HTTP_X_FORWARDED_FOR", ""),
+            "idempotency_key": f"deposit_{request.user.id}_{external_id}",
+        }
+
+        # Criação da transação (igual validation)
         result = adapter.create_transaction(
             external_id=external_id,
             amount=float(amount),
             customer=customer,
             webhook_url=webhook_url,
-            meta={"app": "mpay", "type": "deposit"},
+            meta=meta,
         )
 
         copia_e_cola = result.get("pix_qr") or ""
 
-        qr_code_base64 = None
-        if result.get("pix_qr_image"):
-            try:
-                with open(result["pix_qr_image"], "rb") as f:
-                    qr_code_base64 = "data:image/png;base64," + base64.b64encode(f.read()).decode()
-            except Exception:
-                pass
-
+        # Expiração fixa 30 minutos
         expiration = timezone.now() + timezone.timedelta(minutes=30)
 
-        pix = PixTransaction.objects.create(
+        # Criação do PixTransaction exatamente como na validation
+        pix_transaction = PixTransaction.objects.create(
             user=request.user,
             amount=amount,
-            provider=getattr(adapter, "name", "unknown"),
+            provider=active_provider,
             external_id=external_id,
-            transaction_id=(result.get("transaction_id") or "")[:128],
-            hash_id=(result.get("hash_id") or "")[:128],
+            transaction_id=result.get("transaction_id"),
+            hash_id=result.get("hash_id"),
             status="PENDING",
+            qr_code=copia_e_cola,  # campo qr_code é salvo aqui
         )
 
+        # Cache igual validation
+        normalized = {
+            "qr_code": copia_e_cola,
+            "txid": result.get("transaction_id"),
+            "paid": False,
+            "expired": False,
+            "ts": int(time.time())
+        }
+        set_cached_pix(request.user.id, normalized, ttl=300)
+
         return JsonResponse({
-            "id": pix.id,
+            "id": pix_transaction.id,
             "amount": str(amount),
-            "qr_code_base64": qr_code_base64,
+            "qr_code_base64": None,  # frontend gera do copia_e_cola
             "copia_e_cola": copia_e_cola,
             "expires_at": expiration.isoformat(),
         })
