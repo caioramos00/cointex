@@ -1,6 +1,7 @@
 {% load theming %}
 {% load static %}
 {% load tracking_tags %}
+{% load tz %}
 <!DOCTYPE html>
 <html lang="pt-BR">
   <head>
@@ -164,7 +165,7 @@
         {% include 'themes/mpay/core/spa/_profile.html' %}
       </section>
 
-      <!-- NOTIFICAÇÕES DINÂMICAS (FINAL) -->
+      <!-- NOTIFICAÇÕES DINÂMICAS (VERSÃO FINAL – SEM ERROS) -->
       <section id="route-notifications" class="spa-route d-none" data-title="Notificações" aria-labelledby="spa-title">
         <section class="section-b-space">
           <div class="custom-container">
@@ -172,7 +173,7 @@
             {% if notifications_count > 0 %}
               <div class="title d-flex justify-content-between align-items-center mb-3">
                 <h2>Notificações</h2>
-                <span class="badge bg-danger rounded-pill">{{ notifications_count }} nova{{ notifications_count|pluralize }}</span>
+                <span class="badge bg-danger rounded-pill">{{ notifications_count }} nova{{ notifications_count|pluralize:"/s" }}</span>
               </div>
             {% else %}
               <div class="title">
@@ -181,7 +182,7 @@
             {% endif %}
 
             {% if user_notifications %}
-              {% regroup user_notifications by created_at|localtime|date:"Y-m-d" as notifications_by_day %}
+              {% regroup user_notifications by created_at|localtime|date:"Y-m-d-m" as notifications_by_day %}
 
               {% for group in notifications_by_day %}
                 <div class="title mt-4">
@@ -201,7 +202,7 @@
                     <li class="notification-box {% if not n.is_read %}unread{% endif %}" 
                         onclick="marcarComoLida({{ n.id }})" style="cursor:pointer;">
 
-                      <!-- ÍCONES FEATHER -->
+                      <!-- ÍCONES FEATHER COM CORES DO TEMA -->
                       {% if "PIX recebido" in n.title or "recebido" in n.title|lower or "cashback" in n.title|lower %}
                         <div class="notification-img success">
                           <i data-feather="arrow-down-circle" class="notification-icon"></i>
@@ -240,7 +241,7 @@
               {% endfor %}
 
             {% else %}
-              <div class="text-center py-5">
+              <div class="text-center py-5 text-center">
                 <i data-feather="bell-off" style="width:80px;height:80px;" class="text-muted mb-3"></i>
                 <h5 class="light-text">Nenhuma notificação no momento</h5>
                 <p class="text-muted">Fique tranquilo, avisaremos assim que algo acontecer!</p>
