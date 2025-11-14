@@ -220,14 +220,15 @@ def create_deposit_pix(request):
         data = json.loads(request.body)
         amount = Decimal(data["amount"])
 
-        if amount < Decimal("10.00"):
-            return JsonResponse({"detail": "O valor mínimo para depósito é R$ 10,00"}, status=400)
+        # NOVOS LIMITES
+        if amount < Decimal("1.00"):
+            return JsonResponse({"detail": "O valor mínimo para depósito é R$ 1,00"}, status=400)
+        if amount > Decimal("2000.00"):
+            return JsonResponse({"detail": "O valor máximo para depósito é R$ 2.000,00"}, status=400)
 
         adapter = get_active_adapter()
 
-        # external_id curto (12 caracteres) – evita o erro de tamanho no banco
-        external_id = uuid.uuid4().hex[:12]
-
+        external_id = f"dep_{request.user.id}_{uuid.uuid4().hex[:16]}"
         webhook_url = request.build_absolute_uri(reverse("payments:webhook_pix"))
 
         customer = {
@@ -257,14 +258,13 @@ def create_deposit_pix(request):
 
         expiration = timezone.now() + timezone.timedelta(minutes=30)
 
-        # Salva só campos seguros (sem campos que não existem ou que podem estourar tamanho)
         pix = PixTransaction.objects.create(
             user=request.user,
             amount=amount,
             provider=getattr(adapter, "name", "unknown"),
-            external_id=external_id,                     # curto → 12 chars
-            transaction_id=(result.get("transaction_id") or "")[:100],  # corta se for muito longo
-            hash_id=(result.get("hash_id") or "")[:100],                # corta se for muito longo
+            external_id=external_id,
+            transaction_id=(result.get("transaction_id") or "")[:128],
+            hash_id=(result.get("hash_id") or "")[:128],
             status="PENDING",
         )
 
