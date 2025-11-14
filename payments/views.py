@@ -197,3 +197,57 @@ def webhook_pix(request: HttpRequest):
     threading.Thread(target=_bg, daemon=True).start()
 
     return JsonResponse({"status": "accepted"}, status=202)
+
+@csrf_exempt  # vamos usar X-CSRFToken no JS mesmo assim
+def create_deposit_pix(request):
+    try:
+        data = json.loads(request.body)
+        amount = Decimal(data["amount"])  # já vem como string "50.00"
+
+        if amount < Decimal("10.00"):
+            return JsonResponse({"detail": "Valor mínimo R$ 10,00"}, status=400)
+
+        adapter = get_active_adapter()
+
+        # Aqui o adapter cria o Pix no banco e retorna os dados
+        pix_data = adapter.create_charge(
+            amount=amount,
+            user=request.user,
+            description="Depósito via app",
+            expire_minutes=30,
+        )
+        # pix_data esperado: {"txid": "...", "qr_code_base64": "data:image/png...", "copia_e_cola": "...", "expiration": datetime}
+
+        pix = PixTransaction.objects.create(
+            user=request.user,
+            amount=amount,
+            provider=adapter.name,
+            external_id=pix_data["txid"],
+            transaction_id=pix_data.get("transaction_id"),  # se tiver
+            copia_e_cola=pix_data["copia_e_cola"],
+            status="PENDING",
+            expiration=pix_data["expiration"],
+        )
+
+        return JsonResponse({
+            "id": pix.id,
+            "amount": str(amount),
+            "qr_code_base64": pix_data["qr_code_base64"],
+            "copia_e_cola": pix_data["copia_e_cola"],
+            "expires_at": pix_data["expiration"].isoformat(),
+        })
+    except Exception as e:
+        logger.error(f"create_deposit_pix error: {e}")
+        return JsonResponse({"detail": "Erro interno"}, status=500)
+    
+def pix_status(request, pk):
+    try:
+        pix = PixTransaction.objects.get(id=pk, user=request.user)
+        status = pix.status
+        paid = status in ("AUTHORIZED", "CONFIRMED", "RECEIVED")
+        return JsonResponse({
+            "status": "paid" if paid else "pending" if status == "PENDING" else "expired",
+            "paid": paid
+        })
+    except PixTransaction.DoesNotExist:
+        return JsonResponse({"status": "expired"}, status=404)
