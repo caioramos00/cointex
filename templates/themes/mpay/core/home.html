@@ -228,7 +228,7 @@
                               {{ n.title }}
                               {% if not n.is_read %}<span class="badge bg-primary ms-2" style="font-size:10px;">Nova</span>{% endif %}
                             </h5>
-                            <h6 class="fw-normal light-text mt-1">{{ n.message|truncatewords:18 }}</h6>
+                            <h6 class="fw-normal light-text mt-1">{{ n.message|truncatewords:35 }}</h6>
                           </div>
                           <h6 class="time fw-normal light-text">
                             {{ n.created_at|localtime|time:"H:i" }}

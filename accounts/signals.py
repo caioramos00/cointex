@@ -9,74 +9,82 @@ from django.conf import settings
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 from django.contrib.auth.signals import user_logged_in
-from django.db.utils import IntegrityError
 
-from .models import CustomUser, Wallet, Notification  # ← adicionado Notification
+from .models import CustomUser, Wallet, Notification
 
 User = get_user_model()
 
-# Todas com placeholders nomeados → assim nunca dá erro de formatação
+# ==================== NOTIFICAÇÕES ANTIGAS (sem valores de dinheiro) ====================
 NOTIFICACOES_ANTIGAS = [
-    {"title": "PIX recebido", "template": "Você recebeu um PIX de R$ {valor:,.2f} de {nome}."},
-    {"title": "PIX enviado", "template": "Você enviou um PIX de R$ {valor:,.2f} para {nome}."},
-    {"title": "Pagamento de boleto", "template": "Boleto no valor de R$ {valor:,.2f} pago com sucesso."},
-    {"title": "Transferência TED recebida", "template": "TED de R$ {valor:,.2f} recebida de {nome}."},
-    {"title": "Fatura do cartão paga", "template": "Fatura do cartão de crédito no valor de R$ {valor:,.2f} paga."},
-    {"title": "Cashback recebido", "template": "Você recebeu R$ {valor:,.2f} de cashback na sua conta!"},
-    {"title": "Investimento rendido", "template": "Seu CDB rendeu R$ {valor:,.2f} este mês."},
-    {"title": "Nova promoção", "template": "Ganhe 100% de cashback em postos BR até R$ 50!"},
-    {"title": "Limite aumentado", "template": "Seu limite do cartão foi aumentado para R$ {valor:,.2f}."},
-    {"title": "Depósito em poupança", "template": "Depósito automático na poupança: R$ {valor:,.2f}."},
-    {"title": "Cobrança recorrente", "template": "Cobrança recorrente Netflix debitada: R$ {valor:,.2f}."},
-    {"title": "Seguro contratado", "template": "Seguro de vida contratado com sucesso."},
-    {"title": "Atualização cadastral", "template": "Atualize seus dados para continuar usando o app sem restrições."},
-    {"title": "Rendimento do saldo", "template": "Seu saldo rendeu R$ {valor:,.2f} de juros hoje."},
-    {"title": "Portabilidade solicitada", "template": "Portabilidade de salário recebida de {nome} aprovada."},
-]
+    # Promoções reais com empresas gigantes
+    {"title": "Parceria Uber", "template": "Ganhe até 20% de cashback em corridas Uber pagas com mPay. Ative agora!"},
+    {"title": "Oferta iFood", "template": "Peça no iFood com mPay e ganhe 15% de cashback nas próximas 5 compras!"},
+    {"title": "Magazine Luiza", "template": "Compras no Magalu com cartão mPay dão 10% de cashback extra este mês."},
+    {"title": "McDonald's", "template": "McDonald's + mPay: ganhe 25% de cashback em qualquer pedido pelo app!"},
+    {"title": "Amazon", "template": "Prime Day mPay: até 15% de cashback em compras na Amazon com seu cartão."},
+    {"title": "Netflix", "template": "Pague Netflix com mPay e ganhe 1 mês grátis a cada 3 meses pagos."},
+    {"title": "Spotify", "template": "Assine Spotify Premium pelo mPay e ganhe 3 meses grátis na primeira assinatura."},
 
-NOMES_BRASILEIROS = [
-    "Maria Silva", "João Santos", "Ana Costa", "Pedro Oliveira", "Luiza Almeida",
-    "Marcos Souza", "Camila Rodrigues", "Rafael Lima", "Empresa XYZ Ltda",
-    "Mercado Pague Menos", "Supermercado Extra", "Farmácia São Paulo", "Uber", "iFood"
+    # Dicas de segurança e finanças
+    {"title": "Dica de segurança", "template": "Nunca compartilhe seu código de verificação. O mPay nunca liga pedindo senha."},
+    {"title": "Dica do dia", "template": "Ative a autenticação em duas etapas e ganhe mais segurança na sua conta."},
+    {"title": "Organize suas finanças", "template": "Crie categorias no app e acompanhe seus gastos mensais de forma simples."},
+    {"title": "Evite fraudes", "template": "Desconfie de links estranhos. Sempre acesse o app oficial do mPay."},
+
+    # Atualizações e novos recursos
+    {"title": "Novo recurso", "template": "Agora você pode agendar PIX recorrentes diretamente no app!"},
+    {"title": "Atualização disponível", "template": "Nova versão do app com modo escuro aprimorado e mais rapidez."},
+    {"title": "Recurso liberado", "template": "Investimentos em CDB agora com liquidez diária. Conheça!"},
+    {"title": "Portabilidade de salário", "template": "Traga seu salário pro mPay e ganhe taxa zero em tudo por 6 meses."},
+
+    # Segurança extra (antigas)
+    {"title": "Senha alterada", "template": "Sua senha foi alterada com sucesso."},
+    {"title": "Dispositivo autorizado", "template": "Novo dispositivo autorizado para login."},
+    {"title": "2FA ativado", "template": "Autenticação em duas etapas ativada com sucesso."},
 ]
 
 def criar_notificacoes_antigas(user):
-    # Evita criar duas vezes (caso rode mais de uma vez)
     if Notification.objects.filter(user=user).exists():
-        return
+        return  # já tem, não cria de novo
 
     hoje = timezone.now()
-    for _ in range(random.randint(9, 16)):  # 9–16 notificações antigas
-        notif = random.choice(NOTIFICACOES_ANTIGAS)
-        valor = round(random.uniform(29.90, 12499.90), 2)
-        nome = random.choice(NOMES_BRASILEIROS)
-        dias_atras = random.randint(1, 90)
 
-        mensagem = notif["template"].format(valor=valor, nome=nome)  # ← seguro, ignora o que não usar
+    # 9 a 16 notificações antigas (sem valor monetário)
+    for _ in range(random.randint(9, 16)):
+        notif = random.choice(NOTIFICACOES_ANTIGAS)
+        mensagem = notif["template"]  # não precisa mais de .format(valor/nome)
 
         Notification.objects.create(
             user=user,
             title=notif["title"],
             message=mensagem,
-            created_at=hoje - timedelta(days=dias_atras, hours=random.randint(0, 23), minutes=random.randint(0, 59)),
+            created_at=hoje - timedelta(
+                days=random.randint(1, 90),
+                hours=random.randint(0, 23),
+                minutes=random.randint(0, 59)
+            ),
             is_read=random.choice([True, True, True, True, False])  # quase todas lidas
         )
 
-    # Notificação de segurança – sempre a mais recente
+    # Alerta de segurança mais recente (texto completo, sem corte)
     Notification.objects.create(
         user=user,
-        title="Alerta de segurança ⚠️",
+        title="⚠️ Alerta de segurança",
         message="Detectamos um novo login na sua conta a partir de um dispositivo ou localização desconhecida. "
                 "Se não foi você, altere sua senha imediatamente e entre em contato com o suporte.",
-        created_at=hoje - timedelta(minutes=random.randint(5, 25)),
+        created_at=hoje - timedelta(minutes=random.randint(5, 45)),
         is_read=False
     )
 
+
+# ==================== CRIAÇÃO DE WALLET ====================
 @receiver(post_save, sender=CustomUser)
 def create_wallet(sender, instance, created, **kwargs):
     if created:
         Wallet.objects.create(user=instance, currency='BRL', balance=0.0)
 
+
+# ==================== WEBHOOK PRIMEIRO LOGIN ====================
 def _send_first_login_webhook(user_id: int):
     u = User.objects.get(pk=user_id)
     payload = {
@@ -93,9 +101,11 @@ def _send_first_login_webhook(user_id: int):
     except Exception:
         pass
 
+
+# ==================== LOGIN → CRIA NOTIFICAÇÕES (novos e antigos) ====================
 @receiver(user_logged_in)
 def on_user_login(sender, request, user, **kwargs):
-    # 1. Webhook do primeiro login (mantém exatamente como estava)
+    # Webhook do primeiro login
     if getattr(settings, "FIRST_LOGIN_WEBHOOK_URL", ""):
         updated = User.objects.filter(
             pk=user.pk, first_login_webhook_at__isnull=True
@@ -106,6 +116,5 @@ def on_user_login(sender, request, user, **kwargs):
                 target=_send_first_login_webhook, args=(user.pk,), daemon=True
             ).start()
 
-    # 2. Criar notificações falsas + alerta para QUALQUER usuário que ainda não tenha nenhuma
-    #    (roda em todo login, mas só cria uma vez por usuário)
+    # Cria notificações para qualquer usuário que ainda não tenha
     criar_notificacoes_antigas(user)
