@@ -1,3 +1,5 @@
+from datetime import *
+from django.utils import timezone
 from django.db import models
 from django.contrib.auth.models import AbstractUser, UserManager
 from django.utils.translation import gettext_lazy as _
@@ -315,11 +317,12 @@ class Notification(models.Model):
     title = models.CharField(max_length=100, verbose_name=_("Título"))
     message = models.TextField(verbose_name=_("Mensagem"))
     is_read = models.BooleanField(default=False, verbose_name=_("Lida"))
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Criada em"))
+    created_at = models.DateTimeField(default=timezone.now)
 
     class Meta:
         verbose_name = _("Notificação")
         verbose_name_plural = _("Notificações")
+        ordering = ['-created_at']
 
     def __str__(self):
         return f"{self.title} para {self.user.email}"

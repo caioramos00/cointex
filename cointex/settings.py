@@ -151,9 +151,9 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.template.context_processors.static",
                 "django.contrib.messages.context_processors.messages",
-                # opcionais:
                 "appearance.context_processors.theme_context",
                 "tracking.context_processors.tracking_context",
+                'accounts.context_processors.notifications',
             ],
         },
     },

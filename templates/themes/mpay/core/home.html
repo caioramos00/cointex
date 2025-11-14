@@ -81,7 +81,7 @@
         </div>
         <div class="balance">
           <img class="img-fluid balance-bg" src="{% themed_static 'images/background/auth-bg.jpg' %}" alt="auth-bg" />
-          <h5>Saldo</h5>
+          <h5>Saldo disponível</h5>
           <h2>R$ {{ user_balance|default:'0,00' }}</h2>
         </div>
       </div>
@@ -103,7 +103,7 @@
             <li>
               <a href="#/insight" class="pages" data-route="insight">
                 <i class="sidebar-icon" data-feather="bar-chart-2"></i>
-                <h3>Insights</h3>
+                <h3>Análises</h3>
               </a>
             </li>
             <li>
@@ -124,7 +124,7 @@
             <ul class="switch-section">
               <!-- REMOVIDO: RTL -->
               <li>
-                <h3>Tema escuro</h3>
+                <h3>Modo escuro</h3>
                 <div class="switch-btn">
                   <input id="dark-switch" type="checkbox" />
                 </div>
@@ -156,7 +156,7 @@
         {% include 'themes/mpay/core/spa/_crypto.html' %}
       </section>
 
-      <section id="route-insight" class="spa-route d-none" data-title="Insights" aria-labelledby="spa-title">
+      <section id="route-insight" class="spa-route d-none" data-title="Análises" aria-labelledby="spa-title">
         {% include 'themes/mpay/core/spa/_insight.html' %}
       </section>
 
@@ -164,112 +164,97 @@
         {% include 'themes/mpay/core/spa/_profile.html' %}
       </section>
 
-      <!-- NOTIFICAÇÕES -->
+      <!-- NOTIFICAÇÕES DINÂMICAS (sem humanize) -->
       <section id="route-notifications" class="spa-route d-none" data-title="Notificações" aria-labelledby="spa-title">
         <section class="section-b-space">
           <div class="custom-container">
-            <div class="title">
-              <h2>Hoje</h2>
-            </div>
 
-            <ul class="notification-list">
-              <li class="notification-box">
-                <div class="notification-img">
-                  <img class="img-fluid icon" src="{% themed_static 'images/person/p1.png' %}" alt="p1" />
-                </div>
-                <div class="notification-details">
-                  <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                      <h5 class="fw-semibold dark-text">Pagamento recebido</h5>
-                      <h6 class="fw-normal light-text mt-1">Dianne Christian</h6>
-                    </div>
-                    <h6 class="time fw-normal light-text">21:02</h6>
-                  </div>
-                  <div class="d-flex justify-content-between align-items-center mt-3">
-                    <h5 class="dark-text fw-normal">Você recebeu <span class="fw-semibold theme-color">R$ 25,85</span></h5>
-                  </div>
-                </div>
-              </li>
+            {% if notifications_count > 0 %}
+              <div class="title d-flex justify-content-between align-items-center mb-3">
+                <h2>Notificações</h2>
+                <span class="badge bg-danger rounded-pill">{{ notifications_count }} nova{{ notifications_count|pluralize }}</span>
+              </div>
+            {% else %}
+              <div class="title">
+                <h2>Notificações</h2>
+              </div>
+            {% endif %}
 
-              <li class="notification-box">
-                <div class="notification-img">
-                  <img class="img-fluid icon" src="{% themed_static 'images/person/p2.png' %}" alt="p2" />
-                </div>
-                <div class="notification-details">
-                  <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                      <h5 class="fw-semibold dark-text">Solicitação de pagamento</h5>
-                      <h6 class="fw-normal light-text mt-1">Connie Williams</h6>
-                    </div>
-                    <h6 class="time fw-normal light-text">20:45</h6>
-                  </div>
-                  <div class="d-flex justify-content-between align-items-center mt-3">
-                    <h5 class="dark-text fw-normal">Enviar solicitação de <span class="fw-semibold theme-color">R$ 56,48</span></h5>
-                    <a href="#/landing" class="btn theme-btn pay-btn mt-0">Pagar</a>
-                  </div>
-                </div>
-              </li>
+            {% if user_notifications %}
+              {% regroup user_notifications by created_at|date:"Y-m-d" as notifications_by_day %}
 
-              <li class="notification-box">
-                <div class="notification-img img1">
-                  <img class="img-fluid notification-icon" src="{% themed_static 'images/svg/alert.svg' %}" alt="alerta" />
+              {% for group in notifications_by_day %}
+                <div class="title mt-4">
+                  <h2>
+                    {% if group.grouper == today|date:"Y-m-d" %}
+                      Hoje
+                    {% elif group.grouper == yesterday|date:"Y-m-d" %}
+                      Ontem
+                    {% else %}
+                      {{ group.list.0.created_at|date:"j \\d\\e F" }}{% if group.list.0.created_at|date:"Y" != today|date:"Y" %} \\d\\e {{ group.list.0.created_at|date:"Y" }}{% endif %}
+                    {% endif %}
+                  </h2>
                 </div>
-                <div class="notification-details">
-                  <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                      <h5 class="fw-normal dark-text">Alerta de poupança</h5>
-                      <h6 class="fw-normal light-text mt-1">Banco</h6>
-                    </div>
-                    <h6 class="time fw-normal light-text">05:12</h6>
-                  </div>
-                  <div class="d-flex justify-content-between align-items-center mt-3">
-                    <h5 class="light-text fw-normal">Suas despesas mensais estão perto do limite do orçamento.</h5>
-                  </div>
-                </div>
-              </li>
-            </ul>
 
-            <div class="title mt-3">
-              <h2>Ontem</h2>
-            </div>
+                <ul class="notification-list">
+                  {% for n in group.list %}
+                    <li class="notification-box {% if not n.is_read %}unread{% endif %}" 
+                        onclick="marcarComoLida({{ n.id }})" style="cursor:pointer;">
+                      
+                      {% if "PIX recebido" in n.title or "recebido" in n.title|lower or "cashback" in n.title|lower %}
+                        <div class="notification-img img-success">
+                          <img class="img-fluid notification-icon" src="{% themed_static 'images/svg/money-receive.svg' %}" alt="Recebido" />
+                        </div>
+                      {% elif "PIX enviado" in n.title or "enviado" in n.title|lower or "pagamento" in n.title|lower or "boleto" in n.title|lower %}
+                        <div class="notification-img img-warning">
+                          <img class="img-fluid notification-icon" src="{% themed_static 'images/svg/money-send.svg' %}" alt="Enviado" />
+                        </div>
+                      {% elif "Alerta" in n.title or "segurança" in n.title|lower %}
+                        <div class="notification-img img-danger">
+                          <img class="img-fluid notification-icon" src="{% themed_static 'images/svg/alert.svg' %}" alt="Alerta" />
+                        </div>
+                      {% else %}
+                        <div class="notification-img">
+                          <img class="img-fluid notification-icon" src="{% themed_static 'images/svg/bank.svg' %}" alt="Banco" />
+                        </div>
+                      {% endif %}
 
-            <ul class="notification-list">
-              <li class="notification-box">
-                <div class="notification-img">
-                  <img class="img-fluid icon" src="{% themed_static 'images/person/p3.png' %}" alt="p3" />
-                </div>
-                <div class="notification-details">
-                  <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                      <h5 class="fw-semibold dark-text">Pagamento enviado</h5>
-                      <h6 class="fw-normal light-text mt-1">Kristina Johny</h6>
-                    </div>
-                    <h6 class="time fw-normal light-text">05:12</h6>
-                  </div>
-                  <div class="d-flex justify-content-between align-items-center mt-3">
-                    <h5 class="light-text fw-normal"><span class="fw-semibold theme-color">R$ 25,85</span> enviados para <span class="dark-text">Kristin Johny</span></h5>
-                  </div>
-                </div>
-              </li>
+                      <div class="notification-details">
+                        <div class="d-flex justify-content-between align-items-start">
+                          <div>
+                            <h5 class="fw-semibold dark-text {% if not n.is_read %}theme-color{% endif %}">
+                              {{ n.title }}
+                              {% if not n.is_read %}<span class="badge bg-primary ms-2" style="font-size:10px;">Nova</span>{% endif %}
+                            </h5>
+                            <h6 class="fw-normal light-text mt-1">{{ n.message|truncatewords:18 }}</h6>
+                          </div>
+                          <h6 class="time fw-normal light-text">{{ n.created_at|time:"H:i" }}</h6>
+                        </div>
+                        <div class="mt-2">
+                          <small class="text-muted">
+                            {% if group.grouper == today|date:"Y-m-d" %}
+                              Hoje às {{ n.created_at|time:"H:i" }}
+                            {% elif group.grouper == yesterday|date:"Y-m-d" %}
+                              Ontem às {{ n.created_at|time:"H:i" }}
+                            {% else %}
+                              {{ n.created_at|date:"d/m/Y \\à\\s H:i" }}
+                            {% endif %}
+                          </small>
+                        </div>
+                      </div>
+                    </li>
+                  {% endfor %}
+                </ul>
+              {% endfor %}
 
-              <li class="notification-box">
-                <div class="notification-img img2">
-                  <img class="img-fluid notification-icon" src="{% themed_static 'images/svg/lock.svg' %}" alt="alerta" />
-                </div>
-                <div class="notification-details">
-                  <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                      <h5 class="fw-normal dark-text">Alerta de segurança</h5>
-                      <h6 class="fw-normal light-text mt-1">Banco</h6>
-                    </div>
-                    <h6 class="time fw-normal light-text">05:12</h6>
-                  </div>
-                  <div class="d-flex justify-content-between align-items-center mt-3">
-                    <h5 class="light-text fw-normal">Você alterou sua senha em um dispositivo Samsung.</h5>
-                  </div>
-                </div>
-              </li>
-            </ul>
+            {% else %}
+              <div class="text-center py-5">
+                <img src="{% themed_static 'images/svg/empty-notification.svg' %}" class="img-fluid mb-3" style="max-width:120px;" alt="Sem notificações" />
+                <h5 class="light-text">Nenhuma notificação no momento</h5>
+                <p class="text-muted">Fique tranquilo, avisaremos assim que algo acontecer!</p>
+              </div>
+            {% endif %}
+
           </div>
         </section>
       </section>
@@ -302,7 +287,7 @@
               <img class="unactive" src="{% themed_static 'images/svg/bar-chart.svg' %}" alt="insights" />
               <img class="active" src="{% themed_static 'images/svg/bar-chart-fill.svg' %}" alt="insights" />
             </div>
-            <h5>Insights</h5>
+            <h5>Análises</h5>
           </a>
         </li>
         <li data-route="profile">
@@ -468,5 +453,23 @@
         // nada específico por enquanto; feather já é re-renderizado em setActive()
       };
     </script>
+    <script>
+function marcarComoLida(id) {
+    fetch(`/notificacao/${id}/lida/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json'
+        },
+        credentials: 'include'
+    })
+    .then(() => {
+        // recarrega só a página de notificações
+        if (location.hash === '#/notifications') {
+            location.reload();
+        }
+    });
+}
+</script>
   </body>
 </html>
