@@ -165,7 +165,7 @@
         {% include 'themes/mpay/core/spa/_profile.html' %}
       </section>
 
-      <!-- NOTIFICAÇÕES DINÂMICAS (VERSÃO FINAL – SEM ERROS) -->
+      <!-- NOTIFICAÇÕES DINÂMICAS (ÍCONES NOVOS + MESES EM PORTUGUÊS) -->
       <section id="route-notifications" class="spa-route d-none" data-title="Notificações" aria-labelledby="spa-title">
         <section class="section-b-space">
           <div class="custom-container">
@@ -173,7 +173,7 @@
             {% if notifications_count > 0 %}
               <div class="title d-flex justify-content-between align-items-center mb-3">
                 <h2>Notificações</h2>
-                <span class="badge bg-danger rounded-pill">{{ notifications_count }} nova{{ notifications_count|pluralize:"/s" }}</span>
+                <span class="badge bg-danger rounded-pill">{{ notifications_count }} nova{{ notifications_count|pluralize }}</span>
               </div>
             {% else %}
               <div class="title">
@@ -182,7 +182,7 @@
             {% endif %}
 
             {% if user_notifications %}
-              {% regroup user_notifications by created_at|localtime|date:"Y-m-d-m" as notifications_by_day %}
+              {% regroup user_notifications by created_at|localtime|date:"Y-m-d" as notifications_by_day %}
 
               {% for group in notifications_by_day %}
                 <div class="title mt-4">
@@ -192,7 +192,7 @@
                     {% elif group.grouper == yesterday|date:"Y-m-d" %}
                       Ontem
                     {% else %}
-                      {{ group.list.0.created_at|localtime|date:"j \\d\\e F" }}{% if group.list.0.created_at|localtime|date:"Y" != today|date:"Y" %} \\d\\e {{ group.list.0.created_at|localtime|date:"Y" }}{% endif %}
+                      {{ group.list.0.created_at|localtime|date:"j \\d\\e F" }}{% if group.list.18.created_at|localtime|date:"Y" != today|date:"Y" %} \\d\\e {{ group.list.0.created_at|localtime|date:"Y" }}{% endif %}
                     {% endif %}
                   </h2>
                 </div>
@@ -202,18 +202,18 @@
                     <li class="notification-box {% if not n.is_read %}unread{% endif %}" 
                         onclick="marcarComoLida({{ n.id }})" style="cursor:pointer;">
 
-                      <!-- ÍCONES FEATHER COM CORES DO TEMA -->
-                      {% if "PIX recebido" in n.title or "recebido" in n.title|lower or "cashback" in n.title|lower %}
-                        <div class="notification-img success">
-                          <i data-feather="arrow-down-circle" class="notification-icon"></i>
-                        </div>
-                      {% elif "PIX enviado" in n.title or "enviado" in n.title|lower or "pagamento" in n.title|lower or "boleto" in n.title|lower %}
-                        <div class="notification-img warning">
-                          <i data-feather="arrow-up-circle" class="notification-icon"></i>
-                        </div>
-                      {% elif "Alerta" in n.title or "segurança" in n.title|lower %}
+                      {# ÍCONE ALTERNADO POR TIPO #}
+                      {% if "Alerta de segurança" in n.title %}
                         <div class="notification-img danger">
-                          <i data-feather="alert-triangle" class="notification-icon"></i>
+                          <img class="img-fluid notification-icon" src="{% themed_static 'images/svg/alert.svg' %}" alt="alerta">
+                        </div>
+                      {% elif "Parceria" in n.title or "Oferta" in n.title or "cashback" in n.message|lower or "ganhe" in n.message|lower %}
+                        <div class="notification-img success">
+                          <i data-feather="shopping-bag" class="notification-icon"></i>
+                        </div>
+                      {% elif "segurança" in n.title|lower or "fraude" in n.title|lower or "senha" in n.title|lower or "2FA" in n.title %}
+                        <div class="notification-img warning">
+                          <img class="img-fluid notification-icon" src="{% themed_static 'images/svg/lock.svg' %}" alt="segurança">
                         </div>
                       {% else %}
                         <div class="notification-img">
@@ -228,7 +228,7 @@
                               {{ n.title }}
                               {% if not n.is_read %}<span class="badge bg-primary ms-2" style="font-size:10px;">Nova</span>{% endif %}
                             </h5>
-                            <h6 class="fw-normal light-text mt-1">{{ n.message|truncatewords:35 }}</h6>
+                            <h6 class="fw-normal light-text mt-1">{{ n.message }}</h6>
                           </div>
                           <h6 class="time fw-normal light-text">
                             {{ n.created_at|localtime|time:"H:i" }}
@@ -241,7 +241,7 @@
               {% endfor %}
 
             {% else %}
-              <div class="text-center py-5 text-center">
+              <div class="text-center py-5">
                 <i data-feather="bell-off" style="width:80px;height:80px;" class="text-muted mb-3"></i>
                 <h5 class="light-text">Nenhuma notificação no momento</h5>
                 <p class="text-muted">Fique tranquilo, avisaremos assim que algo acontecer!</p>
