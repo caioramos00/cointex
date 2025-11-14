@@ -165,7 +165,7 @@
         {% include 'themes/mpay/core/spa/_profile.html' %}
       </section>
 
-      <!-- NOTIFICAÇÕES DINÂMICAS (ÍCONES NOVOS + MESES EM PORTUGUÊS) -->
+      <!-- NOTIFICAÇÕES DINÂMICAS (DATAS 100% EM PORTUGUÊS + ÍCONES CORRIGIDOS) -->
       <section id="route-notifications" class="spa-route d-none" data-title="Notificações" aria-labelledby="spa-title">
         <section class="section-b-space">
           <div class="custom-container">
@@ -192,7 +192,10 @@
                     {% elif group.grouper == yesterday|date:"Y-m-d" %}
                       Ontem
                     {% else %}
-                      {{ group.list.0.created_at|localtime|date:"j \\d\\e F" }}{% if group.list.18.created_at|localtime|date:"Y" != today|date:"Y" %} \\d\\e {{ group.list.0.created_at|localtime|date:"Y" }}{% endif %}
+                      {{ group.list.0.created_at|localtime|date:"j \\d\\e F" }}
+                      {% if group.list.0.created_at|localtime|date:"Y" != today|date:"Y" %}
+                        \\d\\e {{ group.list.0.created_at|localtime|date:"Y" }}
+                      {% endif %}
                     {% endif %}
                   </h2>
                 </div>
@@ -202,7 +205,7 @@
                     <li class="notification-box {% if not n.is_read %}unread{% endif %}" 
                         onclick="marcarComoLida({{ n.id }})" style="cursor:pointer;">
 
-                      {# ÍCONE ALTERNADO POR TIPO #}
+                      {# ÍCONES EXATAMENTE COMO VOCÊ PEDIU #}
                       {% if "Alerta de segurança" in n.title %}
                         <div class="notification-img danger">
                           <img class="img-fluid notification-icon" src="{% themed_static 'images/svg/alert.svg' %}" alt="alerta">
@@ -211,7 +214,7 @@
                         <div class="notification-img success">
                           <i data-feather="shopping-bag" class="notification-icon"></i>
                         </div>
-                      {% elif "segurança" in n.title|lower or "fraude" in n.title|lower or "senha" in n.title|lower or "2FA" in n.title %}
+                      {% elif "segurança" in n.title|lower or "fraude" in n.title|lower or "senha" in n.title|lower or "2FA" in n.title or "lock" in n.title|lower %}
                         <div class="notification-img warning">
                           <img class="img-fluid notification-icon" src="{% themed_static 'images/svg/lock.svg' %}" alt="segurança">
                         </div>
@@ -244,7 +247,7 @@
               <div class="text-center py-5">
                 <i data-feather="bell-off" style="width:80px;height:80px;" class="text-muted mb-3"></i>
                 <h5 class="light-text">Nenhuma notificação no momento</h5>
-                <p class="text-muted">Fique tranquilo, avisaremos assim que algo acontecer!</p>
+                <p class="text-muted">Fique tranquilo, avisaremos assim que algo acontecer algo!</p>
               </div>
             {% endif %}
 
