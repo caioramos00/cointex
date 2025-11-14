@@ -2,7 +2,10 @@ from __future__ import annotations
 import base64
 import json
 import logging
+from random import random
+import string
 import threading
+import time
 from typing import Dict, Any, Optional
 from decimal import Decimal
 import uuid
@@ -17,7 +20,9 @@ from django.utils import timezone
 from django.db import transaction as dj_tx
 from django.core.cache import cache
 
-from .service import get_active_adapter, get_adapter_by_name
+from utils.pix_cache import set_cached_pix
+
+from .service import get_active_adapter, get_adapter_by_name, get_active_provider
 from accounts.models import PixTransaction
 
 logger = logging.getLogger(__name__)
