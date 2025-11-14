@@ -12,8 +12,10 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 import os
 from pathlib import Path
+
 import dj_database_url
 from dotenv import load_dotenv
+from django.core.exceptions import ImproperlyConfigured
 
 load_dotenv()  # Carrega as variáveis de ambiente do arquivo .env, se existir
 
@@ -25,24 +27,48 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('SECRET_KEY', default='django-insecure-0kaay6yyas=1an#cb=+!y7l77kfeo=hsgrn1eop$u7fm7h^5c5')
+SECRET_KEY = os.environ.get(
+    "SECRET_KEY",
+    default="django-insecure-0kaay6yyas=1an#cb=+!y7l77kfeo=hsgrn1eop$u7fm7h^5c5",
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = 'True'
+# DEBUG como boolean, baseado em env DEBUG (default: True)
+DEBUG = os.getenv("DEBUG", "True").lower() == "true"
 
-# ALLOWED_HOSTS = ['localhost', 'www.cointex.cash']
+if DEBUG:
+    SECURE_SSL_REDIRECT = False
+    SESSION_COOKIE_SECURE = False
+    CSRF_COOKIE_SECURE = False
+    SECURE_HSTS_SECONDS = 0
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = False
+    SECURE_HSTS_PRELOAD = False
+    SESSION_COOKIE_SAMESITE = "Lax"
+
+    print("⚠️  DEBUG está ATIVADO! Não use isso em produção! ⚠️")
+else:
+    # Ajuste aqui se em produção você quiser forçar HTTPS
+    SECURE_SSL_REDIRECT = False  # troque para True se estiver sempre atrás de HTTPS
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SESSION_COOKIE_SAMESITE = "Lax"
+
+    # Domínios de cookie só fazem sentido em produção
+    SESSION_COOKIE_DOMAIN = ".cointex.cash"
+    CSRF_COOKIE_DOMAIN = ".cointex.cash"
+
+
+RENDER_EXTERNAL_HOSTNAME = os.environ.get("RENDER_EXTERNAL_HOSTNAME")
+
 ALLOWED_HOSTS = [
-    'localhost', 'cointex.cash', 'www.cointex.cash',
-    os.getenv("RENDER_EXTERNAL_HOSTNAME", "")
+    "localhost",
+    "127.0.0.1",
+    "cointex.cash",
+    "www.cointex.cash",
 ]
 
-SECURE_SSL_REDIRECT = True
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
-SESSION_COOKIE_SAMESITE = "Lax"  # padrão seguro
-
-SESSION_COOKIE_DOMAIN = ".cointex.cash"
-CSRF_COOKIE_DOMAIN = ".cointex.cash"
+if RENDER_EXTERNAL_HOSTNAME:
+    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost",
@@ -51,105 +77,108 @@ CSRF_TRUSTED_ORIGINS = [
     "https://www.cointex.cash",
 ]
 
-RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
 if RENDER_EXTERNAL_HOSTNAME:
     CSRF_TRUSTED_ORIGINS.append(f"https://{RENDER_EXTERNAL_HOSTNAME}")
-
-
-RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
-if RENDER_EXTERNAL_HOSTNAME:
-    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
 
 # Application definition
 
 INSTALLED_APPS = [
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    'accounts.apps.AccountsConfig',
-    'rest_framework',
-    'appearance',
-    'core',
-    'api',
-    'payments',
-    'tracking'
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "accounts.apps.AccountsConfig",
+    "rest_framework",
+    "appearance",
+    "core",
+    "api",
+    "payments",
+    "tracking",
 ]
 
 MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'core.middleware.CanonicalHostMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
-    'django.middleware.gzip.GZipMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'core.middleware.CtwaAutoUtmMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'core.middleware.TimingMiddleware',
-    'django.middleware.locale.LocaleMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "django.middleware.security.SecurityMiddleware",
+    "core.middleware.CanonicalHostMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
+    "django.middleware.gzip.GZipMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "core.middleware.CtwaAutoUtmMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "core.middleware.TimingMiddleware",
+    "django.middleware.locale.LocaleMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-ROOT_URLCONF = 'cointex.urls'
+ROOT_URLCONF = "cointex.urls"
+
+
+# ===== Templates: loaders diferentes em dev x produção =====
+
+if DEBUG:
+    TEMPLATE_LOADERS = [
+        "appearance.loader.Loader",
+        "django.template.loaders.filesystem.Loader",
+        "django.template.loaders.app_directories.Loader",
+    ]
+else:
+    TEMPLATE_LOADERS = [
+        (
+            "django.template.loaders.cached.Loader",
+            [
+                "appearance.loader.Loader",
+                "django.template.loaders.filesystem.Loader",
+                "django.template.loaders.app_directories.Loader",
+            ],
+        ),
+    ]
 
 TEMPLATES = [
     {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],  # onde ficará a pasta "themes/mpay"
-        'APP_DIRS': False,  # controlaremos manualmente a ordem dos loaders
-        'OPTIONS': {
-            # === Sem cache (dev) ===
-            # 'loaders': [
-            #     'appearance.loader.Loader',  # tenta MPay/tema-ativo primeiro
-            #     'django.template.loaders.filesystem.Loader',  # fallback global (Cointex)
-            #     'django.template.loaders.app_directories.Loader',
-            # ],
-
-            # === Com cache (produção) ===
-            'loaders': [
-                ('django.template.loaders.cached.Loader', [
-                    'appearance.loader.Loader',
-                    'django.template.loaders.filesystem.Loader',
-                    'django.template.loaders.app_directories.Loader',
-                ]),
-            ],
-
-            'context_processors': [
-                'django.template.context_processors.debug',
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.template.context_processors.static',
-                'django.contrib.messages.context_processors.messages',
-                # opcional:
-                'appearance.context_processors.theme_context',
-                'tracking.context_processors.tracking_context',
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [BASE_DIR / "templates"],  # onde ficará a pasta "themes/mpay"
+        "APP_DIRS": False,  # controlaremos manualmente a ordem dos loaders
+        "OPTIONS": {
+            "loaders": TEMPLATE_LOADERS,
+            "context_processors": [
+                "django.template.context_processors.debug",
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.template.context_processors.static",
+                "django.contrib.messages.context_processors.messages",
+                # opcionais:
+                "appearance.context_processors.theme_context",
+                "tracking.context_processors.tracking_context",
             ],
         },
     },
 ]
 
-WSGI_APPLICATION = 'cointex.wsgi.application'
+WSGI_APPLICATION = "cointex.wsgi.application"
 
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 DATABASES = {
-    'default': dj_database_url.config(
-        default=os.getenv('DATABASE_URL'),  # Sem fallback hardcoded; use .env local ou Render env
-        conn_max_age=300,  # Reduzido para 1 min para conexões mais frescas
-        conn_health_checks=True  # Ativa verificações para evitar conexões stale
+    "default": dj_database_url.config(
+        default=os.getenv("DATABASE_URL"),  # usa .env local ou Render env
+        conn_max_age=300,  # 5 minutos
+        conn_health_checks=True,
     )
 }
 
-CONN_MAX_AGE = int(os.getenv("DB_CONN_MAX_AGE", "300"))  # 5 min
+CONN_MAX_AGE = int(os.getenv("DB_CONN_MAX_AGE", "300"))
 DATABASES["default"]["CONN_MAX_AGE"] = CONN_MAX_AGE
-DATABASES['default']['OPTIONS'] = {'sslmode': 'require'}
+
+# SSL no banco só em produção (para não quebrar dev local)
+if not DEBUG:
+    DATABASES["default"]["OPTIONS"] = {"sslmode": "require"}
 
 
 # Password validation
@@ -157,90 +186,106 @@ DATABASES['default']['OPTIONS'] = {'sslmode': 'require'}
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
 
-# Cache (Redis em produção; LocMem fallback)
-CACHES = {
-    "default": {
-        "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": os.getenv("REDIS_URL"),  # ex: redis://:pwd@host:6379/0
-        "OPTIONS": {
-            "CLIENT_CLASS": "django_redis.client.DefaultClient",
-            "CONNECTION_POOL_KWARGS": {"max_connections": 80},
-            "COMPRESSOR": "django_redis.compressors.zlib.ZlibCompressor",
-            "IGNORE_EXCEPTIONS": True,  # não derruba app se o Redis oscilar
-        },
-        "TIMEOUT": 60,  # default de cache; views/keys podem sobrescrever
+
+# ===== Cache (LocMem em dev, Redis em produção) =====
+
+if DEBUG:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "dev-locmem-cache",
+        }
     }
-}
+else:
+    REDIS_URL = os.getenv("REDIS_URL")
+    if not REDIS_URL:
+        raise ImproperlyConfigured(
+            "REDIS_URL must be set in production when DEBUG=False"
+        )
+
+    CACHES = {
+        "default": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": REDIS_URL,  # ex: redis://:pwd@host:6379/0
+            "OPTIONS": {
+                "CLIENT_CLASS": "django_redis.client.DefaultClient",
+                "CONNECTION_POOL_KWARGS": {"max_connections": 80},
+                "COMPRESSOR": "django_redis.compressors.zlib.ZlibCompressor",
+                "IGNORE_EXCEPTIONS": True,  # não derruba app se o Redis oscilar
+            },
+            "TIMEOUT": 60,  # default de cache; views/keys podem sobrescrever
+        }
+    }
 
 # TTLs de cache (ajustáveis por ENV)
 PIX_STATUS_TTL_SECONDS = int(os.getenv("PIX_STATUS_TTL", "2"))
 WALLET_CACHE_TTL_SECONDS = int(os.getenv("WALLET_CACHE_TTL", "60"))
 LOG_SAMPLE_RATE = float(os.getenv("LOG_SAMPLE_RATE", "0.05"))
 
+
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = 'pt-br'
+LANGUAGE_CODE = "pt-br"
 USE_I18N = True
 USE_L10N = True
 
-TIME_ZONE = 'UTC'
-
+TIME_ZONE = "UTC"
 USE_TZ = True
 
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATIC_URL = "/static/"
+STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 
 # Só adiciona a pasta 'static/' se ela existir (evita o W004)
-_static_dir = BASE_DIR / 'static'
+_static_dir = BASE_DIR / "static"
 STATICFILES_DIRS = [_static_dir] if _static_dir.exists() else []
 
 if not DEBUG:
-    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+    STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-AUTH_USER_MODEL = 'accounts.CustomUser'
+AUTH_USER_MODEL = "accounts.CustomUser"
 
-LOGIN_REDIRECT_URL = 'home'
-LOGIN_URL = '/accounts/entrar/'
+LOGIN_REDIRECT_URL = "home"
+LOGIN_URL = "/accounts/entrar/"
 
-DATE_FORMAT = 'd/m/Y'
-DATE_INPUT_FORMATS = ['%d/%m/%Y', '%Y-%m-%d']
+DATE_FORMAT = "d/m/Y"
+DATE_INPUT_FORMATS = ["%d/%m/%Y", "%Y-%m-%d"]
 
-AUTHENTICATION_BACKENDS = ['accounts.backends.EmailBackend']
+AUTHENTICATION_BACKENDS = ["accounts.backends.EmailBackend"]
 
-CAPI_TOKEN = os.getenv('CAPI_TOKEN')
+CAPI_TOKEN = os.getenv("CAPI_TOKEN")
 
-LOG_LEVEL = os.getenv("LOG_LEVEL", "ERROR")          # raiz em ERROR (silêncio)
-TIMING_LEVEL = os.getenv("TIMING_LEVEL", "INFO")     # só timing em INFO
+LOG_LEVEL = os.getenv("LOG_LEVEL", "ERROR")  # raiz em ERROR (silêncio)
+TIMING_LEVEL = os.getenv("TIMING_LEVEL", "INFO")  # só timing em INFO
 
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {
-        "json": {"format": "%(message)s"},          # nosso timing já imprime JSON pronto
+        "json": {"format": "%(message)s"},  # nosso timing já imprime JSON pronto
         "default": {"format": "%(asctime)s %(levelname)s %(name)s: %(message)s"},
     },
     "handlers": {
@@ -249,14 +294,46 @@ LOGGING = {
     },
     "root": {"handlers": ["console"], "level": LOG_LEVEL},
     "loggers": {
-        "django": {"handlers": ["console"], "level": "ERROR", "propagate": False},
-        "django.server": {"handlers": ["console"], "level": "ERROR", "propagate": False},
-        "whitenoise": {"handlers": ["console"], "level": "ERROR", "propagate": False},
-        "gunicorn.error": {"handlers": ["console"], "level": "ERROR", "propagate": False},
-        "gunicorn.access": {"handlers": ["console"], "level": "ERROR", "propagate": False},
-        "core.middleware": {"handlers": ["console_json"], "level": TIMING_LEVEL, "propagate": False},
-        "core.views": {"handlers": ["console"], "level": "INFO", "propagate": False},
-        "perf": {"handlers": ["console"], "level": "INFO", "propagate": False},
+        "django": {
+            "handlers": ["console"],
+            "level": "ERROR",
+            "propagate": False,
+        },
+        "django.server": {
+            "handlers": ["console"],
+            "level": "ERROR",
+            "propagate": False,
+        },
+        "whitenoise": {
+            "handlers": ["console"],
+            "level": "ERROR",
+            "propagate": False,
+        },
+        "gunicorn.error": {
+            "handlers": ["console"],
+            "level": "ERROR",
+            "propagate": False,
+        },
+        "gunicorn.access": {
+            "handlers": ["console"],
+            "level": "ERROR",
+            "propagate": False,
+        },
+        "core.middleware": {
+            "handlers": ["console_json"],
+            "level": TIMING_LEVEL,
+            "propagate": False,
+        },
+        "core.views": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "perf": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
     },
 }
 

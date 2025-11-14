@@ -29,7 +29,7 @@ def _build_adapter(p: PaymentProvider) -> PaymentAdapter:
 
     if name == "veltrax":
         return VeltraxAdapter(
-            base=p.api_base or getattr(settings, "VELTRAX_API_BASE", "https://api.veltrax.app"),
+            base=p.api_base or getattr(settings, "VELTRAX_API_BASE", "https://api.veltraxpay.com"),
             client_id=p.api_key or getattr(settings, "VELTRAX_CLIENT_ID", ""),
             client_secret=p.api_token or getattr(settings, "VELTRAX_CLIENT_SECRET", ""),
             webhook_secret=p.webhook_secret or getattr(settings, "VELTRAX_WEBHOOK_SECRET", None),
