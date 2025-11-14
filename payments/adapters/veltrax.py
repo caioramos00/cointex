@@ -248,7 +248,6 @@ class VeltraxAdapter(PaymentAdapter):
         """
         Consulta um depósito via transaction_id.
         GET /api/payments/deposit/:transaction_id
-        (Não é usada hoje, mas deixei pronta.)
         """
         url = self._deposit_by_id_url(transaction_id)
         headers = self._headers(use_auth=True)
@@ -289,7 +288,7 @@ class VeltraxAdapter(PaymentAdapter):
         status_raw = data.get("status") or ""
         status = self.map_status(status_raw)
         amount = data.get("amount")
-        pix_qr = data.get("qrcode") or ""
+        pix_qr = data.get("qrcode") or data.get("qrCode") or ""
 
         return {
             "transaction_id": str(transaction_id),
@@ -299,6 +298,32 @@ class VeltraxAdapter(PaymentAdapter):
             "amount": amount,
         }
 
+    def get_status(self, transaction_id: str) -> str:
+        """
+        Implementação exigida pelo PaymentAdapter.
+
+        Retorna o status normalizado (PENDING, CONFIRMED, REFUSED, etc.)
+        baseado na consulta do depósito na Veltrax.
+        """
+        try:
+            info = self.get_transaction(transaction_id)
+        except Exception as e:
+            logger.error(
+                "[VELTRAX][GET_STATUS][ERROR] tx=%s err=%s",
+                transaction_id,
+                str(e),
+            )
+            # Em caso de erro na consulta remota, não vamos arriscar marcar como pago.
+            return "PENDING"
+
+        status = info.get("status") or "PENDING"
+        logger.info(
+            "[VELTRAX][GET_STATUS] tx=%s status=%s",
+            transaction_id,
+            status,
+        )
+        return status
+    
     def parse_webhook(self, raw_body: bytes, headers: Dict[str, str]) -> Dict[str, Any]:
         """
         Normaliza o callback de depósito da Veltrax.
