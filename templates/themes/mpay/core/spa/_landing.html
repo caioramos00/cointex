@@ -782,7 +782,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   btnDepositar.addEventListener('click', async () => {
-    hideError();
+hideError();
     btnDepositar.disabled = true;
     btnDepositar.querySelector('.spinner-border').classList.remove('d-none');
 
@@ -796,8 +796,16 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    if (amount < 10) {
-      showError('O valor mínimo para depósito é R$ 10,00');
+    // NOVOS LIMITES
+    if (amount < 1) {
+      showError('O valor mínimo para depósito é R$ 1,00');
+      btnDepositar.disabled = false;
+      btnDepositar.querySelector('.spinner-border').classList.add('d-none');
+      return;
+    }
+
+    if (amount > 2000) {
+      showError('O valor máximo para depósito é R$ 2.000,00');
       btnDepositar.disabled = false;
       btnDepositar.querySelector('.spinner-border').classList.add('d-none');
       return;
@@ -818,8 +826,6 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!response.ok) {
         throw new Error(data.detail || 'Erro ao gerar Pix');
       }
-
-      currentPixId = data.id;
 
       // QR Code no frontend
       const qrDiv = document.getElementById('qrcode-div');
