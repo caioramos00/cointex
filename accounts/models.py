@@ -347,7 +347,7 @@ class PixTransaction(models.Model):
     utmify_last_resp_excerpt = models.TextField(null=True, blank=True)
     provider = models.CharField(
         max_length=20,
-        choices=[('galaxify','Galaxify'), ('tribopay','TriboPay')],
+        choices=[('galaxify','Galaxify'), ('tribopay','TriboPay'), ('veltrax', 'Veltrax')],
         default='galaxify',
         db_index=True,
         null=True, blank=True

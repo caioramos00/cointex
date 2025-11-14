@@ -4,6 +4,7 @@ class PaymentProvider(models.Model):
     PROVIDERS = [
         ("galaxify", "Galaxify"),
         ("tribopay", "TriboPay"),
+        ("veltrax", "Veltrax"),
     ]
     name = models.CharField(max_length=20, choices=PROVIDERS, unique=True)
     is_active = models.BooleanField(default=False)
