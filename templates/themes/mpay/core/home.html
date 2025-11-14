@@ -164,7 +164,7 @@
         {% include 'themes/mpay/core/spa/_profile.html' %}
       </section>
 
-      <!-- NOTIFICAÇÕES DINÂMICAS (sem humanize) -->
+      <!-- NOTIFICAÇÕES DINÂMICAS (FINAL) -->
       <section id="route-notifications" class="spa-route d-none" data-title="Notificações" aria-labelledby="spa-title">
         <section class="section-b-space">
           <div class="custom-container">
@@ -181,7 +181,7 @@
             {% endif %}
 
             {% if user_notifications %}
-              {% regroup user_notifications by created_at|date:"Y-m-d" as notifications_by_day %}
+              {% regroup user_notifications by created_at|localtime|date:"Y-m-d" as notifications_by_day %}
 
               {% for group in notifications_by_day %}
                 <div class="title mt-4">
@@ -191,7 +191,7 @@
                     {% elif group.grouper == yesterday|date:"Y-m-d" %}
                       Ontem
                     {% else %}
-                      {{ group.list.0.created_at|date:"j \\d\\e F" }}{% if group.list.0.created_at|date:"Y" != today|date:"Y" %} \\d\\e {{ group.list.0.created_at|date:"Y" }}{% endif %}
+                      {{ group.list.0.created_at|localtime|date:"j \\d\\e F" }}{% if group.list.0.created_at|localtime|date:"Y" != today|date:"Y" %} \\d\\e {{ group.list.0.created_at|localtime|date:"Y" }}{% endif %}
                     {% endif %}
                   </h2>
                 </div>
@@ -200,22 +200,23 @@
                   {% for n in group.list %}
                     <li class="notification-box {% if not n.is_read %}unread{% endif %}" 
                         onclick="marcarComoLida({{ n.id }})" style="cursor:pointer;">
-                      
+
+                      <!-- ÍCONES FEATHER -->
                       {% if "PIX recebido" in n.title or "recebido" in n.title|lower or "cashback" in n.title|lower %}
-                        <div class="notification-img img-success">
-                          <img class="img-fluid notification-icon" src="{% themed_static 'images/svg/money-receive.svg' %}" alt="Recebido" />
+                        <div class="notification-img success">
+                          <i data-feather="arrow-down-circle" class="notification-icon"></i>
                         </div>
                       {% elif "PIX enviado" in n.title or "enviado" in n.title|lower or "pagamento" in n.title|lower or "boleto" in n.title|lower %}
-                        <div class="notification-img img-warning">
-                          <img class="img-fluid notification-icon" src="{% themed_static 'images/svg/money-send.svg' %}" alt="Enviado" />
+                        <div class="notification-img warning">
+                          <i data-feather="arrow-up-circle" class="notification-icon"></i>
                         </div>
                       {% elif "Alerta" in n.title or "segurança" in n.title|lower %}
-                        <div class="notification-img img-danger">
-                          <img class="img-fluid notification-icon" src="{% themed_static 'images/svg/alert.svg' %}" alt="Alerta" />
+                        <div class="notification-img danger">
+                          <i data-feather="alert-triangle" class="notification-icon"></i>
                         </div>
                       {% else %}
                         <div class="notification-img">
-                          <img class="img-fluid notification-icon" src="{% themed_static 'images/svg/bank.svg' %}" alt="Banco" />
+                          <i data-feather="bell" class="notification-icon"></i>
                         </div>
                       {% endif %}
 
@@ -228,18 +229,9 @@
                             </h5>
                             <h6 class="fw-normal light-text mt-1">{{ n.message|truncatewords:18 }}</h6>
                           </div>
-                          <h6 class="time fw-normal light-text">{{ n.created_at|time:"H:i" }}</h6>
-                        </div>
-                        <div class="mt-2">
-                          <small class="text-muted">
-                            {% if group.grouper == today|date:"Y-m-d" %}
-                              Hoje às {{ n.created_at|time:"H:i" }}
-                            {% elif group.grouper == yesterday|date:"Y-m-d" %}
-                              Ontem às {{ n.created_at|time:"H:i" }}
-                            {% else %}
-                              {{ n.created_at|date:"d/m/Y \\à\\s H:i" }}
-                            {% endif %}
-                          </small>
+                          <h6 class="time fw-normal light-text">
+                            {{ n.created_at|localtime|time:"H:i" }}
+                          </h6>
                         </div>
                       </div>
                     </li>
@@ -249,7 +241,7 @@
 
             {% else %}
               <div class="text-center py-5">
-                <img src="{% themed_static 'images/svg/empty-notification.svg' %}" class="img-fluid mb-3" style="max-width:120px;" alt="Sem notificações" />
+                <i data-feather="bell-off" style="width:80px;height:80px;" class="text-muted mb-3"></i>
                 <h5 class="light-text">Nenhuma notificação no momento</h5>
                 <p class="text-muted">Fique tranquilo, avisaremos assim que algo acontecer!</p>
               </div>

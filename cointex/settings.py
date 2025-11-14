@@ -243,8 +243,8 @@ LANGUAGE_CODE = "pt-br"
 USE_I18N = True
 USE_L10N = True
 
-TIME_ZONE = "UTC"
 USE_TZ = True
+TIME_ZONE = 'America/Sao_Paulo'
 
 
 # Static files (CSS, JavaScript, Images)
