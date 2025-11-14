@@ -1,9 +1,15 @@
 from __future__ import annotations
+import base64
 import json
 import logging
 import threading
 from typing import Dict, Any, Optional
+from decimal import Decimal
+import uuid
 
+from django.contrib.auth.decorators import login_required
+from django.urls import reverse
+from django.views.decorators.http import require_POST
 from django.conf import settings
 from django.http import JsonResponse, HttpRequest
 from django.views.decorators.csrf import csrf_exempt
@@ -13,7 +19,6 @@ from django.core.cache import cache
 
 from .service import get_active_adapter, get_adapter_by_name
 from accounts.models import PixTransaction
-from core.capi_dispatcher import handle_pix_webhook
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +43,15 @@ def _update_pix_and_caches(pix: PixTransaction, status: str) -> None:
         if pix.paid_at:
             update_fields.append("paid_at")
         pix.save(update_fields=update_fields)
+        
+        if status in ("AUTHORIZED", "CONFIRMED", "RECEIVED"):
+            try:
+                from accounts.models import Account
+                account = pix.user.account
+                account.balance += pix.amount
+                account.save(update_fields=["balance"])
+            except Exception as e:
+                logger.error(f"Erro ao creditar saldo user {pix.user_id}: {e}")
 
         # Atualiza o cache 'longo' (utils.pix_cache), se existir
         try:
@@ -198,56 +212,82 @@ def webhook_pix(request: HttpRequest):
 
     return JsonResponse({"status": "accepted"}, status=202)
 
-@csrf_exempt  # vamos usar X-CSRFToken no JS mesmo assim
+@login_required
+@require_POST
+@csrf_exempt
 def create_deposit_pix(request):
     try:
         data = json.loads(request.body)
-        amount = Decimal(data["amount"])  # já vem como string "50.00"
+        amount = Decimal(data["amount"])
 
         if amount < Decimal("10.00"):
-            return JsonResponse({"detail": "Valor mínimo R$ 10,00"}, status=400)
+            return JsonResponse({"detail": "O valor mínimo para depósito é R$ 10,00"}, status=400)
 
         adapter = get_active_adapter()
 
-        # Aqui o adapter cria o Pix no banco e retorna os dados
-        pix_data = adapter.create_charge(
-            amount=amount,
-            user=request.user,
-            description="Depósito via app",
-            expire_minutes=30,
-        )
-        # pix_data esperado: {"txid": "...", "qr_code_base64": "data:image/png...", "copia_e_cola": "...", "expiration": datetime}
+        # external_id curto (12 caracteres) – evita o erro de tamanho no banco
+        external_id = uuid.uuid4().hex[:12]
 
+        webhook_url = request.build_absolute_uri(reverse("payments:webhook_pix"))
+
+        customer = {
+            "name": request.user.get_full_name() or request.user.username or "Usuário mPay",
+            "email": getattr(request.user, "email", "") or "sem-email@mpay.app",
+            "document": "",
+            "phone": "",
+        }
+
+        result = adapter.create_transaction(
+            external_id=external_id,
+            amount=float(amount),
+            customer=customer,
+            webhook_url=webhook_url,
+            meta={"app": "mpay", "type": "deposit"},
+        )
+
+        copia_e_cola = result.get("pix_qr") or ""
+
+        qr_code_base64 = None
+        if result.get("pix_qr_image"):
+            try:
+                with open(result["pix_qr_image"], "rb") as f:
+                    qr_code_base64 = "data:image/png;base64," + base64.b64encode(f.read()).decode()
+            except Exception:
+                pass
+
+        expiration = timezone.now() + timezone.timedelta(minutes=30)
+
+        # Salva só campos seguros (sem campos que não existem ou que podem estourar tamanho)
         pix = PixTransaction.objects.create(
             user=request.user,
             amount=amount,
-            provider=adapter.name,
-            external_id=pix_data["txid"],
-            transaction_id=pix_data.get("transaction_id"),  # se tiver
-            copia_e_cola=pix_data["copia_e_cola"],
+            provider=getattr(adapter, "name", "unknown"),
+            external_id=external_id,                     # curto → 12 chars
+            transaction_id=(result.get("transaction_id") or "")[:100],  # corta se for muito longo
+            hash_id=(result.get("hash_id") or "")[:100],                # corta se for muito longo
             status="PENDING",
-            expiration=pix_data["expiration"],
         )
 
         return JsonResponse({
             "id": pix.id,
             "amount": str(amount),
-            "qr_code_base64": pix_data["qr_code_base64"],
-            "copia_e_cola": pix_data["copia_e_cola"],
-            "expires_at": pix_data["expiration"].isoformat(),
+            "qr_code_base64": qr_code_base64,
+            "copia_e_cola": copia_e_cola,
+            "expires_at": expiration.isoformat(),
         })
+
     except Exception as e:
-        logger.error(f"create_deposit_pix error: {e}")
-        return JsonResponse({"detail": "Erro interno"}, status=500)
-    
+        logger.exception("create_deposit_pix error")
+        return JsonResponse({"detail": "Erro interno ao gerar Pix"}, status=500)
+
+@login_required
 def pix_status(request, pk):
     try:
         pix = PixTransaction.objects.get(id=pk, user=request.user)
-        status = pix.status
-        paid = status in ("AUTHORIZED", "CONFIRMED", "RECEIVED")
+        paid = pix.status in ("AUTHORIZED", "CONFIRMED", "RECEIVED")
         return JsonResponse({
-            "status": "paid" if paid else "pending" if status == "PENDING" else "expired",
-            "paid": paid
+            "paid": paid,
+            "status": "paid" if paid else ("expired" if pix.status == "EXPIRED" else "pending")
         })
     except PixTransaction.DoesNotExist:
-        return JsonResponse({"status": "expired"}, status=404)
+        return JsonResponse({"paid": False, "status": "expired"})

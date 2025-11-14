@@ -539,25 +539,36 @@
 <!-- (news-update) -->
 <!-- ==================== MODAIS E OFFCANVAS ==================== -->
 
+<!-- ==================== MODAL DE DEPÓSITO ==================== -->
+
 <!-- add money modal start -->
 <div class="modal add-money-modal fade" id="add-money" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header">
-        <h2 class="modal-title" id="modal-title">Adicionar dinheiro</h2>
+        <h2 class="modal-title">Adicionar dinheiro</h2>
       </div>
 
       <!-- Etapa 1: Formulário -->
       <div class="modal-body" id="step-form">
         <div class="form-group mb-3">
           <label class="form-label mb-2">Forma de pagamento</label>
-          <select class="form-select" disabled><option>PIX</option></select>
+          <select class="form-select" disabled>
+            <option>PIX</option>
+          </select>
         </div>
 
         <div class="form-group mb-3">
           <label class="form-label mb-2">Valor</label>
-          <input type="text" class="form-control" id="inputamount" placeholder="R$ 0,00" autocomplete="off">
-          <small class="text-muted">Mínimo R$ 10,00</small>
+          <!-- teclado numérico em mobile + melhor UX -->
+          <input 
+            type="text" 
+            inputmode="decimal" 
+            class="form-control" 
+            id="inputamount" 
+            placeholder="R$ 0,00" 
+            autocomplete="off">
+          <div id="deposit-error" class="text-danger fw-bold mt-2 d-none"></div>
         </div>
 
         <button type="button" class="btn theme-btn w-100" id="btn-depositar">
@@ -566,22 +577,37 @@
         </button>
       </div>
 
-      <!-- Etapa 2: Pix gerado -->
-      <div class="modal-body d-none text-center" id="step-pix">
-        <h5 class="mb-4">Escaneie o QR Code para pagar</h5>
-        <img id="qrcode-img" src="" alt="QR Code PIX" class="img-fluid mb-3" style="max-width:280px;">
+      <!-- Etapa 2: PIX gerado -->
+      <div class="modal-body d-none" id="step-pix">
+        <div class="text-center px-3 py-4">
 
-        <div class="alert alert-info small py-2">
-          Valor: <strong id="pix-amount" class="theme-color"></strong><br>
-          Expira em <span id="pix-timer">30:00</span>
+          <!-- QR Code -->
+          <div id="qrcode-div" class="mx-auto mb-4" style="width: 260px; height: 260px; background:#fff; padding:12px; border-radius:14px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);"></div>
+
+          <!-- Valor grande -->
+          <h3 class="mb-2 fw-bold" id="pix-amount"></h3>
+
+          <!-- Timer preto e bold -->
+          <p class="text-muted mb-4">
+            Expira em <span id="pix-timer" class="fw-bold text-dark">30:00</span>
+          </p>
+
+          <!-- Copia e cola – agora perfeitamente alinhado e mesmo tamanho -->
+          <div class="d-flex gap-2 mb-4">
+            <input 
+              type="text" 
+              class="form-control flex-fill text-center fw-medium" 
+              id="copia-e-cola" 
+              readonly 
+              style="font-size: 0.95rem; letter-spacing: 0.5px;">
+            <button class="btn btn-primary px-4" type="button" id="btn-copy">
+              <i data-feather="copy" class="me-1"></i> Copiar
+            </button>
+          </div>
+
+          <!-- Status -->
+          <div id="pix-status" class="alert alert-warning py-2 small">Aguardando pagamento...</div>
         </div>
-
-        <div class="input-group mb-3">
-          <input type="text" class="form-control" id="copia-e-cola" readonly>
-          <button class="btn btn-outline-secondary" type="button" id="btn-copy">Copiar</button>
-        </div>
-
-        <div id="pix-status" class="alert alert-warning small">Aguardando pagamento...</div>
       </div>
 
       <button type="button" class="btn close-btn" data-bs-dismiss="modal">
@@ -661,19 +687,55 @@
 <!-- pwa offcanvas end -->
 
 <script src="https://unpkg.com/imask@7/dist/imask.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+
 <script>
+function getCookie(name) {
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== '') {
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      if (cookie.substring(0, name.length + 1) === (name + '=')) {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   const modalEl = document.getElementById('add-money');
   const modal = new bootstrap.Modal(modalEl);
   const stepForm = document.getElementById('step-form');
   const stepPix = document.getElementById('step-pix');
   const btnDepositar = document.getElementById('btn-depositar');
+  const errorEl = document.getElementById('deposit-error');
 
-  // Máscara brasileira
   const mask = IMask(document.getElementById('inputamount'), {
     mask: 'R$ num',
-    blocks: { num: { mask: Number, thousandsSeparator: '.', scale: 2, radix: ',', padFractionalZeros: true }}
+    blocks: {
+      num: {
+        mask: Number,
+        thousandsSeparator: '.',
+        scale: 2,
+        radix: ',',
+        padFractionalZeros: true,
+        normalizeZeros: true
+      }
+    }
   });
+
+  function showError(msg) {
+    errorEl.textContent = msg;
+    errorEl.classList.remove('d-none');
+  }
+
+  function hideError() {
+    errorEl.classList.add('d-none');
+    errorEl.textContent = '';
+  }
 
   let currentPixId = null;
   let timerInterval = null;
@@ -682,7 +744,8 @@ document.addEventListener('DOMContentLoaded', () => {
   modalEl.addEventListener('show.bs.modal', () => {
     stepForm.classList.remove('d-none');
     stepPix.classList.add('d-none');
-    mask.updateValue('');
+    mask.value = '';
+    hideError();
     btnDepositar.disabled = false;
     btnDepositar.querySelector('.spinner-border').classList.add('d-none');
     if (timerInterval) clearInterval(timerInterval);
@@ -690,34 +753,64 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   btnDepositar.addEventListener('click', async () => {
-    const raw = mask.unmaskedValue; // centavos como string, ex: "5000"
-    const amount = parseFloat(raw) / 100;
-    if (!raw || amount < 10) return alert('Valor mínimo R$ 10,00');
-
+    hideError();
     btnDepositar.disabled = true;
     btnDepositar.querySelector('.spinner-border').classList.remove('d-none');
 
+    const unmasked = mask.unmaskedValue.replace(/\s/g, '');
+    const amount = parseFloat(unmasked);
+
+    if (isNaN(amount) || amount <= 0) {
+      showError('Insira um valor válido');
+      btnDepositar.disabled = false;
+      btnDepositar.querySelector('.spinner-border').classList.add('d-none');
+      return;
+    }
+
+    if (amount < 10) {
+      showError('O valor mínimo para depósito é R$ 10,00');
+      btnDepositar.disabled = false;
+      btnDepositar.querySelector('.spinner-border').classList.add('d-none');
+      return;
+    }
+
     try {
-      const res = await fetch('/api/pix/deposit/create/', {
+      const response = await fetch('/payments/api/pix/deposit/create/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+          'X-CSRFToken': getCookie('csrftoken')
         },
         body: JSON.stringify({ amount: amount.toFixed(2) })
       });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || 'Erro');
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || 'Erro ao gerar Pix');
+      }
 
       currentPixId = data.id;
 
-      // Preenche etapa 2
-      document.getElementById('qrcode-img').src = data.qr_code_base64;
-      document.getElementById('pix-amount').textContent = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(data.amount);
+      // QR Code no frontend
+      const qrDiv = document.getElementById('qrcode-div');
+      qrDiv.innerHTML = '';
+      new QRCode(qrDiv, {
+        text: data.copia_e_cola,
+        width: 260,
+        height: 260,
+        colorDark: "#000000",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H
+      });
+
+      document.getElementById('pix-amount').textContent = new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL'
+      }).format(data.amount);
+
       document.getElementById('copia-e-cola').value = data.copia_e_cola;
 
-      // Timer
       const expires = new Date(data.expires_at);
       timerInterval = setInterval(() => {
         const diff = Math.floor((expires - new Date()) / 1000);
@@ -732,46 +825,46 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('pix-timer').textContent = `${m}:${s}`;
       }, 1000);
 
-      // Troca de etapa
       stepForm.classList.add('d-none');
       stepPix.classList.remove('d-none');
 
-      // Polling a cada 4s
       pollInterval = setInterval(async () => {
-        const r = await fetch(`/api/pix/deposit/${data.id}/status/`);
-        const st = await r.json();
-        if (st.paid) {
-          clearInterval(pollInterval);
-          clearInterval(timerInterval);
-          document.getElementById('pix-status').textContent = 'Pagamento confirmado!';
-          document.getElementById('pix-status').classList.replace('alert-warning', 'alert-success');
-          setTimeout(() => {
-            modal.hide();
-            location.reload(); // recarrega tudo e atualiza saldo em todos os lugares
-          }, 2000);
-        } else if (st.status === 'expired') {
-          clearInterval(pollInterval);
-          clearInterval(timerInterval);
-          document.getElementById('pix-status').textContent = 'Pix expirado';
-          document.getElementById('pix-status').classList.replace('alert-warning', 'alert-danger');
-        }
+        try {
+          const r = await fetch(`/payments/api/pix/deposit/${data.id}/status/`);
+          const st = await r.json();
+          if (st.paid) {
+            clearInterval(pollInterval);
+            clearInterval(timerInterval);
+            document.getElementById('pix-status').textContent = 'Pagamento confirmado!';
+            document.getElementById('pix-status').classList.replace('alert-warning', 'alert-success');
+            setTimeout(() => {
+              modal.hide();
+              location.reload();
+            }, 2000);
+          }
+        } catch (e) {}
       }, 4000);
 
-    } catch (e) {
-      alert(e.message || 'Erro ao gerar Pix');
+    } catch (err) {
+      showError(err.message || 'Erro ao gerar o Pix. Tente novamente.');
       btnDepositar.disabled = false;
       btnDepositar.querySelector('.spinner-border').classList.add('d-none');
     }
   });
 
   // Botão copiar
-  document.getElementById('btn-copy').addEventListener('click', () => {
+  document.getElementById('btn-copy')?.addEventListener('click', () => {
     const input = document.getElementById('copia-e-cola');
     input.select();
     document.execCommand('copy');
     const btn = document.getElementById('btn-copy');
-    btn.textContent = 'Copiado!';
-    setTimeout(() => btn.textContent = 'Copiar', 2000);
+    const old = btn.innerHTML;
+    btn.innerHTML = '<i data-feather="check" class="me-1"></i> Copiado!';
+    feather.replace();
+    setTimeout(() => {
+      btn.innerHTML = old;
+      feather.replace();
+    }, 2000);
   });
 });
 </script>
