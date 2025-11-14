@@ -1,14 +1,12 @@
 from __future__ import annotations
-import base64
 import json
 import logging
-from random import random
+import random
 import string
 import threading
 import time
 from typing import Dict, Any, Optional
 from decimal import Decimal
-import uuid
 
 from django.contrib.auth.decorators import login_required
 from django.urls import reverse
@@ -26,6 +24,13 @@ from .service import get_active_adapter, get_adapter_by_name, get_active_provide
 from accounts.models import PixTransaction
 
 logger = logging.getLogger(__name__)
+
+try:
+    from utils.pix_cache import set_cached_pix
+    HAS_PIX_CACHE = True
+except Exception as e:
+    logger.warning("utils.pix_cache não disponível (Redis offline?): %s", e)
+    HAS_PIX_CACHE = False
 
 def _get_pix_status_ttl() -> int:
     return int(getattr(settings, "PIX_STATUS_TTL_SECONDS", 2))
@@ -225,7 +230,6 @@ def create_deposit_pix(request):
         data = json.loads(request.body)
         amount = Decimal(data["amount"])
 
-        # Limites atualizados
         if amount < Decimal("1.00"):
             return JsonResponse({"detail": "O valor mínimo para depósito é R$ 1,00"}, status=400)
         if amount > Decimal("2000.00"):
@@ -234,12 +238,11 @@ def create_deposit_pix(request):
         adapter = get_active_adapter()
         active_provider = get_active_provider().name
 
-        # external_id exatamente como na validation: 12 caracteres alfanuméricos maiúsculos
+        # external_id exatamente como na validation: 12 caracteres maiúsculos
         external_id = ''.join(random.choices(string.ascii_uppercase + string.digits, k=12))
 
         webhook_url = request.build_absolute_uri(reverse("payments:webhook_pix"))
 
-        # Dados do cliente (exatamente como na validation)
         name = f"{request.user.first_name} {request.user.last_name}".strip() or "Cliente mPay"
         email = request.user.email or f"user{request.user.id}@mpay.local"
         document = getattr(request.user, "cpf", "") or ""
@@ -252,14 +255,12 @@ def create_deposit_pix(request):
             "phone": phone,
         }
 
-        # Meta com IP (igual validation)
         meta = {
             "ip": request.META.get("REMOTE_ADDR", ""),
             "xff": request.META.get("HTTP_X_FORWARDED_FOR", ""),
             "idempotency_key": f"deposit_{request.user.id}_{external_id}",
         }
 
-        # Criação da transação (igual validation)
         result = adapter.create_transaction(
             external_id=external_id,
             amount=float(amount),
@@ -270,10 +271,8 @@ def create_deposit_pix(request):
 
         copia_e_cola = result.get("pix_qr") or ""
 
-        # Expiração fixa 30 minutos
         expiration = timezone.now() + timezone.timedelta(minutes=30)
 
-        # Criação do PixTransaction exatamente como na validation
         pix_transaction = PixTransaction.objects.create(
             user=request.user,
             amount=amount,
@@ -282,23 +281,29 @@ def create_deposit_pix(request):
             transaction_id=result.get("transaction_id"),
             hash_id=result.get("hash_id"),
             status="PENDING",
-            qr_code=copia_e_cola,  # campo qr_code é salvo aqui
+            qr_code=copia_e_cola,
         )
 
-        # Cache igual validation
-        normalized = {
-            "qr_code": copia_e_cola,
-            "txid": result.get("transaction_id"),
-            "paid": False,
-            "expired": False,
-            "ts": int(time.time())
-        }
-        set_cached_pix(request.user.id, normalized, ttl=300)
+        # Cache longo – agora protegido contra Redis offline
+        if HAS_PIX_CACHE:
+            try:
+                normalized = {
+                    "qr_code": copia_e_cola,
+                    "txid": result.get("transaction_id"),
+                    "paid": False,
+                    "expired": False,
+                    "ts": int(time.time())
+                }
+                set_cached_pix(request.user.id, normalized, ttl=300)
+            except Exception as e:
+                logger.warning("deposit pix cache failed (Redis offline?): %s", e)
+        else:
+            logger.info("deposit pix cache skipped – utils.pix_cache não disponível")
 
         return JsonResponse({
             "id": pix_transaction.id,
             "amount": str(amount),
-            "qr_code_base64": None,  # frontend gera do copia_e_cola
+            "qr_code_base64": None,
             "copia_e_cola": copia_e_cola,
             "expires_at": expiration.isoformat(),
         })
@@ -318,3 +323,4 @@ def pix_status(request, pk):
         })
     except PixTransaction.DoesNotExist:
         return JsonResponse({"paid": False, "status": "expired"})
+    
