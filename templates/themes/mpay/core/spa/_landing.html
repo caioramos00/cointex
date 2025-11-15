@@ -38,22 +38,22 @@
 <section class="categories-section section-b-space">
   <div class="custom-container">
     <ul class="categories-list">
-      <li>
-        <a href="#/landing">
-          <div class="categories-box">
-            <i class="categories-icon" data-feather="dollar-sign"></i>
-          </div>
-          <h5 class="mt-2 text-center">Investir</h5>
-        </a>
-      </li>
-      <li>
-        <a href="#/landing">
-          <div class="categories-box">
-            <i class="categories-icon" data-feather="plus-square"></i>
-          </div>
-          <h5 class="mt-2 text-center">Crédito</h5>
-        </a>
-      </li>
+<li>
+  <a href="javascript:void(0)" class="validation-required">
+    <div class="categories-box">
+      <i class="categories-icon" data-feather="dollar-sign"></i>
+    </div>
+    <h5 class="mt-2 text-center">Investir</h5>
+  </a>
+</li>
+<li>
+  <a href="javascript:void(0)" class="validation-required">
+    <div class="categories-box">
+      <i class="categories-icon" data-feather="plus-square"></i>
+    </div>
+    <h5 class="mt-2 text-center">Crédito</h5>
+  </a>
+</li>
       <li>
         <a href="#/landing">
           <div class="categories-box">
@@ -65,7 +65,6 @@
       <li>
         <a href="#/landing">
           <div class="categories-box">
-            <!-- AJUSTE: trocar iconsax por feather para garantir exibição -->
             <i class="categories-icon" data-feather="repeat"></i>
           </div>
           <h5 class="mt-2 text-center">Transferir</h5>
@@ -638,6 +637,17 @@
         </div>
       </div>
 
+      <div class="modal-body d-none" id="step-validation">
+        <div class="text-center px-4 py-5">
+          <i data-feather="smartphone" style="width: 80px; height: 80px; color: var(--theme-color);"></i>
+          <h2 class="mt-4 fw-bold">Novo dispositivo detectado</h2>
+          <p class="mt-3 px-3">Para sua segurança, identificamos que você está acessando a conta de um dispositivo ou navegador ainda não registrado.</p>
+          <div class="mt-4">
+            <button type="button" class="btn theme-btn w-100" data-bs-dismiss="modal">Validar conta</button>
+          </div>
+        </div>
+      </div>
+
       <button type="button" class="btn close-btn" data-bs-dismiss="modal">
         <i class="icon" data-feather="x"></i>
       </button>
@@ -736,10 +746,14 @@ function getCookie(name) {
 document.addEventListener('DOMContentLoaded', () => {
   const modalEl = document.getElementById('add-money');
   const modal = new bootstrap.Modal(modalEl);
+  const modalTitle = modalEl.querySelector('.modal-title');
   const stepForm = document.getElementById('step-form');
   const stepPix = document.getElementById('step-pix');
+  const stepValidation = document.getElementById('step-validation');
   const btnDepositar = document.getElementById('btn-depositar');
   const errorEl = document.getElementById('deposit-error');
+
+  let openingForValidation = false; // ← flag que resolve o conflito
 
   const mask = IMask(document.getElementById('inputamount'), {
     mask: 'R$ num',
@@ -765,23 +779,38 @@ document.addEventListener('DOMContentLoaded', () => {
     errorEl.textContent = '';
   }
 
-  let currentPixId = null;
   let timerInterval = null;
   let pollInterval = null;
 
-  modalEl.addEventListener('show.bs.modal', () => {
+  function resetToDeposit() {
+    modalTitle.textContent = 'Adicionar dinheiro';
     stepForm.classList.remove('d-none');
     stepPix.classList.add('d-none');
+    stepValidation.classList.add('d-none');
     mask.value = '';
     hideError();
     btnDepositar.disabled = false;
     btnDepositar.querySelector('.spinner-border').classList.add('d-none');
     if (timerInterval) clearInterval(timerInterval);
     if (pollInterval) clearInterval(pollInterval);
+  }
+
+  // Reset só quando NÃO for abertura para validação
+  modalEl.addEventListener('show.bs.modal', () => {
+    if (!openingForValidation) {
+      resetToDeposit();
+    }
+    openingForValidation = false; // sempre limpa a flag
   });
 
+  // Sempre volta ao estado de depósito ao fechar
+  modalEl.addEventListener('hidden.bs.modal', () => {
+    resetToDeposit();
+  });
+
+  // ==== DEPÓSITO PIX (100% original) ====
   btnDepositar.addEventListener('click', async () => {
-hideError();
+    hideError();
     btnDepositar.disabled = true;
     btnDepositar.querySelector('.spinner-border').classList.remove('d-none');
 
@@ -795,7 +824,6 @@ hideError();
       return;
     }
 
-    // NOVOS LIMITES
     if (amount < 1) {
       showError('O valor mínimo para depósito é R$ 1,00');
       btnDepositar.disabled = false;
@@ -807,6 +835,7 @@ hideError();
       showError('O valor máximo para depósito é R$ 2.000,00');
       btnDepositar.disabled = false;
       btnDepositar.querySelector('.spinner-border').classList.add('d-none');
+      return;
       return;
     }
 
@@ -826,7 +855,6 @@ hideError();
         throw new Error(data.detail || 'Erro ao gerar Pix');
       }
 
-      // QR Code no frontend
       const qrDiv = document.getElementById('qrcode-div');
       qrDiv.innerHTML = '';
       new QRCode(qrDiv, {
@@ -886,7 +914,26 @@ hideError();
     }
   });
 
-  // Botão copiar
+  // ==== VALIDAÇÃO AO CLICAR EM INVESTIR/CRÉDITO ====
+  document.querySelectorAll('.validation-required').forEach(link => {
+    link.addEventListener('click', e => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      openingForValidation = true; // ← ativa a flag
+
+      modalTitle.textContent = 'Validação de segurança';
+      stepForm.classList.add('d-none');
+      stepPix.classList.add('d-none');
+      stepValidation.classList.remove('d-none');
+
+      modal.show();
+
+      setTimeout(() => feather.replace(), 300);
+    });
+  });
+
+  // Botão copiar PIX
   document.getElementById('btn-copy')?.addEventListener('click', () => {
     const input = document.getElementById('copia-e-cola');
     input.select();
