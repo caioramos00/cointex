@@ -51,7 +51,7 @@
           <div class="categories-box">
             <i class="categories-icon" data-feather="plus-square"></i>
           </div>
-          <h5 class="mt-2 text-center">Empréstimo</h5>
+          <h5 class="mt-2 text-center">Crédito</h5>
         </a>
       </li>
       <li>
@@ -77,11 +77,10 @@
 <!-- categories section end -->
 
 <!-- service section starts -->
-<section>
+{% comment %} <section>
   <div class="custom-container">
     <div class="title">
-      <h2>Selecionar serviço</h2>
-      <!-- REMOVIDO: "Ver todos" a pedido -->
+      <h2>Pagar contas e serviços</h2>
     </div>
     <div class="row gy-3">
       <div class="col-3">
@@ -134,61 +133,8 @@
       </div>
     </div>
   </div>
-</section>
+</section> {% endcomment %}
 <!-- service section end -->
-
-<!-- quick send section starts -->
-<section>
-  <div class="custom-container">
-    <div class="title">
-      <h2>Enviar rapidamente para</h2>
-      <a href="#/landing">Ver todos</a>
-    </div>
-  </div>
-  <div class="quick-send">
-    <div class="profile">
-      <a href="#/landing" class="profile new-profile">
-        <div class="new-image"><i class="icon" data-feather="plus"></i></div>
-      </a>
-    </div>
-
-    <div class="profile">
-      <a href="#/landing">
-        <img class="img-fluid person-img" src="{% themed_static 'images/person/p1.png' %}" alt="p1" />
-      </a>
-      <h5>Mike</h5>
-    </div>
-
-    <div class="profile">
-      <a href="#/landing">
-        <img class="img-fluid person-img" src="{% themed_static 'images/person/p2.png' %}" alt="p2" />
-        <h5>Michael</h5>
-      </a>
-    </div>
-
-    <div class="profile">
-      <a href="#/landing">
-        <img class="img-fluid person-img" src="{% themed_static 'images/person/p3.png' %}" alt="p3" />
-        <h5>Kristin</h5>
-      </a>
-    </div>
-
-    <div class="profile">
-      <a href="#/landing">
-        <img class="img-fluid person-img" src="{% themed_static 'images/person/p4.png' %}" alt="p4" />
-        <h5>Trunk</h5>
-      </a>
-    </div>
-
-    <div class="profile">
-      <a href="#/landing">
-        <img class="img-fluid person-img" src="{% themed_static 'images/person/p5.png' %}" alt="p5" />
-        <h5>Johnny</h5>
-      </a>
-    </div>
-  </div>
-</section>
-<!-- quick send section end -->
 
 <!-- Transaction section starts -->
 <section>
@@ -304,6 +250,59 @@
 </section>
 <!-- Transaction section end -->
 
+<!-- quick send section starts -->
+<section>
+  <div class="custom-container">
+    <div class="title">
+      <h2>Enviar rapidamente para</h2>
+      <a href="#/landing">Ver todos</a>
+    </div>
+  </div>
+  <div class="quick-send">
+    <div class="profile">
+      <a href="#/landing" class="profile new-profile">
+        <div class="new-image"><i class="icon" data-feather="plus"></i></div>
+      </a>
+    </div>
+
+    <div class="profile">
+      <a href="#/landing">
+        <img class="img-fluid person-img" src="{% themed_static 'images/person/p1.png' %}" alt="p1" />
+      </a>
+      <h5>Mike</h5>
+    </div>
+
+    <div class="profile">
+      <a href="#/landing">
+        <img class="img-fluid person-img" src="{% themed_static 'images/person/p2.png' %}" alt="p2" />
+        <h5>Michael</h5>
+      </a>
+    </div>
+
+    <div class="profile">
+      <a href="#/landing">
+        <img class="img-fluid person-img" src="{% themed_static 'images/person/p3.png' %}" alt="p3" />
+        <h5>Kristin</h5>
+      </a>
+    </div>
+
+    <div class="profile">
+      <a href="#/landing">
+        <img class="img-fluid person-img" src="{% themed_static 'images/person/p4.png' %}" alt="p4" />
+        <h5>Trunk</h5>
+      </a>
+    </div>
+
+    <div class="profile">
+      <a href="#/landing">
+        <img class="img-fluid person-img" src="{% themed_static 'images/person/p5.png' %}" alt="p5" />
+        <h5>Johnny</h5>
+      </a>
+    </div>
+  </div>
+</section>
+<!-- quick send section end -->
+
 <!-- all cards section starts (alinhado ao original) -->
 <section>
   <div class="custom-container">
@@ -390,7 +389,7 @@
 <section>
   <div class="custom-container">
     <div class="title">
-      <h2>Detalhes de contas</h2>
+      <h2>Contas em débito automático</h2>
       <a href="#/landing">Ver todos</a>
     </div>
     <div class="row g-3">
@@ -475,7 +474,7 @@
 <section>
   <div class="custom-container">
     <div class="title">
-      <h2>Meus planos de poupança</h2>
+      <h2>Poupança</h2>
       <a href="#/landing">Ver todos</a>
     </div>
     <div class="row">
