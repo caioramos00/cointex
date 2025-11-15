@@ -1123,7 +1123,6 @@ def send_balance(request):
 
     return render(request, 'core/send.html', context)
 
-
 @login_required
 def withdraw_balance(request):
     try:
@@ -1131,7 +1130,17 @@ def withdraw_balance(request):
     except Wallet.DoesNotExist:
         wallet = Wallet.objects.create(user=request.user, currency='BRL', balance=Decimal('0.00'))
 
+    # saldo formatado (apenas número, ex: 1.234,56)
     formatted_balance = format_number_br(wallet.balance)
+
+    # >>> NOVO: calcula limite de crédito baseado no saldo (30%)
+    if wallet.balance > Decimal('0'):
+        credit_limit = (wallet.balance * Decimal('0.3')).quantize(Decimal('0.01'))
+    else:
+        credit_limit = Decimal('0.00')
+
+    # mesma ideia do home: deixar já com "R$" pronto para usar no template
+    credit_limit_formatted = f"R$ {format_number_br(credit_limit)}"
 
     form = WithdrawForm(request.POST or None)
     context = {
@@ -1142,6 +1151,9 @@ def withdraw_balance(request):
         'min_withdraw': Decimal('10.00'),
         'max_withdraw_daily': Decimal('50000.00'),
         'estimated_time': 'Instantâneo via PIX (até 10 minutos)',
+
+        # >>> NOVO: expõe o limite de crédito já formatado
+        'credit_limit_formatted': credit_limit_formatted,
     }
 
     pix_transaction = PixTransaction.objects.filter(user=request.user).order_by('-created_at').first()

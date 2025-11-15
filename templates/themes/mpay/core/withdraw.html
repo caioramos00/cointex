@@ -57,11 +57,13 @@
   <!-- Withdraw section starts -->
   <section class="section-b-space">
     <div class="custom-container">
-      <div class="title">
-        <h2>Saldo para saque</h2>
+      <div class="title" style="margin-bottom: 0px;">
+        {% comment %} <h2>Origem do saque</h2> {% endcomment %}
+          <label for="inputbankname" class="form-label">Origem do saque</label>
       </div>
 
-      <ul class="select-bank">
+      <ul class="select-bank" style="margin-bottom: 6px;">
+        <!-- CARD 1: SALDO REAL DO USUÁRIO -->
         <li>
           <div class="balance-box active">
             <input class="form-check-input" type="radio" name="flexRadio" checked />
@@ -72,37 +74,41 @@
                  src="{% themed_static 'images/svg/balance-box-bg.svg' %}"
                  alt="caixa-saldo" />
             <div class="balance-content">
-              <h6>Saldo</h6>
-              <h3>R$ 25.263,36</h3>
-              <h5>**** **** **** 2563</h5>
+              <h6>Saldo atual</h6>
+              <!-- formatted_balance vem da view e é só o número (ex.: 1.234,56) -->
+              <h3>R$ {{ formatted_balance|default:"0,00" }}</h3>
+              <h5>Disponível para saque</h5>
             </div>
           </div>
         </li>
+
+        <!-- CARD 2: LIMITE DO CARTÃO DE CRÉDITO -->
         <li>
           <div class="balance-box">
             <input class="form-check-input" type="radio" name="flexRadio" />
             <img class="img-fluid balance-box-img active"
                  src="{% themed_static 'images/svg/balance-box-bg-active.svg' %}"
-                 alt="caixa-saldo-ativo" />
+                 alt="caixa-limite-ativo" />
             <img class="img-fluid balance-box-img unactive"
                  src="{% themed_static 'images/svg/balance-box-bg.svg' %}"
-                 alt="caixa-saldo" />
+                 alt="caixa-limite" />
             <div class="balance-content">
-              <h6>Saldo</h6>
-              <h3>R$ 25.263,36</h3>
-              <h5>**** **** **** 1235</h5>
+              <h6>Cartão de crédito</h6>
+              <!-- credit_limit_formatted já vem com "R$ ..." da view -->
+              <h3>{{ credit_limit_formatted|default:"R$ 0,00" }}</h3>
+              <h5>**** **** **** 2563</h5>
             </div>
           </div>
         </li>
       </ul>
 
-      <div class="title">
+      {% comment %} <div class="title">
         <h2>Transferir para</h2>
-      </div>
+      </div> {% endcomment %}
 
       <form class="auth-form p-0" target="_blank">
         <div class="form-group">
-          <label for="inputbankname" class="form-label">Nome do banco</label>
+          <label for="inputbankname" class="form-label" style="margin-top: 10px;">Nome do banco</label>
           <select id="inputbankname" class="form-select">
             <option selected>Selecione o banco</option>
             <option>HDFC Bank</option>
@@ -117,7 +123,7 @@
           <input type="text" class="form-control" id="inputamount" placeholder="Digite o valor" />
         </div>
 
-        <ul class="amount-list">
+        {% comment %} <ul class="amount-list">
           <li>
             <div class="amount">R$ 50</div>
           </li>
@@ -127,7 +133,7 @@
           <li>
             <div class="amount">R$ 200</div>
           </li>
-        </ul>
+        </ul> {% endcomment %}
         <a href="#done" class="btn theme-btn w-100" data-bs-toggle="modal">Transferir</a>
       </form>
     </div>
