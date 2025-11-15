@@ -323,7 +323,7 @@
     padding: 14px 0px 0px 0px;
     color: rgba(255, 255, 255, 0.6);
     font-weight: 500;">Limite disponível</h2>
-            <h2 class="card-amount" style="padding: 0px 0 15px 0;">R$ 25.000,89</h2>
+            <h2 class="card-amount" style="padding: 0px 0 15px 0;">{{ credit_limit_formatted|default:'R$ 0,00' }}</h2>
             <div class="d-block">
               <div class="card-date w-100">
                 <h6>Validade</h6>
@@ -388,7 +388,7 @@
 <!-- all cards section end -->
 
 <!-- bill details section starts -->
-<section>
+{% comment %} <section>
   <div class="custom-container">
     <div class="title">
       <h2>Contas em débito automático</h2>
@@ -469,7 +469,7 @@
 
     </div>
   </div>
-</section>
+</section> {% endcomment %}
 <!-- bill details section end -->
 
 <!-- saving plans section starts -->

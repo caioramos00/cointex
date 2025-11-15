@@ -819,6 +819,7 @@ def home(request):
         divisor = Decimal(str(ratio + 1))                # converte float → Decimal (evita TypeError)
         saidas = (balance / divisor).quantize(Decimal('0.01'))
         entradas = (balance + saidas).quantize(Decimal('0.01'))
+        credit_limit = balance * Decimal('0.3')
     else:
         entradas = Decimal('0.00')
         saidas = Decimal('0.00')
@@ -844,6 +845,7 @@ def home(request):
 
         'track_complete_registration': track_complete_registration,
         'user_balance': float(balance),
+        'credit_limit_formatted': f"R$ {credit_limit:,.2f}".replace('.', '#').replace(',', '.').replace('#', ',')
     }
     return render(request, 'core/home.html', context)
 
