@@ -314,12 +314,12 @@
       <div class="swiper-wrapper">
         <div class="swiper-slide">
           <div class="credit-card-box color1">
-            <div class="card-logo">
+            <div class="card-logo" style="justify-content: center;">
               <img class="img-fluid" src="{% themed_static 'images/svg/logo1.svg' %}" alt="logo1" />
-              <img class="img-fluid" src="{% themed_static 'images/svg/card-chip.svg' %}" alt="card-chip" />
             </div>
-            <h6 class="card-number">**** **** **** 2563</h6>
-            <h5 class="card-name">Survana Williams</h5>
+            <h6 class="card-number" style="margin-top: -20px; font-size: 14px;">**** **** **** 2563</h6>
+            <h5 class="card-name">{{ user.get_full_name|default:"Nome do Titular" }}</h5>
+            <h2>Limite disponível</h6>
             <h2 class="card-amount">R$ 25.000,89</h2>
             <div class="d-block">
               <div class="card-date w-100">
