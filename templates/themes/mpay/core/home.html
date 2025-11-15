@@ -95,12 +95,12 @@
                 <h3>mPay</h3>
               </a>
             </li>
-            <li>
+            {% comment %} <li>
               <a href="#/crypto" class="pages" data-route="crypto">
                 <i class="sidebar-icon" data-feather="dollar-sign"></i>
                 <h3>Cripto</h3>
               </a>
-            </li>
+            </li> {% endcomment %}
             {% comment %} <li>
               <a href="#/insight" class="pages" data-route="insight">
                 <i class="sidebar-icon" data-feather="bar-chart-2"></i>
@@ -153,9 +153,9 @@
         {% include 'themes/mpay/core/spa/_landing.html' %}
       </section>
 
-      <section id="route-crypto" class="spa-route d-none" data-title="Cripto" aria-labelledby="spa-title">
+      {% comment %} <section id="route-crypto" class="spa-route d-none" data-title="Cripto" aria-labelledby="spa-title">
         {% include 'themes/mpay/core/spa/_crypto.html' %}
-      </section>
+      </section> {% endcomment %}
 
       {% comment %} <section id="route-insight" class="spa-route d-none" data-title="Análises" aria-labelledby="spa-title">
         {% include 'themes/mpay/core/spa/_insight.html' %}
@@ -263,7 +263,7 @@
             <h5>mPay</h5>
           </a>
         </li>
-        <li data-route="crypto">
+        {% comment %} <li data-route="crypto">
           <a href="#/crypto">
             <div class="icon">
               <img class="unactive" src="{% themed_static 'images/svg/bitcoin.svg' %}" alt="cripto" />
@@ -271,7 +271,7 @@
             </div>
             <h5>Cripto</h5>
           </a>
-        </li>
+        </li> {% endcomment %}
         {% comment %} <li data-route="insight">
           <a href="#/insight">
             <div class="icon">
