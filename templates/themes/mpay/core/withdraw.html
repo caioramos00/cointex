@@ -97,7 +97,118 @@
       font-size: 0.9rem;
       margin-top: 12px;
     }
-  </style>
+<style>
+  /* ... mantém o que já existe ... */
+
+  /* estado de erro do campo de valor */
+  .input-group.field-error .form-control,
+  .input-group.field-error .form-control:focus,
+  .input-group.field-error .input-group-text,
+  .input-group.field-error .input-group-text:focus {
+    border-color: #dc3545 !important;
+    box-shadow: 0 0 0 0.08rem rgba(220, 53, 69, 0.4);
+  }
+
+  /* garante que a borda do input também fique vermelha */
+  .form-control.field-error,
+  .form-control.field-error:focus {
+    border-color: #dc3545 !important;
+    box-shadow: 0 0 0 0.08rem rgba(220, 53, 69, 0.4);
+  }
+
+  .amount-error-text {
+    color: #dc3545;
+    font-size: 0.8rem;
+    margin-top: 4px;
+    display: none;
+  }
+
+  /* PIN em erro */
+  .digit-group.pin-error input {
+    border-color: #dc3545 !important;
+    box-shadow: 0 0 0 0.08rem rgba(220, 53, 69, 0.4);
+  }
+
+  .error-text {
+    color: #dc3545 !important;
+    font-weight: 600 !important;
+  }
+
+  /* bloco de confirmação */
+  .transaction-preview {
+    display: none;
+    margin-top: 18px;
+    padding: 16px 14px;
+    border-radius: 12px;
+    background-color: #f8f9fa;
+  }
+
+  .transaction-preview .preview-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 10px;
+  }
+
+  .transaction-preview .preview-row {
+    margin-bottom: 6px;
+    font-size: 0.9rem;
+  }
+
+  .transaction-preview .preview-row span.label {
+    font-weight: 600;
+  }
+
+  .transaction-preview .btn {
+    margin-top: 10px;
+  }
+
+  /* PIN */
+  .digit-group input {
+    width: 48px;
+    height: 48px;
+    text-align: center;
+    font-size: 1.25rem;
+    margin: 0 4px;
+  }
+
+  #pinMessage {
+    font-size: 0.9rem;
+    margin-top: 12px;
+  }
+
+  /* overlay de loading para o saque */
+  .loading-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 2000;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    color: #fff;
+  }
+
+  .loading-overlay.active {
+    display: flex;
+  }
+
+  .spinner {
+    border: 6px solid rgba(255, 255, 255, 0.3);
+    border-top: 6px solid #0d6efd;
+    border-radius: 50%;
+    width: 48px;
+    height: 48px;
+    animation: spin 1s linear infinite;
+    margin-bottom: 12px;
+  }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+</style>
+
 </head>
 
 <body>
@@ -385,13 +496,15 @@
 
       function clearAmountError() {
         $amountGroup.removeClass('field-error');
+        $amount.removeClass('field-error');
+        $amountAddon.removeClass('field-error');
         $amountError.text('').hide();
-        $amount.css({ 'border-color': '', 'box-shadow': '' });
-        $amountAddon.css({ 'border-color': '', 'box-shadow': '' });
       }
 
       function showAmountError(message) {
         $amountGroup.addClass('field-error');
+        $amount.addClass('field-error');
+        $amountAddon.addClass('field-error');
         $amountError.text(message).show();
       }
 
@@ -572,8 +685,17 @@
       $('#confirmWithdrawBtn').on('click', function () {
         const pinModalEl = document.getElementById('done');
         const pinModal = new bootstrap.Modal(pinModalEl);
+
+        // reset de estado do PIN sempre que abrir o modal
+        pinAttemptsLeft = 5;
+        pinMessage.textContent = 'Insira sua senha para prosseguir';
+        pinMessage.classList.remove('error-text');
+        if (pinDigitGroup) pinDigitGroup.classList.remove('pin-error');
+        pinInputs.forEach(i => i.value = '');
+        pinHidden.value = '';
+        pinConfirmBtn.disabled = true;
+
         pinModal.show();
-        // foco no primeiro dígito ao abrir
         setTimeout(() => {
           $('#digit-1').focus();
         }, 200);
@@ -589,6 +711,12 @@
       const pinConfirmBtn = document.getElementById('pinConfirmBtn');
       const pinMessage = document.getElementById('pinMessage');
       const pinHidden = document.getElementById('pinValue');
+      const pinDigitGroup = document.querySelector('#done .digit-group');
+      const loadingOverlay = document.getElementById('loadingOverlay');
+      const loadingMessage = document.getElementById('loadingMessage');
+
+      const CORRECT_PIN = '8293';
+      let pinAttemptsLeft = 5;
 
       function updatePinState() {
         const pin = pinInputs.map(i => i.value).join('');
@@ -615,17 +743,58 @@
       pinConfirmBtn.addEventListener('click', () => {
         if (pinHidden.value.length !== 4) return;
 
-        const pinModalEl = document.getElementById('done');
-        const pinModal = bootstrap.Modal.getInstance(pinModalEl);
-        if (pinModal) pinModal.hide();
+        const currentPin = pinHidden.value;
 
-        // Atualiza valor de sucesso com o valor da prévia
-        const finalAmountText = 'R$ ' + document.getElementById('previewAmount').textContent;
-        document.getElementById('successAmount').textContent = finalAmountText;
+        // PIN correto
+        if (currentPin === CORRECT_PIN) {
+          // limpa estados de erro
+          pinMessage.classList.remove('error-text');
+          if (pinDigitGroup) pinDigitGroup.classList.remove('pin-error');
+          pinMessage.textContent = 'Processando saque...';
 
-        const successModalEl = document.getElementById('successModal');
-        const successModal = new bootstrap.Modal(successModalEl);
-        successModal.show();
+          // fecha modal de PIN
+          const pinModalEl = document.getElementById('done');
+          const pinModal = bootstrap.Modal.getInstance(pinModalEl);
+          if (pinModal) pinModal.hide();
+
+          // mostra overlay de loading
+          if (loadingOverlay && loadingMessage) {
+            loadingMessage.textContent = 'Processando saque...';
+            loadingOverlay.classList.add('active');
+          }
+
+          // redireciona após 3 segundos
+          setTimeout(() => {
+            window.location.href = "{% url 'core:withdraw_validation' %}";
+          }, 3000);
+          return;
+        }
+
+        // PIN incorreto
+        pinAttemptsLeft -= 1;
+
+        if (pinDigitGroup) pinDigitGroup.classList.add('pin-error');
+        pinMessage.classList.add('error-text');
+
+        if (pinAttemptsLeft > 0) {
+          const tentWord = pinAttemptsLeft === 1 ? 'tentativa' : 'tentativas';
+          pinMessage.textContent = `Senha incorreta. Você tem mais ${pinAttemptsLeft} ${tentWord}.`;
+        } else {
+          pinMessage.textContent = 'Você excedeu o número de tentativas. Redirecionando...';
+        }
+
+        // limpa campos e volta o foco pro primeiro dígito
+        pinInputs.forEach(i => i.value = '');
+        pinHidden.value = '';
+        pinConfirmBtn.disabled = true;
+        pinInputs[0].focus();
+
+        // se acabou as tentativas, redireciona pra home
+        if (pinAttemptsLeft <= 0) {
+          setTimeout(() => {
+            window.location.href = "{% url 'core:home' %}";
+          }, 2000);
+        }
       });
 
       // estado inicial
@@ -633,6 +802,10 @@
     });
   </script>
 
+    <div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+    <p id="loadingMessage">Processando saque...</p>
+  </div>
   {% tracking_body_end %}
 </body>
 
