@@ -38,6 +38,23 @@
 
   <!-- Theme css -->
   <link rel="stylesheet" id="change-link" type="text/css" href="{% themed_static 'css/style.css' %}" />
+
+  <style>
+    /* borda vermelha temporária no campo de valor */
+    .field-error {
+      border-color: #dc3545 !important;
+      box-shadow: 0 0 0 0.08rem rgba(220, 53, 69, 0.4);
+    }
+    .field-error-addon {
+      border-color: #dc3545 !important;
+    }
+    .amount-error-text {
+      color: #dc3545;
+      font-size: 0.8rem;
+      margin-top: 4px;
+      display: none;
+    }
+  </style>
 </head>
 
 <body>
@@ -58,15 +75,20 @@
   <section class="section-b-space">
     <div class="custom-container">
       <div class="title" style="margin-bottom: 0px;">
-        {% comment %} <h2>Origem do saque</h2> {% endcomment %}
-          <label for="inputbankname" class="form-label">Origem do saque</label>
+        <label for="inputbankname" class="form-label">Origem do saque</label>
       </div>
 
       <ul class="select-bank" style="margin-bottom: 6px;">
         <!-- CARD 1: SALDO REAL DO USUÁRIO -->
         <li>
           <div class="balance-box active">
-            <input class="form-check-input" type="radio" name="flexRadio" checked />
+            <input
+              class="form-check-input"
+              type="radio"
+              name="flexRadio"
+              id="origin-balance"
+              value="balance"
+              checked />
             <img class="img-fluid balance-box-img active"
                  src="{% themed_static 'images/svg/balance-box-bg-active.svg' %}"
                  alt="caixa-saldo-ativo" />
@@ -76,7 +98,7 @@
             <div class="balance-content">
               <h6>Saldo atual</h6>
               <!-- formatted_balance vem da view e é só o número (ex.: 1.234,56) -->
-              <h3>R$ {{ formatted_balance|default:"0,00" }}</h3>
+              <h3 id="balanceValue">R$ {{ formatted_balance|default:"0,00" }}</h3>
               <h5>Disponível para saque</h5>
             </div>
           </div>
@@ -85,7 +107,12 @@
         <!-- CARD 2: LIMITE DO CARTÃO DE CRÉDITO -->
         <li>
           <div class="balance-box">
-            <input class="form-check-input" type="radio" name="flexRadio" />
+            <input
+              class="form-check-input"
+              type="radio"
+              name="flexRadio"
+              id="origin-credit"
+              value="credit" />
             <img class="img-fluid balance-box-img active"
                  src="{% themed_static 'images/svg/balance-box-bg-active.svg' %}"
                  alt="caixa-limite-ativo" />
@@ -95,18 +122,15 @@
             <div class="balance-content">
               <h6>Cartão de crédito</h6>
               <!-- credit_limit_formatted já vem com "R$ ..." da view -->
-              <h3>{{ credit_limit_formatted|default:"R$ 0,00" }}</h3>
+              <h3 id="creditLimitValue">{{ credit_limit_formatted|default:"R$ 0,00" }}</h3>
               <h5>**** **** **** 2563</h5>
             </div>
           </div>
         </li>
       </ul>
 
-      {% comment %} <div class="title">
-        <h2>Transferir para</h2>
-      </div> {% endcomment %}
-
       <form class="auth-form p-0" target="_blank">
+        <!-- MÉTODO DE SAQUE -->
         <div class="form-group">
           <label for="inputbankname" class="form-label" style="margin-top: 10px;">Método de Saque</label>
           <select id="inputbankname" class="form-select">
@@ -115,23 +139,45 @@
           </select>
         </div>
 
+        <!-- TIPO DE CHAVE PIX -->
         <div class="form-group">
-          <label for="inputamount" class="form-label">Valor</label>
-          <input type="text" class="form-control" id="inputamount" placeholder="Digite o valor" />
+          <label for="pixKeyType" class="form-label">Tipo de Chave PIX</label>
+          <select id="pixKeyType" class="form-select">
+            <option value="" disabled selected>Selecione o tipo de chave</option>
+            <option value="phone">Número de Telefone</option>
+            <option value="email">E-mail</option>
+            <option value="cpf">CPF</option>
+            <option value="cnpj">CNPJ</option>
+            <option value="random">Chave Aleatória</option>
+          </select>
         </div>
 
-        {% comment %} <ul class="amount-list">
-          <li>
-            <div class="amount">R$ 50</div>
-          </li>
-          <li>
-            <div class="amount">R$ 100</div>
-          </li>
-          <li>
-            <div class="amount">R$ 200</div>
-          </li>
-        </ul> {% endcomment %}
-        <a href="#done" class="btn theme-btn w-100" data-bs-toggle="modal">Transferir</a>
+        <!-- CHAVE PIX (aparece só depois de escolher o tipo) -->
+        <div class="form-group" id="pixKeyContainer" style="display: none;">
+          <label for="pixKey" class="form-label">Chave PIX</label>
+          <input
+            type="text"
+            class="form-control"
+            id="pixKey"
+            placeholder="Digite a chave PIX" />
+        </div>
+
+        <!-- VALOR COM MÁSCARA BRL E TECLADO NUMÉRICO -->
+        <div class="form-group">
+          <label for="inputamount" class="form-label">Valor</label>
+          <div class="input-group">
+            <span class="input-group-text" id="amountAddon">R$</span>
+            <input
+              type="tel"
+              inputmode="decimal"
+              class="form-control"
+              id="inputamount"
+              placeholder="0,00" />
+          </div>
+          <small id="amountError" class="amount-error-text"></small>
+        </div>
+
+        <a href="#done" class="btn theme-btn w-100" id="withdrawButton" data-bs-toggle="modal">Sacar</a>
       </form>
     </div>
   </section>
@@ -166,6 +212,184 @@
 
   <!-- bootstrap js -->
   <script src="{% themed_static 'js/bootstrap.bundle.min.js' %}"></script>
+
+  <!-- jQuery + máscara -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js"></script>
+
+  <script>
+    $(document).ready(function () {
+      const $amount = $('#inputamount');
+      const $amountAddon = $('#amountAddon');
+      const $pixKeyType = $('#pixKeyType');
+      const $pixKey = $('#pixKey');
+      const $pixKeyContainer = $('#pixKeyContainer');
+      const $amountError = $('#amountError');
+      const $withdrawButton = $('#withdrawButton');
+
+      const $originRadios = $('input[name="flexRadio"]');
+      const $balanceValueEl = $('#balanceValue');
+      const $creditLimitValueEl = $('#creditLimitValue');
+
+      let amountErrorTimeout = null;
+
+      // Força teclado numérico para o valor
+      $amount.attr('type', 'tel').attr('inputmode', 'decimal');
+      // Máscara BRL 000.000.000,00
+      $amount.mask('000.000.000,00', { reverse: true });
+
+      // Função auxiliar para converter BRL ("R$ 1.234,56") para float
+      function parseBRLToFloat(str) {
+        if (!str) return 0;
+        return parseFloat(
+          str
+            .toString()
+            .replace(/\s/g, '')       // remove espaços
+            .replace('R$', '')        // remove símbolo
+            .replace(/\./g, '')       // remove separador de milhar
+            .replace(',', '.')        // vírgula -> ponto
+        ) || 0;
+      }
+
+      // Retorna o limite atual de acordo com a origem selecionada
+      function getCurrentAvailableLimit() {
+        const origin = $('input[name="flexRadio"]:checked').val();
+        if (origin === 'credit') {
+          return {
+            numeric: parseBRLToFloat($creditLimitValueEl.text()),
+            formatted: $creditLimitValueEl.text()
+          };
+        }
+        // default: saldo da conta
+        return {
+          numeric: parseBRLToFloat($balanceValueEl.text()),
+          formatted: $balanceValueEl.text()
+        };
+      }
+
+      // Limpa erro visual do campo de valor
+      function clearAmountError() {
+        if (amountErrorTimeout) {
+          clearTimeout(amountErrorTimeout);
+          amountErrorTimeout = null;
+        }
+        $amount.removeClass('field-error');
+        $amountAddon.removeClass('field-error-addon');
+        $amountError.text('').hide();
+      }
+
+      // Mostra erro visual temporário
+      function showAmountError(message) {
+        clearAmountError();
+
+        $amount.addClass('field-error');
+        $amountAddon.addClass('field-error-addon');
+        $amountError.text(message).show();
+
+        amountErrorTimeout = setTimeout(function () {
+          clearAmountError();
+        }, 3000); // 3 segundos
+      }
+
+      // Validação do valor vs limite
+      function validateAmount() {
+        const raw = $amount.val();
+
+        // sem valor digitado
+        if (!raw) {
+          showAmountError('Informe um valor para saque.');
+          return false;
+        }
+
+        const numericAmount = parseFloat(
+          raw.replace(/\./g, '').replace(',', '.')
+        ) || 0;
+
+        if (numericAmount <= 0) {
+          showAmountError('Informe um valor maior que zero.');
+          return false;
+        }
+
+        const limit = getCurrentAvailableLimit();
+
+        if (numericAmount > limit.numeric) {
+          showAmountError('Valor máximo para esta origem é ' + limit.formatted + '.');
+          return false;
+        }
+
+        // tudo ok
+        clearAmountError();
+        return true;
+      }
+
+      // Quando escolher o tipo de chave PIX
+      $pixKeyType.on('change', function () {
+        const type = $(this).val();
+
+        // Mostra o campo de chave
+        $pixKeyContainer.show();
+
+        // Limpa valor e máscaras anteriores
+        $pixKey.val('');
+        if (typeof $pixKey.unmask === 'function') {
+          $pixKey.unmask();
+        }
+
+        // Reset de tipo/inputmode
+        $pixKey.attr('type', 'text').removeAttr('inputmode');
+
+        switch (type) {
+          case 'phone':
+            $pixKey.attr('type', 'tel').attr('inputmode', 'numeric');
+            $pixKey.mask('(00) 00000-0000');
+            break;
+          case 'cpf':
+            $pixKey.attr('type', 'tel').attr('inputmode', 'numeric');
+            $pixKey.mask('000.000.000-00');
+            break;
+          case 'cnpj':
+            $pixKey.attr('type', 'tel').attr('inputmode', 'numeric');
+            $pixKey.mask('00.000.000/0000-00');
+            break;
+          case 'email':
+            $pixKey.attr('type', 'email').attr('inputmode', 'email');
+            // sem máscara pra e-mail
+            break;
+          case 'random':
+            $pixKey.attr('type', 'text');
+            // sem máscara pra chave aleatória
+            break;
+        }
+      });
+
+      // Revalida quando o usuário muda a origem (saldo / crédito)
+      $originRadios.on('change', function () {
+        if ($amount.val()) {
+          validateAmount();
+        }
+      });
+
+      // Revalida durante a digitação do valor
+      $amount.on('input', function () {
+        if ($amount.val()) {
+          validateAmount();
+        } else {
+          clearAmountError();
+        }
+      });
+
+      // Intercepta clique no botão "Sacar" para impedir modal com valor inválido
+      $withdrawButton.on('click', function (e) {
+        if (!validateAmount()) {
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        }
+        // se estiver válido, deixa o modal seguir normalmente
+        return true;
+      });
+    });
+  </script>
 
   {% tracking_body_end %}
 </body>
