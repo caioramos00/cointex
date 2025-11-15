@@ -157,9 +157,9 @@
         {% include 'themes/mpay/core/spa/_crypto.html' %}
       </section>
 
-      <section id="route-insight" class="spa-route d-none" data-title="Análises" aria-labelledby="spa-title">
+      {% comment %} <section id="route-insight" class="spa-route d-none" data-title="Análises" aria-labelledby="spa-title">
         {% include 'themes/mpay/core/spa/_insight.html' %}
-      </section>
+      </section> {% endcomment %}
 
       <section id="route-profile" class="spa-route d-none" data-title="Perfil" aria-labelledby="spa-title">
         {% include 'themes/mpay/core/spa/_profile.html' %}
@@ -272,7 +272,7 @@
             <h5>Cripto</h5>
           </a>
         </li>
-        <li data-route="insight">
+        {% comment %} <li data-route="insight">
           <a href="#/insight">
             <div class="icon">
               <img class="unactive" src="{% themed_static 'images/svg/bar-chart.svg' %}" alt="insights" />
@@ -280,14 +280,14 @@
             </div>
             <h5>Análises</h5>
           </a>
-        </li>
+        </li> {% endcomment %}
         <li data-route="profile">
           <a href="#/profile">
             <div class="icon">
               <img class="unactive" src="{% themed_static 'images/svg/user.svg' %}" alt="perfil" />
               <img class="active" src="{% themed_static 'images/svg/user-fill.svg' %}" alt="perfil" />
             </div>
-            <h5>Perfil</h5>
+            <h5>Conta</h5>
           </a>
         </li>
       </ul>
