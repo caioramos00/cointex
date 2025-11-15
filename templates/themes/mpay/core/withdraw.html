@@ -40,19 +40,46 @@
   <link rel="stylesheet" id="change-link" type="text/css" href="{% themed_static 'css/style.css' %}" />
 
   <style>
-    /* borda vermelha temporária no campo de valor */
-    .field-error {
+    /* estado de erro do campo de valor */
+    .input-group.field-error .form-control,
+    .input-group.field-error .input-group-text {
       border-color: #dc3545 !important;
       box-shadow: 0 0 0 0.08rem rgba(220, 53, 69, 0.4);
     }
-    .field-error-addon {
-      border-color: #dc3545 !important;
-    }
+
     .amount-error-text {
       color: #dc3545;
       font-size: 0.8rem;
       margin-top: 4px;
       display: none;
+    }
+
+    /* bloco de confirmação */
+    .transaction-preview {
+      display: none;
+      margin-top: 18px;
+      padding: 16px 14px;
+      border-radius: 12px;
+      background-color: #f8f9fa;
+    }
+
+    .transaction-preview .preview-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+
+    .transaction-preview .preview-row {
+      margin-bottom: 6px;
+      font-size: 0.9rem;
+    }
+
+    .transaction-preview .preview-row span.label {
+      font-weight: 600;
+    }
+
+    .transaction-preview .btn {
+      margin-top: 10px;
     }
   </style>
 </head>
@@ -97,7 +124,6 @@
                  alt="caixa-saldo" />
             <div class="balance-content">
               <h6>Saldo atual</h6>
-              <!-- formatted_balance vem da view e é só o número (ex.: 1.234,56) -->
               <h3 id="balanceValue">R$ {{ formatted_balance|default:"0,00" }}</h3>
               <h5>Disponível para saque</h5>
             </div>
@@ -121,7 +147,6 @@
                  alt="caixa-limite" />
             <div class="balance-content">
               <h6>Cartão de crédito</h6>
-              <!-- credit_limit_formatted já vem com "R$ ..." da view -->
               <h3 id="creditLimitValue">{{ credit_limit_formatted|default:"R$ 0,00" }}</h3>
               <h5>**** **** **** 2563</h5>
             </div>
@@ -129,7 +154,8 @@
         </li>
       </ul>
 
-      <form class="auth-form p-0" target="_blank">
+      <!-- FORM -->
+      <form class="auth-form p-0" target="_blank" id="withdrawForm">
         <!-- MÉTODO DE SAQUE -->
         <div class="form-group">
           <label for="inputbankname" class="form-label" style="margin-top: 10px;">Método de Saque</label>
@@ -152,7 +178,7 @@
           </select>
         </div>
 
-        <!-- CHAVE PIX (aparece só depois de escolher o tipo) -->
+        <!-- CHAVE PIX -->
         <div class="form-group" id="pixKeyContainer" style="display: none;">
           <label for="pixKey" class="form-label">Chave PIX</label>
           <input
@@ -162,10 +188,10 @@
             placeholder="Digite a chave PIX" />
         </div>
 
-        <!-- VALOR COM MÁSCARA BRL E TECLADO NUMÉRICO -->
+        <!-- VALOR -->
         <div class="form-group">
           <label for="inputamount" class="form-label">Valor</label>
-          <div class="input-group">
+          <div class="input-group" id="amountGroup">
             <span class="input-group-text" id="amountAddon">R$</span>
             <input
               type="tel"
@@ -177,8 +203,48 @@
           <small id="amountError" class="amount-error-text"></small>
         </div>
 
-        <a href="#done" class="btn theme-btn w-100" id="withdrawButton" data-bs-toggle="modal">Sacar</a>
+        <!-- Botão começa desativado -->
+        <button
+          type="button"
+          class="btn theme-btn w-100"
+          id="withdrawButton"
+          disabled>
+          Sacar
+        </button>
       </form>
+
+      <!-- PREVIEW / CONFIRMAÇÃO -->
+      <div class="transaction-preview" id="transactionPreview">
+        <div class="preview-title">Confirme os dados</div>
+
+        <div class="preview-row">
+          <span class="label">Origem:</span>
+          <span id="previewOrigin"></span>
+        </div>
+        <div class="preview-row">
+          <span class="label">Tipo de chave PIX:</span>
+          <span id="previewPixType"></span>
+        </div>
+        <div class="preview-row">
+          <span class="label">Chave PIX:</span>
+          <span id="previewPixKey"></span>
+        </div>
+        <div class="preview-row">
+          <span class="label">Valor a sacar:</span>
+          R$ <span id="previewAmount">0,00</span>
+        </div>
+        <div class="preview-row">
+          <span class="label">Valor final (após taxa):</span>
+          R$ <span id="previewNetAmount">0,00</span>
+        </div>
+
+        <button type="button" class="btn theme-btn w-100" id="confirmWithdrawBtn">
+          Confirmar saque
+        </button>
+        <button type="button" class="btn btn-outline-secondary w-100" id="editWithdrawBtn">
+          Editar dados
+        </button>
+      </div>
     </div>
   </section>
   <!-- Withdraw section end -->
@@ -220,38 +286,40 @@
   <script>
     $(document).ready(function () {
       const $amount = $('#inputamount');
+      const $amountGroup = $('#amountGroup');
       const $amountAddon = $('#amountAddon');
+      const $amountError = $('#amountError');
+
       const $pixKeyType = $('#pixKeyType');
       const $pixKey = $('#pixKey');
       const $pixKeyContainer = $('#pixKeyContainer');
-      const $amountError = $('#amountError');
-      const $withdrawButton = $('#withdrawButton');
 
+      const $withdrawButton = $('#withdrawButton');
       const $originRadios = $('input[name="flexRadio"]');
       const $balanceValueEl = $('#balanceValue');
       const $creditLimitValueEl = $('#creditLimitValue');
 
-      let amountErrorTimeout = null;
+      const $form = $('#withdrawForm');
+      const $transactionPreview = $('#transactionPreview');
+      const feePercentage = {{ fee_percentage|default:"0" }} / 100;
 
-      // Força teclado numérico para o valor
+      // Força teclado numérico para o valor + máscara BRL
       $amount.attr('type', 'tel').attr('inputmode', 'decimal');
-      // Máscara BRL 000.000.000,00
       $amount.mask('000.000.000,00', { reverse: true });
 
-      // Função auxiliar para converter BRL ("R$ 1.234,56") para float
+      // Helper: texto BRL -> float
       function parseBRLToFloat(str) {
         if (!str) return 0;
         return parseFloat(
-          str
-            .toString()
-            .replace(/\s/g, '')       // remove espaços
-            .replace('R$', '')        // remove símbolo
-            .replace(/\./g, '')       // remove separador de milhar
-            .replace(',', '.')        // vírgula -> ponto
+          str.toString()
+            .replace(/\s/g, '')
+            .replace('R$', '')
+            .replace(/\./g, '')
+            .replace(',', '.')
         ) || 0;
       }
 
-      // Retorna o limite atual de acordo com a origem selecionada
+      // Limite de acordo com origem
       function getCurrentAvailableLimit() {
         const origin = $('input[name="flexRadio"]:checked').val();
         if (origin === 'credit') {
@@ -260,42 +328,38 @@
             formatted: $creditLimitValueEl.text()
           };
         }
-        // default: saldo da conta
         return {
           numeric: parseBRLToFloat($balanceValueEl.text()),
           formatted: $balanceValueEl.text()
         };
       }
 
-      // Limpa erro visual do campo de valor
+      // Limpa erro visual
       function clearAmountError() {
-        if (amountErrorTimeout) {
-          clearTimeout(amountErrorTimeout);
-          amountErrorTimeout = null;
-        }
-        $amount.removeClass('field-error');
-        $amountAddon.removeClass('field-error-addon');
+        $amountGroup.removeClass('field-error');
         $amountError.text('').hide();
+        $amount.css({ 'border-color': '', 'box-shadow': '' });
+        $amountAddon.css({ 'border-color': '', 'box-shadow': '' });
       }
 
-      // Mostra erro visual temporário
+      // Mostra erro visual (campo inteiro)
       function showAmountError(message) {
-        clearAmountError();
-
-        $amount.addClass('field-error');
-        $amountAddon.addClass('field-error-addon');
+        $amountGroup.addClass('field-error');
         $amountError.text(message).show();
-
-        amountErrorTimeout = setTimeout(function () {
-          clearAmountError();
-        }, 3000); // 3 segundos
+        $amount.css({
+          'border-color': '#dc3545',
+          'box-shadow': '0 0 0 0.08rem rgba(220, 53, 69, 0.4)'
+        });
+        $amountAddon.css({
+          'border-color': '#dc3545',
+          'box-shadow': '0 0 0 0.08rem rgba(220, 53, 69, 0.4)'
+        });
       }
 
-      // Validação do valor vs limite
+      // Validação "visual" do valor
       function validateAmount() {
         const raw = $amount.val();
 
-        // sem valor digitado
         if (!raw) {
           showAmountError('Informe um valor para saque.');
           return false;
@@ -317,25 +381,70 @@
           return false;
         }
 
-        // tudo ok
         clearAmountError();
         return true;
       }
 
-      // Quando escolher o tipo de chave PIX
+      // Validação simples (sem mexer na UI)
+      function isAmountValidSimple() {
+        const raw = $amount.val();
+        if (!raw) return false;
+
+        const numericAmount = parseFloat(
+          raw.replace(/\./g, '').replace(',', '.')
+        ) || 0;
+        if (numericAmount <= 0) return false;
+
+        const limit = getCurrentAvailableLimit();
+        if (numericAmount > limit.numeric) return false;
+
+        return true;
+      }
+
+      // Validação da chave PIX
+      function isPixKeyValid() {
+        const type = $pixKeyType.val();
+        if (!type) return false;
+
+        const value = ($pixKey.val() || '').trim();
+        if (!value) return false;
+
+        if (type === 'phone') {
+          return /^\(\d{2}\)\s\d{5}-\d{4}$/.test(value);
+        }
+        if (type === 'cpf') {
+          return /^\d{3}\.\d{3}\.\d{3}-\d{2}$/.test(value);
+        }
+        if (type === 'cnpj') {
+          return /^\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}$/.test(value);
+        }
+        if (type === 'email') {
+          return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+        }
+        if (type === 'random') {
+          return value.length > 0;
+        }
+        return false;
+      }
+
+      // Atualiza estado do botão Sacar
+      function updateWithdrawButton() {
+        const canWithdraw = isAmountValidSimple() && isPixKeyValid();
+        $withdrawButton.prop('disabled', !canWithdraw);
+      }
+
+      // Tipo de chave PIX
       $pixKeyType.on('change', function () {
         const type = $(this).val();
 
-        // Mostra o campo de chave
         $pixKeyContainer.show();
 
-        // Limpa valor e máscaras anteriores
+        // limpa valor/máscara
         $pixKey.val('');
         if (typeof $pixKey.unmask === 'function') {
           $pixKey.unmask();
         }
 
-        // Reset de tipo/inputmode
         $pixKey.attr('type', 'text').removeAttr('inputmode');
 
         switch (type) {
@@ -353,41 +462,100 @@
             break;
           case 'email':
             $pixKey.attr('type', 'email').attr('inputmode', 'email');
-            // sem máscara pra e-mail
             break;
           case 'random':
             $pixKey.attr('type', 'text');
-            // sem máscara pra chave aleatória
             break;
         }
+
+        updateWithdrawButton();
       });
 
-      // Revalida quando o usuário muda a origem (saldo / crédito)
+      // Mudança de origem -> revalida
       $originRadios.on('change', function () {
         if ($amount.val()) {
           validateAmount();
         }
+        updateWithdrawButton();
       });
 
-      // Revalida durante a digitação do valor
+      // Digitação do valor
       $amount.on('input', function () {
         if ($amount.val()) {
           validateAmount();
         } else {
           clearAmountError();
         }
+        updateWithdrawButton();
       });
 
-      // Intercepta clique no botão "Sacar" para impedir modal com valor inválido
-      $withdrawButton.on('click', function (e) {
-        if (!validateAmount()) {
-          e.preventDefault();
-          e.stopPropagation();
-          return false;
-        }
-        // se estiver válido, deixa o modal seguir normalmente
-        return true;
+      // Digitação da chave PIX
+      $pixKey.on('input', function () {
+        updateWithdrawButton();
       });
+
+      // Preencher preview
+      function fillPreview() {
+        const originVal = $('input[name="flexRadio"]:checked').val();
+        const originLabel = originVal === 'credit' ? 'Cartão de crédito' : 'Saldo da conta';
+
+        const rawAmount = $amount.val();
+        const amountNumeric = parseFloat(
+          rawAmount.replace(/\./g, '').replace(',', '.')
+        ) || 0;
+
+        const netAmount = amountNumeric * (1 - feePercentage);
+
+        const pixTypeVal = $pixKeyType.val();
+        const pixTypeLabelMap = {
+          phone: 'Número de Telefone',
+          email: 'E-mail',
+          cpf: 'CPF',
+          cnpj: 'CNPJ',
+          random: 'Chave Aleatória'
+        };
+
+        $('#previewOrigin').text(originLabel);
+        $('#previewPixType').text(pixTypeLabelMap[pixTypeVal] || '-');
+        $('#previewPixKey').text($pixKey.val());
+
+        $('#previewAmount').text(
+          amountNumeric.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+        );
+        $('#previewNetAmount').text(
+          netAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+        );
+      }
+
+      // Mostrar tela de confirmação
+      function showPreview() {
+        if (!validateAmount() || !isPixKeyValid()) {
+          return;
+        }
+        fillPreview();
+        $form.hide();
+        $transactionPreview.show();
+      }
+
+      // Voltar para edição
+      $('#editWithdrawBtn').on('click', function () {
+        $transactionPreview.hide();
+        $form.show();
+      });
+
+      // Clique em Sacar -> vai para preview
+      $withdrawButton.on('click', function () {
+        showPreview();
+      });
+
+      // Confirmar saque -> abre modal de sucesso (por enquanto front-only)
+      $('#confirmWithdrawBtn').on('click', function () {
+        const modal = new bootstrap.Modal(document.getElementById('done'));
+        modal.show();
+      });
+
+      // estado inicial
+      updateWithdrawButton();
     });
   </script>
 
